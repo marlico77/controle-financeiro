@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão Financeira | Premium</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="dark-theme">
+    <div id="app">
+        <!-- Login Section -->
+        <section id="login-section" class="full-screen-center">
+            <div class="glass-card login-card animate-fade-in">
+                <h1>Acesso Restrito</h1>
+                <form id="login-form">
+                    <div class="input-group">
+                        <label for="username">Usuário / E-mail</label>
+                        <input type="text" id="username" required placeholder="Digite seu usuário ou e-mail">
+                    </div>
+                    <div class="input-group">
+                        <label for="password">Senha</label>
+                        <input type="password" id="password" required placeholder="Digite sua senha">
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; font-size: 0.9rem;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-dim);">
+                            <input type="checkbox"> Lembre-me
+                        </label>
+                        <a href="#" style="color: var(--accent-color); text-decoration: none;">Perdeu sua senha?</a>
+                    </div>
+
+                    <button type="submit" class="btn-primary">Acessar Conta</button>
+                    <div id="login-error" class="error-msg"></div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Main Dashboard Section (Hidden by default) -->
+        <section id="main-section" style="display: none;">
+            <!-- Mobile Header (Visible only on mobile via CSS) -->
+            <div class="mobile-header">
+                <div class="logo-icon">GF</div>
+                <div class="mobile-avatar" id="mobile-avatar-initials">?</div>
+            </div>
+            
+            <nav class="sidebar">
+                <div class="logo">
+                    <div class="logo-icon">GF</div>
+                </div>
+                <div class="user-profile">
+                    <div class="user-avatar" id="user-avatar-initials">?</div>
+                    <div class="user-info">
+                        <p id="user-name-display">Carregando...</p>
+                        <span id="user-role-badge" style="display: none;">Membro</span>
+                    </div>
+                </div>
+                <ul class="nav-links">
+                    <li class="active" data-target="dashboard"><span class="icon">📊</span> Dashboard</li>
+                    <li data-target="people"><span class="icon">👥</span> Membros</li>
+                </ul>
+                <div class="nav-footer">
+                    <button id="logout-btn" class="btn-text">Sair</button>
+                </div>
+            </nav>
+
+            <main class="content">
+                <header class="top-bar">
+                    <h2 id="page-title">Dashboard de Mensalidades</h2>
+                    <div class="year-selector">
+                        <select id="year-select">
+                            <option value="2026">2026</option>
+                            <option value="2025">2025</option>
+                        </select>
+                    </div>
+                </header>
+
+                <!-- Dashboard Page -->
+                <div id="dashboard-page" class="tab-content">
+                    <div class="stats-grid">
+                        <div class="glass-card stat-card">
+                            <span class="stat-label">Total em Caixa (Ano)</span>
+                            <h3 id="stat-total-cash">R$ 0,00</h3>
+                        </div>
+                        <div class="glass-card stat-card">
+                            <span class="stat-label">Direção</span>
+                            <h3 id="stat-direcao">R$ 0,00</h3>
+                        </div>
+                        <div class="glass-card stat-card">
+                            <span class="stat-label">Desbravadores</span>
+                            <h3 id="stat-desbravadores">R$ 0,00</h3>
+                        </div>
+                    </div>
+
+                    <div class="charts-grid">
+                        <div class="glass-card chart-container">
+                            <h4>Distribuição por Unidade</h4>
+                            <canvas id="pieChart"></canvas>
+                        </div>
+                        <div class="glass-card chart-container">
+                            <h4>Receita Mensal</h4>
+                            <canvas id="barChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="glass-card table-container">
+                        <table id="payments-table">
+                            <thead>
+                                <tr>
+                                    <th>Membro</th>
+                                    <th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th><th>Jun</th>
+                                    <th>Jul</th><th>Ago</th><th>Set</th><th>Out</th><th>Nov</th><th>Dez</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payments-body">
+                                <!-- Data populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- People Page -->
+                <div id="people-page" class="tab-content" style="display: none;">
+                    <div class="action-bar" style="gap: 1rem;">
+                        <input type="file" id="import-input" accept=".xlsx, .xls, .csv" style="display: none;">
+                        <button id="import-btn" class="btn-primary" style="background: #222; border: 1px solid #444; width: auto;">📊 Importar Planilha</button>
+                        <button id="add-person-btn" class="btn-primary" style="width: auto;">+ Novo Membro</button>
+                    </div>
+                    <div class="glass-card list-container">
+                        <table id="people-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Unidade</th>
+                                    <th>Responsável</th>
+                                    <th>CPF</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="people-body">
+                                <!-- Data populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </section>
+
+        <!-- Modals -->
+        <div id="payment-modal" class="modal">
+            <div class="glass-card modal-content">
+                <span class="close-modal">&times;</span>
+                <h3 id="payment-modal-title">Registrar Pagamento</h3>
+                <form id="payment-form">
+                    <input type="hidden" id="p-person-id">
+                    <input type="hidden" id="p-month">
+                    <div class="info-tag">
+                        Membro: <span id="p-member-name"></span> | Mês: <span id="p-month-name"></span>
+                    </div>
+                    <div class="input-group">
+                        <label for="amount">Valor (R$)</label>
+                        <input type="number" id="amount" step="0.01" required placeholder="0,00">
+                    </div>
+                    <div class="input-group">
+                        <label for="receipt">Comprovante (PNG, JPG, PDF) - Opcional</label>
+                        <input type="file" id="receipt" accept="image/*,.pdf">
+                        <div id="view-receipt-container" style="margin-top: 0.5rem; display: none;">
+                            <a href="#" id="view-receipt-btn" target="_blank" style="color: var(--accent-color); font-size: 0.9rem; text-decoration: none;">📄 Ver Comprovante Atual</a>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary" id="save-payment-btn">Salvar Pagamento</button>
+                    <button type="button" id="delete-payment-btn" class="btn-danger" style="display: none; width: 100%; margin-top: 1rem;">Excluir Pagamento</button>
+                    <div id="payment-error" class="error-msg"></div>
+                </form>
+            </div>
+        </div>
+
+        <div id="person-modal" class="modal">
+            <div class="glass-card modal-content">
+                <span class="close-modal">&times;</span>
+                <h3 id="person-modal-title">Novo Membro</h3>
+                <form id="person-form">
+                    <input type="hidden" id="p-id">
+                    <div class="input-group">
+                        <label for="p-name">Nome Completo</label>
+                        <input type="text" id="p-name" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="p-responsible">Responsável (Opcional)</label>
+                        <input type="text" id="p-responsible">
+                    </div>
+                    <div class="input-group">
+                        <label for="p-unit">Unidade</label>
+                        <input type="text" id="p-unit" placeholder="Ex: Unidade Norte">
+                    </div>
+                    <div class="input-group">
+                        <label for="p-birth">Data de Nascimento (Opcional)</label>
+                        <input type="date" id="p-birth">
+                    </div>
+                    <div class="input-group">
+                        <label for="p-age">Idade</label>
+                        <input type="text" id="p-age" readonly placeholder="Calculada automaticamente" style="background: var(--bg-color); opacity: 0.8;">
+                    </div>
+                    <div class="input-group">
+                        <label for="p-cpf">CPF (Opcional)</label>
+                        <input type="text" id="p-cpf" maxlength="14">
+                    </div>
+                    <div class="credentials-section" id="admin-only-credentials" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-color);">
+                        <div class="input-group">
+                            <label for="u-username">Usuário de Acesso</label>
+                            <input type="text" id="u-username">
+                        </div>
+                        <div class="input-group">
+                            <label for="u-password">Nova Senha (deixe vazio para manter)</label>
+                            <input type="password" id="u-password" placeholder="Digite para trocar">
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn-primary">Salvar</button>
+                        <button type="button" id="delete-member-btn" class="btn-danger" style="display: none;">Excluir Membro</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
