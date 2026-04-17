@@ -175,23 +175,16 @@ loginForm.addEventListener('submit', async (e) => {
     }
 });
 
-logoutBtn.addEventListener('click', () => {
-    state.token = null;
-    state.role = null;
-    state.personId = null;
-    state.people = [];
-    state.payments = [];
-    
+const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     localStorage.removeItem('personId');
-    
-    // Reset UI text immediately
-    document.getElementById('user-name-display').textContent = 'Autenticando...';
-    document.getElementById('user-avatar-initials').textContent = '?';
-    
-    checkAuth();
-});
+    window.location.reload();
+};
+
+if (logoutBtn) logoutBtn.onclick = logout;
+const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
+if (mobileLogoutBtn) mobileLogoutBtn.onclick = logout;
 
 // --- Navigation ---
 navLinks.forEach(link => {
