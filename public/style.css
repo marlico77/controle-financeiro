@@ -220,12 +220,19 @@ body {
     pointer-events: none;
 }
 
+.sidebar-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 2.5rem;
+}
+
 .logo {
     display: flex;
-    justify-content: flex-start;
-    margin-bottom: 2rem;
+    justify-content: center;
+    margin-bottom: 1rem;
     width: 100%;
-    padding-left: 0.5rem;
 }
 
 .logo-img {
@@ -235,17 +242,16 @@ body {
 }
 
 .user-profile {
-    margin-bottom: 3rem;
-    text-align: left;
+    margin-bottom: 0;
+    text-align: center;
     width: 100%;
-    padding-left: 0.5rem;
 }
 
 .user-info p {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     text-transform: uppercase;
-    letter-spacing: 1.2px;
-    color: #888;
+    letter-spacing: 1.5px;
+    color: #fff;
     font-weight: 700;
 }
 
@@ -262,11 +268,13 @@ body {
     color: #888;
     transition: all 0.2s;
     margin-bottom: 0.5rem;
-    display: flex;
+    display: flex !important;
+    flex-direction: row !important;
     align-items: center;
     justify-content: flex-start; /* Explicitly align contents to left */
     gap: 12px;
     width: 100%;
+    white-space: nowrap;
 }
 
 .nav-links li .icon {
