@@ -23,15 +23,12 @@ app.use(express.json());
 app.use(express.static('public'));
 // REMOVED: app.use('/uploads', express.static('uploads')); (Secured via /api/files/receipt)
 
-// Multer Config
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
+// Multer Config: Using MemoryStorage to store files in the database instead of disk
+const storage = multer.memoryStorage();
+const upload = multer({ 
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
-const upload = multer({ storage });
 
 // Middleware: Auth
 const authenticateToken = (req, res, next) => {
@@ -310,7 +307,7 @@ app.post('/api/people/import', authenticateToken, upload.single('file'), async (
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
 
   try {
-    const workbook = xlsx.readFile(req.file.path);
+    const workbook = xlsx.read(req.file.buffer);
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
     let count = 0;
     
@@ -372,7 +369,12 @@ app.get('/api/payments/detail/:id', authenticateToken, async (req, res) => {
 
 app.post('/api/payments', authenticateToken, upload.single('receipt'), async (req, res) => {
   const { person_id, month, year, amount } = req.body;
-  const receipt_path = req.file ? req.file.path : null;
+  
+  // Use memory buffer and mime type from multer
+  const receipt_content = req.file ? req.file.buffer : null;
+  const receipt_mime = req.file ? req.file.mimetype : null;
+  const receipt_filename = req.file ? `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
+  const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
 
   if (!person_id || !month || !year || !amount) {
     return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
@@ -385,8 +387,15 @@ app.post('/api/payments', authenticateToken, upload.single('receipt'), async (re
     const existing = existingResult.rows[0];
 
     if (existing) {
-        const finalReceipt = receipt_path || existing.receipt_path;
-        await db.query('UPDATE payments SET amount = $1, receipt_path = $2, status = $3, rejection_reason = NULL WHERE id = $4', [amount, finalReceipt, status, existing.id]);
+        const finalContent = receipt_content || existing.receipt_content;
+        const finalMime = receipt_mime || existing.receipt_mime;
+        const finalPath = receipt_path || existing.receipt_path;
+
+        await db.query(`
+            UPDATE payments 
+            SET amount = $1, receipt_path = $2, receipt_content = $3, receipt_mime = $4, status = $5, rejection_reason = NULL 
+            WHERE id = $6
+        `, [amount, finalPath, finalContent, finalMime, status, existing.id]);
         
         if (status === 'pending') {
             const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
@@ -398,7 +407,11 @@ app.post('/api/payments', authenticateToken, upload.single('receipt'), async (re
         }
         res.json({ id: existing.id, updated: true, status });
     } else {
-        const insertResult = await db.query('INSERT INTO payments (person_id, month, year, amount, receipt_path, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id', [person_id, month, year, amount, receipt_path, status]);
+        const insertResult = await db.query(`
+            INSERT INTO payments (person_id, month, year, amount, receipt_path, receipt_content, receipt_mime, status) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+            RETURNING id
+        `, [person_id, month, year, amount, receipt_path, receipt_content, receipt_mime, status]);
         const newId = insertResult.rows[0].id;
         
         if (status === 'pending') {
@@ -695,7 +708,11 @@ app.get('/api/event-payments/detail/:id', authenticateToken, async (req, res) =>
 
 app.post('/api/event-payments', authenticateToken, upload.single('receipt'), async (req, res) => {
     const { person_id, event_id, amount, month, year } = req.body || {};
-    const receipt_path = req.file ? req.file.path : null;
+    
+    const receipt_content = req.file ? req.file.buffer : null;
+    const receipt_mime = req.file ? req.file.mimetype : null;
+    const receipt_filename = req.file ? `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
+    const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
     
     // Authorization
     const effectivePersonId = req.user.role === 'admin' ? (person_id || req.user.personId) : req.user.personId;
@@ -719,7 +736,11 @@ app.post('/api/event-payments', authenticateToken, upload.single('receipt'), asy
         const existing = existingResult.rows[0];
 
         if (existing) {
-            await db.query('UPDATE event_payments SET amount = $1, receipt_path = COALESCE($2, receipt_path), status = $3, rejection_reason = NULL WHERE id = $4', [amount, receipt_path, status, existing.id]);
+            await db.query(`
+                UPDATE event_payments 
+                SET amount = $1, receipt_path = COALESCE($2, receipt_path), receipt_content = COALESCE($3, receipt_content), receipt_mime = COALESCE($4, receipt_mime), status = $5, rejection_reason = NULL 
+                WHERE id = $6
+            `, [amount, receipt_path, receipt_content, receipt_mime, status, existing.id]);
             
             if (status === 'pending') {
                 const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
@@ -733,8 +754,12 @@ app.post('/api/event-payments', authenticateToken, upload.single('receipt'), asy
             }
             res.json({ id: existing.id, updated: true, status });
         } else {
-            const insertSql = 'INSERT INTO event_payments (person_id, event_id, amount, month, year, receipt_path, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id';
-            const insertParams = [effectivePersonId, event_id, amount, month || null, year || null, receipt_path, status];
+            const insertSql = `
+                INSERT INTO event_payments (person_id, event_id, amount, month, year, receipt_path, receipt_content, receipt_mime, status) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+                RETURNING id
+            `;
+            const insertParams = [effectivePersonId, event_id, amount, month || null, year || null, receipt_path, receipt_content, receipt_mime, status];
             const insertResult = await db.query(insertSql, insertParams);
             const newId = insertResult.rows[0].id;
 
@@ -820,12 +845,12 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
 
     try {
         // Try monthly payments
-        let result = await db.query('SELECT person_id FROM payments WHERE receipt_path = $1', [fullRelativePath]);
+        let result = await db.query('SELECT person_id, receipt_content, receipt_mime FROM payments WHERE receipt_path = $1', [fullRelativePath]);
         let payment = result.rows[0];
         
         // Try event payments
         if (!payment) {
-            result = await db.query('SELECT person_id FROM event_payments WHERE receipt_path = $1', [fullRelativePath]);
+            result = await db.query('SELECT person_id, receipt_content, receipt_mime FROM event_payments WHERE receipt_path = $1', [fullRelativePath]);
             payment = result.rows[0];
         }
 
@@ -839,8 +864,12 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
             return res.sendStatus(403);
         }
 
-        const absolutePath = path.join(__dirname, 'uploads', filename);
-        res.sendFile(absolutePath);
+        if (!payment.receipt_content) {
+            return res.status(404).json({ error: 'Conteúdo do arquivo não encontrado no banco de dados' });
+        }
+        
+        res.set('Content-Type', payment.receipt_mime || 'application/octet-stream');
+        res.send(payment.receipt_content);
     } catch (err) {
         res.status(500).json({ error: 'Erro ao processar arquivo' });
     }
