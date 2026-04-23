@@ -77,8 +77,8 @@ const syncMemberUsers = async () => {
         const peopleResult = await db.query('SELECT id, name FROM people');
         const people = peopleResult.rows;
         
-        const salt = bcrypt.genSaltSync(10);
-        const defaultHash = bcrypt.hashSync('tribo@2026', salt);
+        // Generate default hash once
+        const defaultHash = await bcrypt.hash('tribo@2026', 10);
 
         for (const p of people) {
             // Generate username: first.last
@@ -94,10 +94,10 @@ const syncMemberUsers = async () => {
                         [username, defaultHash, 'member', p.id]
                     );
                 } catch (err) {
-                    // Fallback username with ID if collision
+                    const fallbackName = `${username}${p.id}`;
                     await db.query(
                         'INSERT INTO users (username, password_hash, role, person_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
-                        [`${username}${p.id}`, defaultHash, 'member', p.id]
+                        [fallbackName, defaultHash, 'member', p.id]
                     );
                 }
             }
@@ -294,10 +294,11 @@ app.post('/api/people', authenticateToken, async (req, res) => {
   const { name, responsible, birth_date, cpf, unit, username, password } = req.body || {};
   if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
 
+  const client = await db.pool.connect();
   try {
-      await db.query('BEGIN');
+      await client.query('BEGIN');
       
-      const result = await db.query(
+      const result = await client.query(
         'INSERT INTO people (name, responsible, birth_date, cpf, unit) VALUES ($1, $2, $3, $4, $5) RETURNING id', 
         [name, responsible || null, birth_date || null, cpf || null, unit || null]
       );
@@ -306,20 +307,21 @@ app.post('/api/people', authenticateToken, async (req, res) => {
 
       // Also create user if provided
       if (req.user.role === 'admin' && username) {
-          const salt = bcrypt.genSaltSync(10);
-          const hash = bcrypt.hashSync(password || 'tribo@2026', salt);
-          await db.query(
+          const hash = await bcrypt.hash(password || 'tribo@2026', 10);
+          await client.query(
               'INSERT INTO users (username, password_hash, role, person_id) VALUES ($1, $2, $3, $4)',
               [username, hash, 'member', personId]
           );
       }
 
-      await db.query('COMMIT');
+      await client.query('COMMIT');
       res.json({ id: personId, name });
   } catch (err) {
-      await db.query('ROLLBACK');
+      await client.query('ROLLBACK');
       console.error('[SERVER] Error creating member:', err);
       res.status(500).json({ error: 'Erro ao criar membro: ' + err.message });
+  } finally {
+      client.release();
   }
 });
 
