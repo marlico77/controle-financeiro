@@ -12,9 +12,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET;
 
-console.log('[SERVER] Booting...');
-console.log('[SERVER] PORT:', PORT);
-console.log('[SERVER] NODE_ENV:', process.env.NODE_ENV);
+console.log(`[SERVER] Started on PORT ${PORT} - ENV: ${process.env.NODE_ENV || 'development'}`);
 
 
 if (!SECRET && process.env.NODE_ENV === 'production') {
@@ -24,18 +22,11 @@ if (!SECRET && process.env.NODE_ENV === 'production') {
 const JWT_SECRET = SECRET || 'dev-secret-only';
 
 app.use(cors());
-
-// Global request logger
-app.use((req, res, next) => {
-    console.log(`[REQ] ${req.method} ${req.url} - ${req.ip}`);
-    next();
-});
-
 app.use(express.json());
 app.use(express.static('public'));
 
+// Explicit root route for robustness
 app.get('/', (req, res) => {
-    console.log('[REQ] Explicit root access, serving index.html');
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
@@ -59,11 +50,17 @@ const authenticateToken = (req, res, next) => {
     }
     
     try {
-        // Check mandatory password change in DB for security
-        const result = await db.query('SELECT must_change_password, username, role, person_id FROM users WHERE id = $1', [decoded.id]);
+        // Check session and mandatory password change in DB
+        const result = await db.query('SELECT current_session_id, must_change_password, username, role, person_id FROM users WHERE id = $1', [decoded.id]);
         const dbUser = result.rows[0];
         
-        if (!dbUser) return res.status(403).json({ error: 'Usuário não encontrado' });
+        if (!dbUser) return res.status(401).json({ error: 'Usuário não encontrado' });
+
+        // Single Session Rule: Check if session ID matches
+        if (dbUser.current_session_id && decoded.sid !== dbUser.current_session_id) {
+            console.warn(`[AUTH] Sessão duplicada para ${dbUser.username}. Token SID: ${decoded.sid}, DB SID: ${dbUser.current_session_id}`);
+            return res.status(401).json({ error: 'Sessão expirada. Logado em outro local.' });
+        }
 
         // Block access if password change is required (except for auth status and change-password)
         const allowedPaths = ['/api/auth/change-password', '/api/auth/status'];
@@ -75,7 +72,8 @@ const authenticateToken = (req, res, next) => {
             id: decoded.id,
             username: dbUser.username,
             role: dbUser.role || 'member',
-            personId: dbUser.person_id ? parseInt(dbUser.person_id) : null
+            personId: dbUser.person_id ? parseInt(dbUser.person_id) : null,
+            sid: decoded.sid
         };
 
         console.log(`[AUTH] Usuário: ${req.user.username} | Role: ${req.user.role} | ID: ${req.user.personId}`);
@@ -137,15 +135,20 @@ app.post('/api/login', async (req, res) => {
 
     const role = user.role || 'member'; // Fallback to member
     const personId = user.person_id || null;
+    
+    // Single Session Logic: Generate unique Session ID
+    const sessionId = Date.now().toString() + Math.random().toString(36).substring(2, 10);
+    await db.query('UPDATE users SET current_session_id = $1 WHERE id = $2', [sessionId, user.id]);
 
     const token = jwt.sign({ 
       id: user.id, 
       username: user.username, 
       role: role, 
-      personId: personId 
+      personId: personId,
+      sid: sessionId
     }, JWT_SECRET, { expiresIn: '12h' });
 
-    console.log(`Login Successful: ${user.username} as ${role}`);
+    console.log(`Login Successful: ${user.username} as ${role} (SID: ${sessionId})`);
 
     res.json({ 
       token, 
@@ -344,35 +347,54 @@ app.post('/api/people', authenticateToken, async (req, res) => {
 app.post('/api/people/import', authenticateToken, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
 
+  const client = await db.pool.connect();
   try {
     const workbook = xlsx.read(req.file.buffer);
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
     let count = 0;
     
-    await db.query('BEGIN');
+    await client.query('BEGIN');
     try {
         for (const item of data) {
             const keys = Object.keys(item);
             const nameKey = keys.find(k => k.trim().toUpperCase() === 'NOME');
             const unitKey = keys.find(k => k.trim().toUpperCase() === 'UNIDADE');
+            const birthKey = keys.find(k => k.trim().toUpperCase().includes('NASCIMENTO'));
             
             const name = nameKey ? item[nameKey] : null;
             const unit = unitKey ? item[unitKey] : null;
+            let birthDate = birthKey ? item[birthKey] : null;
+
+            // Simple date conversion if Excel number
+            if (typeof birthDate === 'number') {
+                const date = xlsx.utils.format_cell({ v: birthDate, t: 'd' });
+                birthDate = date;
+            }
             
             if (name) {
-                await db.query('INSERT INTO people (name, unit) VALUES ($1, $2)', [name.toString().trim(), unit ? unit.toString().trim() : null]);
+                await client.query(
+                    'INSERT INTO people (name, unit, birth_date) VALUES ($1, $2, $3)', 
+                    [name.toString().trim(), unit ? unit.toString().trim() : null, birthDate || null]
+                );
                 count++;
             }
         }
-        await db.query('COMMIT');
+        await client.query('COMMIT');
+        
+        // Trigger user sync to create accounts for new people
+        console.log(`[IMPORT] Success. Synching ${count} new members to users...`);
+        syncMemberUsers(); 
+
         res.json({ success: true, count });
     } catch (innerErr) {
-        await db.query('ROLLBACK');
+        await client.query('ROLLBACK');
         throw innerErr;
     }
   } catch (err) {
     console.error('Import Error:', err);
-    res.status(500).json({ error: 'Erro ao processar planilha.' });
+    res.status(500).json({ error: 'Erro ao processar planilha: ' + err.message });
+  } finally {
+    client.release();
   }
 });
 
