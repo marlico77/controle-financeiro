@@ -12,6 +12,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET;
 
+console.log('[SERVER] Booting...');
+console.log('[SERVER] PORT:', PORT);
+console.log('[SERVER] NODE_ENV:', process.env.NODE_ENV);
+
+
 if (!SECRET && process.env.NODE_ENV === 'production') {
     console.error('FATAL: JWT_SECRET environment variable is missing!');
     process.exit(1);
@@ -19,9 +24,20 @@ if (!SECRET && process.env.NODE_ENV === 'production') {
 const JWT_SECRET = SECRET || 'dev-secret-only';
 
 app.use(cors());
+
+// Global request logger
+app.use((req, res, next) => {
+    console.log(`[REQ] ${req.method} ${req.url} - ${req.ip}`);
+    next();
+});
+
 app.use(express.json());
 app.use(express.static('public'));
-// REMOVED: app.use('/uploads', express.static('uploads')); (Secured via /api/files/receipt)
+
+app.get('/', (req, res) => {
+    console.log('[REQ] Explicit root access, serving index.html');
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Multer Config: Using MemoryStorage to store files in the database instead of disk
 const storage = multer.memoryStorage();
