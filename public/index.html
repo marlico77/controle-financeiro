@@ -3,22 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão Financeira | Premium</title>
+    <title>Gestão Financeira</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="logo.png">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="dark-theme">
     <div id="app">
+        <div id="toast-container" class="toast-container"></div>
         <!-- Login Section -->
         <section id="login-section" class="full-screen-center">
             <div class="glass-card login-card animate-fade-in">
-                <h1>Acesso Restrito</h1>
+                <h1>Login</h1>
                 <form id="login-form">
                     <div class="input-group">
-                        <label for="username">Usuário / E-mail</label>
+                        <label for="username">Usuário</label>
                         <input type="text" id="username" required placeholder="Digite seu usuário ou e-mail">
                     </div>
                     <div class="input-group">
@@ -30,7 +32,7 @@
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-dim);">
                             <input type="checkbox"> Lembre-me
                         </label>
-                        <a href="#" style="color: var(--accent-color); text-decoration: none;">Perdeu sua senha?</a>
+                        <a href="#" id="forgot-password-link" style="color: var(--accent-color); text-decoration: none;">Perdeu sua senha?</a>
                     </div>
 
                     <button type="submit" class="btn-primary">Acessar Conta</button>
@@ -43,27 +45,28 @@
         <section id="main-section" style="display: none;">
             <!-- Mobile Header (Visible only on mobile via CSS) -->
             <div class="mobile-header">
-                <div class="logo-icon">GF</div>
+                <img src="logo.png" alt="Logo" class="logo-img">
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div class="mobile-avatar" id="mobile-avatar-initials">?</div>
-                    <button id="mobile-logout-btn" class="btn-text" style="padding: 0; color: white; font-size: 1.2rem;">🚪 Sair</button>
+                    <button id="mobile-logout-btn" class="btn-text">Sair</button>
                 </div>
             </div>
             
             <nav class="sidebar">
                 <div class="logo">
-                    <div class="logo-icon">GF</div>
+                    <img src="logo.png" alt="Logo" class="logo-img">
                 </div>
                 <div class="user-profile">
-                    <div class="user-avatar" id="user-avatar-initials">?</div>
                     <div class="user-info">
                         <p id="user-name-display">Carregando...</p>
                         <span id="user-role-badge" style="display: none;">Membro</span>
                     </div>
                 </div>
                 <ul class="nav-links">
-                    <li class="active" data-target="dashboard"><span class="icon">📊</span> Dashboard</li>
-                    <li data-target="people"><span class="icon">👥</span> Membros</li>
+                    <li data-target="dashboard"><span class="icon"></span> Dashboard</li>
+                    <li data-target="mensalidade"><span class="icon"></span> Mensalidade</li>
+                    <li data-target="events"><span class="icon"></span> Eventos</li>
+                    <li data-target="people"><span class="icon"></span> Membros</li>
+                    <li data-target="reports"><span class="icon"></span> Relatórios</li>
                 </ul>
                 <div class="nav-footer">
                     <button id="logout-btn" class="btn-text">Sair</button>
@@ -72,12 +75,42 @@
 
             <main class="content">
                 <header class="top-bar">
-                    <h2 id="page-title">Dashboard de Mensalidades</h2>
-                    <div class="year-selector">
-                        <select id="year-select">
-                            <option value="2026">2026</option>
-                            <option value="2025">2025</option>
-                        </select>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <button id="sidebar-toggle" class="btn-text" style="font-size: 1.5rem; color: var(--text-color);">☰</button>
+                        <h2 id="page-title">Dashboard de Mensalidades</h2>
+                    </div>
+                    <div class="header-actions">
+                        <div class="notification-container" id="notification-trigger">
+                            <div class="notification-bell">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20" fill="currentColor">
+                                    <path d="M320 64C306.7 64 296 74.7 296 88L296 97.7C214.6 109.3 152 179.4 152 264L152 278.5C152 316.2 142 353.2 123 385.8L101.1 423.2C97.8 429 96 435.5 96 442.2C96 463.1 112.9 480 133.8 480L506.2 480C527.1 480 544 463.1 544 442.2C544 435.5 542.2 428.9 538.9 423.2L517 385.7C498 353.1 488 316.1 488 278.4L488 263.9C488 179.3 425.4 109.2 344 97.6L344 87.9C344 74.6 333.3 63.9 320 63.9zM488.4 432L151.5 432L164.4 409.9C187.7 370 200 324.6 200 278.5L200 264C200 197.7 253.7 144 320 144C386.3 144 440 197.7 440 264L440 278.5C440 324.7 452.3 370 475.5 409.9L488.4 432zM252.1 528C262 556 288.7 576 320 576C351.3 576 378 556 387.9 528L252.1 528z"/>
+                                </svg>
+                                <span class="notification-badge" id="notification-badge">0</span>
+                            </div>
+                            <div class="notification-dropdown" id="notification-dropdown">
+                                <div class="notification-header">
+                                    <h4>Notificações</h4>
+                                    <button class="btn-link" id="mark-all-read">Limpar Tudo</button>
+                                </div>
+                                <div class="notification-list" id="notification-list">
+                                    <!-- Notifications populated by JS -->
+                                    <div class="notification-empty">Não há novas notificações</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="people-actions" style="display: none; gap: 0.8rem; align-items: center;">
+                            <button id="import-btn" class="btn-primary btn-small">Importar Planilha</button>
+                            <button id="add-person-btn" class="btn-primary btn-small">Novo Membro</button>
+                        </div>
+                        <div id="events-actions" style="display: none; gap: 0.8rem; align-items: center;">
+                            <button id="add-event-btn" class="btn-primary btn-small">Novo Evento</button>
+                            <button id="add-participants-btn" class="btn-primary btn-small" style="background: black; display: none;">Adicionar Membros</button>
+                        </div>
+                        <div class="year-selector">
+                            <select id="year-select">
+                                <option value="2026">2026</option>
+                            </select>
+                        </div>
                     </div>
                 </header>
 
@@ -108,7 +141,10 @@
                             <canvas id="barChart"></canvas>
                         </div>
                     </div>
+                </div>
 
+                <!-- Mensalidade Page -->
+                <div id="mensalidade-page" class="tab-content" style="display: none;">
                     <div class="glass-card table-container">
                         <table id="payments-table">
                             <thead>
@@ -116,21 +152,56 @@
                                     <th>Membro</th>
                                     <th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th><th>Jun</th>
                                     <th>Jul</th><th>Ago</th><th>Set</th><th>Out</th><th>Nov</th><th>Dez</th>
+                                    <th>Total</th>
                                 </tr>
                             </thead>
                             <tbody id="payments-body">
                                 <!-- Data populated by JS -->
                             </tbody>
+                            <tfoot id="payments-footer">
+                                <!-- Totals populated by JS -->
+                            </tfoot>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Events Page -->
+                <div id="events-page" class="tab-content" style="display: none;">
+                    <div id="events-master-view">
+                        <div class="events-grid" id="events-list">
+                            <!-- Events cards populated by JS -->
+                        </div>
+                    </div>
+
+                    <div id="events-detail-view" style="display: none;">
+                        <button id="back-to-events" class="btn-text" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--accent-color);">
+                            ← Voltar para Todos os Eventos
+                        </button>
+                        <div class="glass-card table-container">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                                <h4 id="detail-event-title">Nome do Evento</h4>
+                            </div>
+                            <table id="event-detail-table">
+                                <thead>
+                                    <tr>
+                                        <th>Membro</th>
+                                        <th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th><th>Jun</th>
+                                        <th>Jul</th><th>Ago</th><th>Set</th><th>Out</th><th>Nov</th><th>Dez</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="event-detail-body">
+                                    <!-- Data populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
                 <!-- People Page -->
                 <div id="people-page" class="tab-content" style="display: none;">
-                    <div class="action-bar" style="gap: 1rem;">
+                    <div class="action-bar" style="display: none;">
                         <input type="file" id="import-input" accept=".xlsx, .xls, .csv" style="display: none;">
-                        <button id="import-btn" class="btn-primary" style="background: #222; border: 1px solid #444; width: auto;">📊 Importar Planilha</button>
-                        <button id="add-person-btn" class="btn-primary" style="width: auto;">+ Novo Membro</button>
                     </div>
                     <div class="glass-card list-container">
                         <table id="people-table">
@@ -147,6 +218,17 @@
                                 <!-- Data populated by JS -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Reports Page -->
+                <div id="reports-page" class="tab-content" style="display: none;">
+                    <div class="glass-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem; text-align: center;">
+                        <div style="margin-bottom: 2rem;">
+                            <h3 style="color: var(--accent-color); margin-bottom: 0.5rem; font-size: 1.8rem;">Central de Relatórios</h3>
+                            <p style="color: var(--text-dim);">Gere extratos detalhados de mensalidades, membros ou eventos.</p>
+                        </div>
+                        <button id="open-report-selector-btn" class="btn-primary" style="max-width: 300px; background: black; color: white; padding: 1.2rem 2rem; font-weight: 700;">Gerar Novo Relatório</button>
                     </div>
                 </div>
             </main>
@@ -171,12 +253,34 @@
                         <label for="receipt">Comprovante (PNG, JPG, PDF) - Opcional</label>
                         <input type="file" id="receipt" accept="image/*,.pdf">
                         <div id="view-receipt-container" style="margin-top: 0.5rem; display: none;">
-                            <a href="#" id="view-receipt-btn" target="_blank" style="color: var(--accent-color); font-size: 0.9rem; text-decoration: none;">📄 Ver Comprovante Atual</a>
+                            <a href="#" id="view-receipt-btn" target="_blank" style="color: var(--accent-color); font-size: 0.9rem; text-decoration: none;">Ver Comprovante Atual</a>
                         </div>
                     </div>
-                    <button type="submit" class="btn-primary" id="save-payment-btn">Salvar Pagamento</button>
-                    <button type="button" id="delete-payment-btn" class="btn-danger" style="display: none; width: 100%; margin-top: 1rem;">Excluir Pagamento</button>
                     <div id="payment-error" class="error-msg"></div>
+
+                    <!-- Member View: Rejection Reason -->
+                    <div id="rejection-reason-container" class="reason-display" style="display: none;">
+                        <h6>Correção Necessária</h6>
+                        <p id="rejection-reason-text"></p>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="save-payment-btn">Salvar Pagamento</button>
+                    
+                    <!-- Admin Actions -->
+                    <div id="admin-payment-actions" class="modal-footer-actions" style="display: none;">
+                        <button type="button" id="approve-payment-btn" class="btn-primary" style="flex: 1; background-color: #4caf50;">Aprovar</button>
+                        <button type="button" id="reject-trigger-btn" class="btn-danger" style="flex: 1;">Rejeitar</button>
+                    </div>
+
+                    <!-- Admin: Rejection Reason Form -->
+                    <div id="rejection-form" class="rejection-form">
+                        <label for="reject-reason">Motivo da Rejeição</label>
+                        <textarea id="reject-reason" placeholder="Descreva por que o pagamento foi recusado e o que deve ser corrigido..."></textarea>
+                        <button type="button" id="confirm-reject-btn" class="btn-danger" style="width: 100%;">Confirmar Rejeição</button>
+                        <button type="button" id="cancel-reject-btn" class="btn-text" style="width: 100%; margin-top: 0.5rem;">Voltar</button>
+                    </div>
+
+                    <button type="button" id="delete-payment-btn" class="btn-danger" style="display: none; width: 100%; margin-top: 1rem;">Excluir Pagamento Permanentemente</button>
                 </form>
             </div>
         </div>
@@ -211,7 +315,7 @@
                         <label for="p-cpf">CPF (Opcional)</label>
                         <input type="text" id="p-cpf" maxlength="14">
                     </div>
-                    <div class="credentials-section" id="admin-only-credentials" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-color);">
+                    <div class="credentials-section" id="admin-only-credentials" style="margin-top: 1rem; padding-top: 1rem;">
                         <div class="input-group">
                             <label for="u-username">Usuário de Acesso</label>
                             <input type="text" id="u-username">
@@ -223,12 +327,260 @@
                     </div>
                     <div class="modal-actions">
                         <button type="submit" class="btn-primary">Salvar</button>
-                        <button type="button" id="delete-member-btn" class="btn-danger" style="display: none;">Excluir Membro</button>
+                        <button type="button" id="delete-member-btn" class="btn-danger" style="display: none; width: 100%; margin-top: 1rem;">Excluir Membro Permanente</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Event Modal (Admin Only) -->
+        <div id="event-create-modal" class="modal">
+            <div class="glass-card modal-content">
+                <span class="close-modal">&times;</span>
+                <h3>Novo Evento</h3>
+                <form id="event-form">
+                    <div class="input-group">
+                        <label for="event-name">Nome do Evento</label>
+                        <input type="text" id="event-name" required placeholder="Ex: Campori">
+                    </div>
+                    <div class="input-group">
+                        <label for="event-date">Data (Opcional)</label>
+                        <input type="date" id="event-date">
+                    </div>
+                    <div class="input-group">
+                        <label for="event-desc">Descrição (Opcional)</label>
+                        <textarea id="event-desc" style="width: 100%; min-height: 80px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;"></textarea>
+                    </div>
+                    <div class="participants-selector" style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                        <h4 style="margin-bottom: 1rem;">Participantes</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.8rem;">
+                            <button type="button" id="ev-clear-all" class="btn-primary" style="background: var(--error-color); color: white; padding: 0.5rem; font-size: 0.9rem; border: none; border-radius: 4px; cursor: pointer;">Limpar Seleção</button>
+                            <select id="ev-unit-filter" style="background: #1a1a1a; color: white; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.5rem; cursor: pointer; font-size: 0.9rem; text-align: center; text-align-last: center;">
+                                <option value="">Selecionar</option>
+                                <option value="ALL">Todos os Membros</option>
+                            </select>
+                        </div>
+                        <div class="input-group" style="margin-bottom: 1rem;">
+                            <input type="text" id="ev-member-search" placeholder="Pesquisar membro..." style="width: 100%; padding: 0.6rem; background: white; border: 1px solid var(--border-color); border-radius: 4px; color: black; font-size: 0.9rem;">
+                        </div>
+                        <div id="event-participants-list" class="checklist-container" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem;">
+                            <!-- Checkboxes populated by JS -->
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary" style="margin-top: 1.5rem;">Criar Evento</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Event Payment Modal -->
+        <div id="event-payment-modal" class="modal">
+            <div class="glass-card modal-content">
+                <span class="close-modal">&times;</span>
+                <h3 id="ep-modal-title">Pagar Evento</h3>
+                <form id="event-payment-form">
+                    <input type="hidden" id="ep-event-id">
+                    <div class="info-tag">
+                        Evento: <span id="ep-event-name"></span>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                        <div class="input-group" style="flex: 1;">
+                            <label for="ep-month">Mês</label>
+                            <select id="ep-month">
+                                <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+                                <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+                                <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+                                <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="input-group" style="flex: 1;">
+                            <label for="ep-year">Ano</label>
+                            <select id="ep-year">
+                                <option value="2026">2026</option>
+                                <option value="2027">2027</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="ep-amount">Valor (R$)</label>
+                        <input type="number" id="ep-amount" step="0.01" required placeholder="0,00">
+                    </div>
+                    <div class="input-group">
+                        <label for="ep-receipt">Comprovante</label>
+                        <input type="file" id="ep-receipt" accept="image/*,.pdf">
+                        <div id="ep-view-receipt-container" style="margin-top: 0.5rem; display: none;">
+                            <a href="#" id="ep-view-receipt-btn" target="_blank" style="color: var(--accent-color); font-size: 0.9rem; text-decoration: none;">Ver Comprovante Atual</a>
+                        </div>
+                    </div>
+                    <div id="ep-rejection-container" class="reason-display" style="display: none; margin-bottom: 1rem;">
+                        <h6>Correção Necessária</h6>
+                        <p id="ep-rejection-text"></p>
+                    </div>
+
+                    <div id="ep-main-actions">
+                        <button type="submit" id="ep-save-btn" class="btn-primary" style="background: black; color: white; width: 100%; padding: 0.8rem; border-radius: 4px; font-weight: 700; border: none; cursor: pointer; margin-bottom: 0.5rem;">Enviar Pagamento</button>
+                        <button type="button" id="ep-delete-btn" class="btn-primary" style="background: var(--error-color); color: white; width: 100%; padding: 0.8rem; border-radius: 4px; font-weight: 700; border: none; cursor: pointer; display: none;">Remover Pagamento</button>
+                    </div>
+
+                    <div id="ep-admin-actions" class="modal-footer-actions" style="display: none; gap: 0.5rem; margin-top: 0.5rem;">
+                        <button type="button" id="ep-approve-btn" class="btn-primary" style="flex: 1; background-color: #4caf50;">Aprovar</button>
+                        <button type="button" id="ep-reject-trigger-btn" class="btn-danger" style="flex: 1;">Rejeitar</button>
+                    </div>
+
+                    <div id="ep-rejection-form" class="rejection-form">
+                        <textarea id="ep-reject-reason" placeholder="Motivo da rejeição..."></textarea>
+                        <button type="button" id="ep-confirm-reject-btn" class="btn-danger" style="width: 100%;">Confirmar Rejeição</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+
+    <!-- Add Participants Modal -->
+    <div id="event-participants-modal" class="modal">
+        <div class="glass-card modal-content" style="max-width: 500px;">
+            <span class="close-modal">&times;</span>
+            <h3 style="color: var(--accent-color); margin-bottom: 0.5rem;">Adicionar Membros ao Evento</h3>
+            <p style="margin-bottom: 1.5rem; color: var(--text-dim); font-size: 0.9rem;">Selecione os novos membros que deseja incluir neste evento.</p>
+            
+            <div class="input-group" style="margin-bottom: 1rem;">
+                <input type="text" id="add-member-search" placeholder="Pesquisar membro..." style="width: 100%; padding: 0.6rem; background: white; border: 1px solid var(--border-color); border-radius: 4px; color: black; font-size: 0.9rem;">
+            </div>
+            
+            <div id="add-participants-list" class="checklist-container" style="max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem; margin-bottom: 1.5rem;">
+                <!-- Populated by JS -->
+            </div>
+            
+            <button id="save-new-participants-btn" class="btn-primary" style="width: 100%; background: black; color: white; padding: 1rem; font-weight: 700;">Salvar Selecionados</button>
+        </div>
+    </div>
+
+    <!-- Report Selector Modal -->
+    <div id="report-selector-modal" class="modal">
+        <div class="glass-card modal-content" style="max-width: 500px;">
+            <span class="close-modal">&times;</span>
+            <h3 style="margin-bottom: 1.5rem; color: var(--accent-color);">O que você deseja gerar?</h3>
+            
+            <div class="input-group">
+                <label for="report-type-select">Tipo de Relatório</label>
+                <select id="report-type-select">
+                    <option value="general">Mensalidades Geral (Ano)</option>
+                    <option value="member">Individual por Membro</option>
+                    <option value="event">Específico de Evento</option>
+                </select>
+            </div>
+
+            <!-- Field for Member -->
+            <div id="report-field-member" class="input-group" style="display: none;">
+                <label for="report-member-select">Selecione o Membro</label>
+                <select id="report-member-select">
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+
+            <!-- Fields for Event -->
+            <div id="report-fields-event" style="display: none;">
+                <div class="input-group">
+                    <label for="report-event-select">Selecione o Evento</label>
+                    <select id="report-event-select">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="report-event-filter">Agrupamento</label>
+                    <select id="report-event-filter">
+                        <option value="all">Lista Completa de Participantes</option>
+                        <option value="unit">Resumo por Unidade</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="confirm-generate-report-btn" class="btn-primary" style="width: 100%; margin-top: 1.5rem; background: black; color: white; padding: 1rem; font-weight: 700;">Gerar Agora</button>
+        </div>
+    </div>
+
+    <!-- Report Preview Modal -->
+    <div id="report-modal" class="modal">
+        <div class="glass-card modal-content" style="max-width: 900px; height: 90vh; display: flex; flex-direction: column;">
+            <span class="close-modal">&times;</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-right: 2rem;">
+                <h3 style="color: var(--accent-color); margin: 0;">Visualização do Relatório</h3>
+                <button class="btn-primary" onclick="window.print()" style="background: black; color: white; padding: 0.6rem 1.2rem;">Imprimir / Salvar PDF</button>
+            </div>
+            
+            <div id="report-printable" class="report-canvas" style="flex: 1; overflow-y: auto; background: white; color: black; padding: 3rem; border-radius: 8px; border: 1px solid #ddd;">
+                <!-- Generated Report HTML -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Back to Top Button -->
+    <button id="back-to-top" title="Voltar ao topo">↑</button>
+
+    <!-- Custom Confirm Modal -->
+    <div id="confirm-modal" class="modal">
+        <div class="glass-card modal-content" style="max-width: 400px; text-align: center;">
+            <h3 id="confirm-title" style="color: var(--accent-color); margin-bottom: 1rem;">Confirmar Ação</h3>
+            <p id="confirm-message" style="margin-bottom: 2rem; line-height: 1.5; color: var(--text-dim);"></p>
+            <div style="display: flex; gap: 1rem;">
+                <button id="confirm-yes" class="btn-primary" style="flex: 1; background: var(--accent-color);">Confirmar</button>
+                <button id="confirm-no" class="btn-secondary" style="flex: 1; background: var(--border-color); color: var(--text-color); border: none; padding: 0.8rem; border-radius: 6px; cursor: pointer;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recover Password Modal -->
+    <div id="recover-modal" class="modal">
+        <div class="modal-content glass-card animate-fade-in" style="max-width: 400px;">
+            <span class="close-modal" id="close-recover-modal">&times;</span>
+            <h2 style="margin-bottom: 1.5rem; color: var(--accent-color);">Recuperar Senha</h2>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 1.5rem;">
+                Informe seu usuário e CPF para validar sua identidade e definir uma nova senha.
+            </p>
+            <form id="recover-form">
+                <div class="input-group">
+                    <label>Usuário</label>
+                    <input type="text" id="recover-username" required placeholder="Digite seu usuário">
+                </div>
+                <div class="input-group">
+                    <label>CPF</label>
+                    <input type="text" id="recover-cpf" required placeholder="Digite seu CPF (apenas números)">
+                </div>
+                <div class="input-group">
+                    <label>Nova Senha</label>
+                    <input type="password" id="recover-new-password" required placeholder="Mín. 5 chars, 1 num, 1 especial">
+                </div>
+                <button type="submit" class="btn-primary" style="margin-top: 1rem;">Redefinir Senha</button>
+                <div id="recover-error" class="error-msg"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Mandatory Password Change Modal -->
+    <div id="force-change-modal" class="modal" style="z-index: 10001; background: rgba(0,0,0,0.9);">
+        <div class="modal-content glass-card animate-fade-in" style="max-width: 450px;">
+            <h2 style="margin-bottom: 1.5rem; color: var(--accent-color);">Segurança Obrigatória</h2>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 1.5rem;">
+                Por segurança, você deve trocar sua senha no primeiro acesso. <br><br>
+                <strong>Requisitos:</strong><br>
+                • Mínimo de 5 caracteres<br>
+                • Pelo menos 1 número<br>
+                • Pelo menos 1 caractere especial (!@#$, etc)
+            </p>
+            <form id="force-change-form">
+                <div class="input-group">
+                    <label>Nova Senha</label>
+                    <input type="password" id="force-new-password" required placeholder="Digite a nova senha">
+                </div>
+                <div class="input-group">
+                    <label>Confirmar Nova Senha</label>
+                    <input type="password" id="force-confirm-password" required placeholder="Confirme a nova senha">
+                </div>
+                <button type="submit" class="btn-primary" style="margin-top: 1rem;">Atualizar Senha e Entrar</button>
+                <div id="force-change-error" class="error-msg"></div>
+            </form>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>

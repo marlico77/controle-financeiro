@@ -39,190 +39,338 @@ const authenticateToken = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) return res.sendStatus(401);
 
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) {
         console.error(`[AUTH] Verificação falhou: ${err.message}`);
         return res.status(403).json({ error: 'Sessão inválida', details: err.message });
     }
     
-    req.user = {
-        id: decoded.id,
-        username: decoded.username,
-        role: decoded.role || 'member',
-        personId: decoded.personId ? parseInt(decoded.personId) : null
-    };
+    try {
+        // Check mandatory password change in DB for security
+        const result = await db.query('SELECT must_change_password, username, role, person_id FROM users WHERE id = $1', [decoded.id]);
+        const dbUser = result.rows[0];
+        
+        if (!dbUser) return res.status(403).json({ error: 'Usuário não encontrado' });
 
-    console.log(`[AUTH] Usuário: ${req.user.username} | Role: ${req.user.role} | ID: ${req.user.personId}`);
-    next();
+        // Block access if password change is required (except for auth status and change-password)
+        const allowedPaths = ['/api/auth/change-password', '/api/auth/status'];
+        if (dbUser.must_change_password && !allowedPaths.includes(req.path)) {
+            return res.status(403).json({ error: 'Alteração de senha obrigatória', mustChangePassword: true });
+        }
+
+        req.user = {
+            id: decoded.id,
+            username: dbUser.username,
+            role: dbUser.role || 'member',
+            personId: dbUser.person_id ? parseInt(dbUser.person_id) : null
+        };
+
+        console.log(`[AUTH] Usuário: ${req.user.username} | Role: ${req.user.role} | ID: ${req.user.personId}`);
+        next();
+    } catch (err) {
+        console.error('Auth DB error:', err);
+        res.status(500).json({ error: 'Erro ao verificar autenticação' });
+    }
   });
 };
 
 // --- Sync Members to Users ---
-const syncMemberUsers = () => {
-    const people = db.prepare('SELECT id, name FROM people').all();
-    const insertUser = db.prepare('INSERT OR IGNORE INTO users (username, password_hash, role, person_id) VALUES (?, ?, ?, ?)');
-    const salt = bcrypt.genSaltSync(10);
-    const defaultHash = bcrypt.hashSync('tribo@2026', salt);
+const syncMemberUsers = async () => {
+    try {
+        const peopleResult = await db.query('SELECT id, name FROM people');
+        const people = peopleResult.rows;
+        
+        const salt = bcrypt.genSaltSync(10);
+        const defaultHash = bcrypt.hashSync('tribo@2026', salt);
 
-    people.forEach(p => {
-        // Generate username: first.last
-        const parts = p.name.trim().toLowerCase().split(/\s+/);
-        let username;
-        if (parts.length >= 2) {
-            username = `${parts[0]}.${parts[parts.length - 1]}`;
-        } else {
-            username = parts[0];
-        }
+        for (const p of people) {
+            // Generate username: first.last
+            const parts = p.name.trim().toLowerCase().split(/\s+/);
+            let username = parts.length >= 2 ? `${parts[0]}.${parts[parts.length - 1]}` : parts[0];
 
-        // Check if person already has a user
-        const existing = db.prepare('SELECT id FROM users WHERE person_id = ?').get(p.id);
-        if (!existing) {
-            try {
-                insertUser.run(username, defaultHash, 'member', p.id);
-            } catch (err) {
-                // If username exists, try adding ID
-                if (err.message.includes('UNIQUE')) {
-                    insertUser.run(`${username}${p.id}`, defaultHash, 'member', p.id);
+            // Check if person already has a user
+            const existing = await db.query('SELECT id FROM users WHERE person_id = $1', [p.id]);
+            if (existing.rows.length === 0) {
+                try {
+                    await db.query(
+                        'INSERT INTO users (username, password_hash, role, person_id) VALUES ($1, $2, $3, $4) ON CONFLICT (username) DO NOTHING',
+                        [username, defaultHash, 'member', p.id]
+                    );
+                } catch (err) {
+                    // Fallback username with ID if collision
+                    await db.query(
+                        'INSERT INTO users (username, password_hash, role, person_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
+                        [`${username}${p.id}`, defaultHash, 'member', p.id]
+                    );
                 }
             }
         }
-    });
+    } catch (err) {
+        console.error('Error syncing members:', err);
+    }
 };
 syncMemberUsers();
 
 // --- AUTH API ---
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body || {};
+  try {
+    const result = await db.query('SELECT * FROM users WHERE username = $1', [username]);
+    const user = result.rows[0];
 
-  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-    return res.status(401).json({ error: 'Credenciais inválidas' });
+    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+      return res.status(401).json({ error: 'Credenciais inválidas' });
+    }
+
+    const role = user.role || 'member'; // Fallback to member
+    const personId = user.person_id || null;
+
+    const token = jwt.sign({ 
+      id: user.id, 
+      username: user.username, 
+      role: role, 
+      personId: personId 
+    }, JWT_SECRET, { expiresIn: '12h' });
+
+    console.log(`Login Successful: ${user.username} as ${role}`);
+
+    res.json({ 
+      token, 
+      role: role, 
+      username: user.username,
+      personId: personId,
+      mustChangePassword: !!user.must_change_password
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Erro no servidor durante login' });
   }
+});
 
-  const role = user.role || 'member'; // Fallback to member
-  const personId = user.person_id || null;
+app.get('/api/auth/status', authenticateToken, async (req, res) => {
+    try {
+        const result = await db.query('SELECT must_change_password, role, person_id FROM users WHERE id = $1', [req.user.id]);
+        const user = result.rows[0];
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+        
+        res.json({
+            mustChangePassword: !!user.must_change_password,
+            role: user.role,
+            personId: user.person_id
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao verificar status' });
+    }
+});
 
-  const token = jwt.sign({ 
-    id: user.id, 
-    username: user.username, 
-    role: role, 
-    personId: personId 
-  }, JWT_SECRET, { expiresIn: '12h' });
+app.post('/api/auth/reset-lost-password', async (req, res) => {
+    const { username, cpf, newPassword } = req.body || {};
+    
+    if (!username || !cpf || !newPassword) {
+        return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
+    }
 
-  console.log(`Login Successful: ${user.username} as ${role}`);
+    // Complexity check
+    const complexityRegex = /^(?=.*[0-9])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{5,}$/;
+    if (!complexityRegex.test(newPassword)) {
+        return res.status(400).json({ error: 'A senha deve ter no mínimo 5 caracteres, incluindo 1 letra maiúscula, 1 número e 1 caractere especial.' });
+    }
 
-  res.json({ 
-    token, 
-    role: role, 
-    username: user.username,
-    personId: personId 
-  });
+    try {
+        const result = await db.query(`
+            SELECT u.id 
+            FROM users u
+            JOIN people p ON u.person_id = p.id
+            WHERE u.username = $1 AND p.cpf = $2
+        `, [username, cpf]);
+
+        const user = result.rows[0];
+        if (!user) {
+            return res.status(401).json({ error: 'Usuário ou CPF incorretos' });
+        }
+
+        const salt = bcrypt.genSaltSync(10);
+        const hash = bcrypt.hashSync(newPassword, salt);
+        
+        await db.query('UPDATE users SET password_hash = $1, must_change_password = FALSE WHERE id = $2', [hash, user.id]);
+        
+        res.json({ success: true, message: 'Senha redefinida com sucesso' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro interno no servidor' });
+    }
+});
+
+app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
+    const { newPassword } = req.body || {};
+    
+    if (!newPassword) {
+        return res.status(400).json({ error: 'Nova senha é obrigatória' });
+    }
+
+    const complexityRegex = /^(?=.*[0-9])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{5,}$/;
+    if (!complexityRegex.test(newPassword)) {
+        return res.status(400).json({ error: 'A senha deve ter no mínimo 5 caracteres, incluindo 1 letra maiúscula, 1 número e 1 caractere especial.' });
+    }
+
+    try {
+        const salt = bcrypt.genSaltSync(10);
+        const hash = bcrypt.hashSync(newPassword, salt);
+        
+        await db.query('UPDATE users SET password_hash = $1, must_change_password = FALSE WHERE id = $2', [hash, req.user.id]);
+        
+        res.json({ success: true, message: 'Senha alterada com sucesso' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro interno no servidor' });
+    }
+});
+
+// --- NOTIFICATIONS API ---
+const createNotification = async (userId, title, message, type = 'info', relatedId = null, relatedType = null) => {
+    try {
+        await db.query('INSERT INTO notifications (user_id, title, message, type, related_id, related_type) VALUES ($1, $2, $3, $4, $5, $6)', 
+          [userId, title, message, type, relatedId, relatedType]);
+    } catch (err) {
+        console.error('Error creating notification:', err);
+    }
+};
+
+const monthNames = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
+
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20', [req.user.id]);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao buscar notificações' });
+    }
+});
+
+app.patch('/api/notifications/read-all', authenticateToken, async (req, res) => {
+    try {
+        await db.query('UPDATE notifications SET is_read = TRUE WHERE user_id = $1', [req.user.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao atualizar notificações' });
+    }
 });
 
 // --- PEOPLE API ---
-app.get('/api/people', authenticateToken, (req, res) => {
+app.get('/api/people', authenticateToken, async (req, res) => {
   try {
     if (req.user.role === 'admin') {
-      const people = db.prepare(`
+      const result = await db.query(`
         SELECT p.*, u.username 
         FROM people p 
         LEFT JOIN users u ON p.id = u.person_id 
         ORDER BY p.name ASC
-      `).all();
+      `);
       
-      console.log(`[DEBUG] Sending ${people.length} people. First entry username: ${people[0]?.username}`);
-      return res.json(people);
+      console.log(`[DEBUG] Sending ${result.rows.length} people.`);
+      return res.json(result.rows);
     }
     
     // STRICT MEMBER ACCESS
     if (!req.user.personId) {
-        console.warn(`[SECURITY] Member ${req.user.username} tried to fetch people without personId`);
         return res.json([]);
     }
     
-    const person = db.prepare(`
+    const result = await db.query(`
         SELECT p.*, u.username 
         FROM people p 
         LEFT JOIN users u ON p.id = u.person_id 
-        WHERE p.id = ?
-    `).all(); // Using all to maintain array format for frontend
+        WHERE p.id = $1
+    `, [req.user.personId]);
     
-    console.log(`[DEBUG] Sending personal data for personId ${req.user.personId}. Username: ${person[0]?.username}`);
-    res.json(person);
+    res.json(result.rows);
   } catch (err) {
     console.error('API Error /api/people:', err);
     res.status(500).json({ error: 'Erro ao buscar dados' });
   }
 });
 
-app.post('/api/people', authenticateToken, (req, res) => {
-  const { name, responsible, birth_date, cpf } = req.body;
+app.post('/api/people', authenticateToken, async (req, res) => {
+  const { name, responsible, birth_date, cpf } = req.body || {};
   if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
 
-  const info = db.prepare('INSERT INTO people (name, responsible, birth_date, cpf) VALUES (?, ?, ?, ?)')
-    .run(name, responsible || null, birth_date || null, cpf || null);
-  
-  res.json({ id: info.lastInsertRowid, name });
+  try {
+      const result = await db.query('INSERT INTO people (name, responsible, birth_date, cpf) VALUES ($1, $2, $3, $4) RETURNING id', 
+        [name, responsible || null, birth_date || null, cpf || null]);
+      res.json({ id: result.rows[0].id, name });
+  } catch (err) {
+      res.status(500).json({ error: 'Erro ao criar membro' });
+  }
 });
 
-app.post('/api/people/import', authenticateToken, upload.single('file'), (req, res) => {
-  console.log('Import request received');
+app.post('/api/people/import', authenticateToken, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
 
   try {
     const workbook = xlsx.readFile(req.file.path);
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = xlsx.utils.sheet_to_json(worksheet);
-    const insert = db.prepare('INSERT INTO people (name, unit) VALUES (?, ?)');
+    const data = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
     let count = 0;
     
-    const transaction = db.transaction((items) => {
-      for (const item of items) {
-        const keys = Object.keys(item);
-        const nameKey = keys.find(k => k.trim().toUpperCase() === 'NOME');
-        const unitKey = keys.find(k => k.trim().toUpperCase() === 'UNIDADE');
-        
-        const name = nameKey ? item[nameKey] : null;
-        const unit = unitKey ? item[unitKey] : null;
-        
-        if (name) {
-          insert.run(name.toString().trim(), unit ? unit.toString().trim() : null);
-          count++;
+    await db.query('BEGIN');
+    try {
+        for (const item of data) {
+            const keys = Object.keys(item);
+            const nameKey = keys.find(k => k.trim().toUpperCase() === 'NOME');
+            const unitKey = keys.find(k => k.trim().toUpperCase() === 'UNIDADE');
+            
+            const name = nameKey ? item[nameKey] : null;
+            const unit = unitKey ? item[unitKey] : null;
+            
+            if (name) {
+                await db.query('INSERT INTO people (name, unit) VALUES ($1, $2)', [name.toString().trim(), unit ? unit.toString().trim() : null]);
+                count++;
+            }
         }
-      }
-    });
-
-    transaction(data);
-    res.json({ success: true, count });
+        await db.query('COMMIT');
+        res.json({ success: true, count });
+    } catch (innerErr) {
+        await db.query('ROLLBACK');
+        throw innerErr;
+    }
   } catch (err) {
     console.error('Import Error:', err);
-    res.status(500).json({ error: 'Erro ao processar planilha. Verifique se as colunas NOME e UNIDADE existem.' });
+    res.status(500).json({ error: 'Erro ao processar planilha.' });
   }
 });
 
-// --- PAYMENTS API ---
-app.get('/api/payments', authenticateToken, (req, res) => {
+app.get('/api/payments', authenticateToken, async (req, res) => {
   const { year } = req.query;
   const targetYear = parseInt(year) || new Date().getFullYear();
 
   try {
     if (req.user.role === 'admin') {
-      const payments = db.prepare('SELECT * FROM payments WHERE year = ?').all(targetYear);
-      return res.json(payments);
+      const result = await db.query('SELECT * FROM payments WHERE year = $1', [targetYear]);
+      return res.json(result.rows);
     }
 
-    // Members: strictly filter by personId
     if (!req.user.personId) return res.json([]);
-    const payments = db.prepare('SELECT * FROM payments WHERE person_id = ? AND year = ?')
-      .all(req.user.personId, targetYear);
-    res.json(payments);
+    const result = await db.query('SELECT * FROM payments WHERE person_id = $1 AND year = $2', [req.user.personId, targetYear]);
+    res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar pagamentos' });
   }
 });
 
-app.post('/api/payments', authenticateToken, upload.single('receipt'), (req, res) => {
+app.get('/api/payments/detail/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.sendStatus(403);
+    try {
+        const result = await db.query('SELECT * FROM payments WHERE id = $1', [req.params.id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Pagamento não encontrado' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao buscar detalhes' });
+    }
+});
+
+app.post('/api/payments', authenticateToken, upload.single('receipt'), async (req, res) => {
   const { person_id, month, year, amount } = req.body;
   const receipt_path = req.file ? req.file.path : null;
 
@@ -230,35 +378,108 @@ app.post('/api/payments', authenticateToken, upload.single('receipt'), (req, res
     return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
   }
 
-  // Upsert logic: check if exists
-  const existing = db.prepare('SELECT id, receipt_path FROM payments WHERE person_id = ? AND month = ? AND year = ?')
-    .get(person_id, month, year);
+  try {
+    const status = req.user.role === 'admin' ? 'approved' : 'pending';
 
-  if (existing) {
-    // Update
-    const finalReceipt = receipt_path || existing.receipt_path;
-    db.prepare('UPDATE payments SET amount = ?, receipt_path = ? WHERE id = ?')
-      .run(amount, finalReceipt, existing.id);
-    res.json({ id: existing.id, updated: true });
-  } else {
-    // Insert new
-    const info = db.prepare('INSERT INTO payments (person_id, month, year, amount, receipt_path) VALUES (?, ?, ?, ?, ?)')
-      .run(person_id, month, year, amount, receipt_path);
-    res.json({ id: info.lastInsertRowid });
+    const existingResult = await db.query('SELECT id, receipt_path, status FROM payments WHERE person_id = $1 AND month = $2 AND year = $3', [person_id, month, year]);
+    const existing = existingResult.rows[0];
+
+    if (existing) {
+        const finalReceipt = receipt_path || existing.receipt_path;
+        await db.query('UPDATE payments SET amount = $1, receipt_path = $2, status = $3, rejection_reason = NULL WHERE id = $4', [amount, finalReceipt, status, existing.id]);
+        
+        if (status === 'pending') {
+            const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
+            const personResult = await db.query("SELECT name FROM people WHERE id = $1", [person_id]);
+            const person = personResult.rows[0];
+            for (const admin of adminsResult.rows) {
+                await createNotification(admin.id, 'Novo Comprovante', `O membro ${person.name} atualizou um comprovante para o mês de ${monthNames[month-1]}.`, 'info', existing.id, 'monthly');
+            }
+        }
+        res.json({ id: existing.id, updated: true, status });
+    } else {
+        const insertResult = await db.query('INSERT INTO payments (person_id, month, year, amount, receipt_path, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id', [person_id, month, year, amount, receipt_path, status]);
+        const newId = insertResult.rows[0].id;
+        
+        if (status === 'pending') {
+            const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
+            const personResult = await db.query("SELECT name FROM people WHERE id = $1", [person_id]);
+            const person = personResult.rows[0];
+            for (const admin of adminsResult.rows) {
+                await createNotification(admin.id, 'Novo Comprovante', `O membro ${person.name} enviou um novo comprovante para o mês de ${monthNames[month-1]}.`, 'info', newId, 'monthly');
+            }
+        }
+        res.json({ id: newId, updated: false, status });
+    }
+  } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Erro ao salvar pagamento' });
   }
 });
 
+// Approval Endpoints
+app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.sendStatus(403);
+    
+    try {
+        const paymentResult = await db.query('SELECT person_id, month FROM payments WHERE id = $1', [req.params.id]);
+        const payment = paymentResult.rows[0];
+        if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
+
+        await db.query('UPDATE payments SET status = \'approved\', rejection_reason = NULL WHERE id = $1', [req.params.id]);
+        
+        // Notify Member
+        const userResult = await db.query('SELECT id FROM users WHERE person_id = $1', [payment.person_id]);
+        const userForMember = userResult.rows[0];
+        if (userForMember) {
+            await createNotification(userForMember.id, 'Pagamento Aprovado', `Seu pagamento do mês de ${monthNames[payment.month-1]} foi aprovado com sucesso!`, 'success');
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao aprovar pagamento' });
+    }
+});
+
+app.post('/api/payments/:id/reject', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.sendStatus(403);
+    const { reason } = req.body;
+    
+    try {
+        const paymentResult = await db.query('SELECT person_id, month FROM payments WHERE id = $1', [req.params.id]);
+        const payment = paymentResult.rows[0];
+        if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
+
+        await db.query('UPDATE payments SET status = \'rejected\', rejection_reason = $1 WHERE id = $2', [reason || 'Comprovante inválido', req.params.id]);
+        
+        // Notify Member
+        const userResult = await db.query('SELECT id FROM users WHERE person_id = $1', [payment.person_id]);
+        const userForMember = userResult.rows[0];
+        if (userForMember) {
+            await createNotification(userForMember.id, 'Pagamento Rejeitado', `Seu pagamento do mês de ${monthNames[payment.month-1]} foi rejeitado. Motivo: ${reason || 'Comprovante inválido'}. Por favor, corrija-o.`, 'error');
+        }
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao rejeitar pagamento' });
+    }
+});
+
 // Delete payment
-app.delete('/api/payments/:id', authenticateToken, (req, res) => {
+app.delete('/api/payments/:id', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.sendStatus(403);
-  db.prepare('DELETE FROM payments WHERE id = ?').run(req.params.id);
-  res.json({ success: true });
+  try {
+    await db.query('DELETE FROM payments WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao deletar pagamento' });
+  }
 });
 
 // Update person
-app.put('/api/people/:id', authenticateToken, (req, res) => {
+app.put('/api/people/:id', authenticateToken, async (req, res) => {
   try {
-    const { name, responsible, birth_date, cpf, unit, username, password } = req.body;
+    const { name, responsible, birth_date, cpf, unit, username, password } = req.body || {};
     const { id } = req.params;
     
     if (req.user.role !== 'admin' && parseInt(id) !== req.user.personId) {
@@ -268,25 +489,25 @@ app.put('/api/people/:id', authenticateToken, (req, res) => {
     if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
 
     // Update people table
-    const result = db.prepare('UPDATE people SET name = ?, responsible = ?, birth_date = ?, cpf = ?, unit = ? WHERE id = ?')
-      .run(name, responsible || null, birth_date || null, cpf || null, unit || null, id);
+    const updateResult = await db.query('UPDATE people SET name = $1, responsible = $2, birth_date = $3, cpf = $4, unit = $5 WHERE id = $6', 
+      [name, responsible || null, birth_date || null, cpf || null, unit || null, id]);
     
-    if (result.changes === 0) {
+    if (updateResult.rowCount === 0) {
       return res.status(404).json({ error: 'Membro não encontrado' });
     }
 
     // Update user credentials if admin
     if (req.user.role === 'admin' && username) {
-        const existingUser = db.prepare('SELECT id FROM users WHERE person_id = ?').get(id);
+        const userCheck = await db.query('SELECT id FROM users WHERE person_id = $1', [id]);
+        const existingUser = userCheck.rows[0];
         if (existingUser) {
             if (password) {
                 const salt = bcrypt.genSaltSync(10);
                 const hash = bcrypt.hashSync(password, salt);
-                db.prepare('UPDATE users SET username = ?, password_hash = ? WHERE id = ?')
-                  .run(username, hash, existingUser.id);
+                await db.query('UPDATE users SET username = $1, password_hash = $2 WHERE id = $3', 
+                  [username, hash, existingUser.id]);
             } else {
-                db.prepare('UPDATE users SET username = ? WHERE id = ?')
-                  .run(username, existingUser.id);
+                await db.query('UPDATE users SET username = $1 WHERE id = $2', [username, existingUser.id]);
             }
         }
     }
@@ -299,9 +520,292 @@ app.put('/api/people/:id', authenticateToken, (req, res) => {
 });
 
 // Delete person
-app.delete('/api/people/:id', authenticateToken, (req, res) => {
-  db.prepare('DELETE FROM people WHERE id = ?').run(req.params.id);
-  res.json({ success: true });
+app.delete('/api/people/:id', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.sendStatus(403);
+  try {
+    await db.query('DELETE FROM people WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao deletar membro' });
+  }
+});
+
+// --- EVENTS API ---
+app.get('/api/events', authenticateToken, async (req, res) => {
+    try {
+        if (req.user.role === 'admin') {
+            const result = await db.query('SELECT * FROM events ORDER BY date ASC');
+            return res.json(result.rows);
+        }
+
+        const result = await db.query(`
+            SELECT e.* FROM events e
+            JOIN event_participants ep ON e.id = ep.event_id
+            WHERE ep.person_id = $1
+            ORDER BY e.date ASC
+        `, [req.user.personId]);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao buscar eventos' });
+    }
+});
+
+app.post('/api/events', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.sendStatus(403);
+    const { name, description, date, participant_ids } = req.body || {};
+    if (!name) return res.status(400).json({ error: 'Nome do evento é obrigatório' });
+    
+    try {
+        await db.query('BEGIN');
+        const eventResult = await db.query('INSERT INTO events (name, description, date) VALUES ($1, $2, $3) RETURNING id', [name, description || null, date || null]);
+        const eventId = eventResult.rows[0].id;
+
+        if (participant_ids && Array.isArray(participant_ids)) {
+            for (const pid of participant_ids) {
+                await db.query('INSERT INTO event_participants (event_id, person_id) VALUES ($1, $2)', [eventId, pid]);
+            }
+        }
+        await db.query('COMMIT');
+        res.json({ id: eventId, name });
+    } catch (err) {
+        await db.query('ROLLBACK');
+        res.status(500).json({ error: 'Erro ao criar evento' });
+    }
+});
+
+app.post('/api/events/:id/participants', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.sendStatus(403);
+    const { participant_ids } = req.body || {};
+    const eventId = req.params.id;
+
+    if (!participant_ids || !Array.isArray(participant_ids)) {
+        return res.status(400).json({ error: 'Lista de participantes inválida' });
+    }
+
+    try {
+        await db.query('BEGIN');
+        for (const pid of participant_ids) {
+            await db.query('INSERT INTO event_participants (event_id, person_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [eventId, pid]);
+        }
+        await db.query('COMMIT');
+        res.json({ success: true });
+    } catch (err) {
+        await db.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao adicionar participantes' });
+    }
+});
+
+
+app.get('/api/events/:id/details', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const eventResult = await db.query('SELECT * FROM events WHERE id = $1', [id]);
+        const event = eventResult.rows[0];
+        if (!event) return res.status(404).json({ error: 'Evento não encontrado' });
+
+        if (req.user.role !== 'admin') {
+            const participantResult = await db.query('SELECT 1 FROM event_participants WHERE event_id = $1 AND person_id = $2', [id, req.user.personId]);
+            if (participantResult.rows.length === 0) return res.sendStatus(403);
+        }
+
+        let participants, payments;
+        if (req.user.role === 'admin') {
+            const pResult = await db.query(`
+                SELECT p.id, p.name, p.unit 
+                FROM people p
+                JOIN event_participants ep ON p.id = ep.person_id
+                WHERE ep.event_id = $1
+                ORDER BY p.name ASC
+            `, [id]);
+            participants = pResult.rows;
+            const payResult = await db.query('SELECT * FROM event_payments WHERE event_id = $1', [id]);
+            payments = payResult.rows;
+        } else {
+            const pResult = await db.query(`
+                SELECT p.id, p.name, p.unit 
+                FROM people p
+                JOIN event_participants ep ON p.id = ep.person_id
+                WHERE ep.event_id = $1 AND p.id = $2
+            `, [id, req.user.personId]);
+            participants = pResult.rows;
+            const payResult = await db.query('SELECT * FROM event_payments WHERE event_id = $1 AND person_id = $2', [id, req.user.personId]);
+            payments = payResult.rows;
+        }
+
+        res.json({ event, participants, payments });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao buscar detalhes do evento' });
+    }
+});
+
+app.delete('/api/events/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.sendStatus(403);
+    try {
+        await db.query('DELETE FROM events WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao deletar evento' });
+    }
+});
+
+// --- EVENT PAYMENTS API ---
+app.get('/api/event-payments', authenticateToken, async (req, res) => {
+    const { event_id, month, year } = req.query;
+    try {
+        if (req.user.role === 'admin') {
+            let sql = 'SELECT ep.*, p.name as member_name FROM event_payments ep JOIN people p ON ep.person_id = p.id';
+            let params = [];
+            let conditions = [];
+            if (event_id) { conditions.push('ep.event_id = $' + (params.length + 1)); params.push(event_id); }
+            if (month) { conditions.push('ep.month = $' + (params.length + 1)); params.push(month); }
+            if (year) { conditions.push('ep.year = $' + (params.length + 1)); params.push(year); }
+            
+            if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
+            
+            const result = await db.query(sql, params);
+            return res.json(result.rows);
+        }
+        
+        if (!req.user.personId) return res.json([]);
+        let sql = 'SELECT * FROM event_payments WHERE person_id = $1';
+        let params = [req.user.personId];
+        if (event_id) { sql += ' AND event_id = $' + (params.length + 1); params.push(event_id); }
+        if (month) { sql += ' AND month = $' + (params.length + 1); params.push(month); }
+        if (year) { sql += ' AND year = $' + (params.length + 1); params.push(year); }
+
+        const result = await db.query(sql, params);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao buscar pagamentos de eventos' });
+    }
+});
+
+app.get('/api/event-payments/detail/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.sendStatus(403);
+    try {
+        const result = await db.query('SELECT * FROM event_payments WHERE id = $1', [req.params.id]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Pagamento de evento não encontrado' });
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao buscar detalhes' });
+    }
+});
+
+app.post('/api/event-payments', authenticateToken, upload.single('receipt'), async (req, res) => {
+    const { person_id, event_id, amount, month, year } = req.body || {};
+    const receipt_path = req.file ? req.file.path : null;
+    
+    // Authorization
+    const effectivePersonId = req.user.role === 'admin' ? (person_id || req.user.personId) : req.user.personId;
+
+    if (!effectivePersonId) return res.status(400).json({ error: 'Membro não identificado.' });
+    if (!event_id) return res.status(400).json({ error: 'Evento não identificado.' });
+    if (!amount) return res.status(400).json({ error: 'Valor não informado.' });
+
+    try {
+        const status = req.user.role === 'admin' ? 'approved' : 'pending';
+
+        const existingSql = (month && year)
+            ? 'SELECT id FROM event_payments WHERE person_id = $1 AND event_id = $2 AND month = $3 AND year = $4'
+            : 'SELECT id FROM event_payments WHERE person_id = $1 AND event_id = $2 AND month IS NULL';
+        
+        const existingParams = (month && year)
+            ? [effectivePersonId, event_id, month, year] 
+            : [effectivePersonId, event_id];
+
+        const existingResult = await db.query(existingSql, existingParams);
+        const existing = existingResult.rows[0];
+
+        if (existing) {
+            await db.query('UPDATE event_payments SET amount = $1, receipt_path = COALESCE($2, receipt_path), status = $3, rejection_reason = NULL WHERE id = $4', [amount, receipt_path, status, existing.id]);
+            
+            if (status === 'pending') {
+                const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
+                const personResult = await db.query("SELECT name FROM people WHERE id = $1", [effectivePersonId]);
+                const eventResult = await db.query("SELECT name FROM events WHERE id = $1", [event_id]);
+                const person = personResult.rows[0];
+                const event = eventResult.rows[0];
+                for (const admin of adminsResult.rows) {
+                    await createNotification(admin.id, 'Novo Comprovante', `O membro ${person.name} atualizou um comprovante para o evento ${event.name}.`, 'info', existing.id, 'event');
+                }
+            }
+            res.json({ id: existing.id, updated: true, status });
+        } else {
+            const insertSql = 'INSERT INTO event_payments (person_id, event_id, amount, month, year, receipt_path, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id';
+            const insertParams = [effectivePersonId, event_id, amount, month || null, year || null, receipt_path, status];
+            const insertResult = await db.query(insertSql, insertParams);
+            const newId = insertResult.rows[0].id;
+
+            if (status === 'pending') {
+                const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
+                const personResult = await db.query("SELECT name FROM people WHERE id = $1", [effectivePersonId]);
+                const eventResult = await db.query("SELECT name FROM events WHERE id = $1", [event_id]);
+                const person = personResult.rows[0];
+                const event = eventResult.rows[0];
+                for (const admin of adminsResult.rows) {
+                    await createNotification(admin.id, 'Novo Comprovante', `O membro ${person.name} enviou um novo comprovante para o evento ${event.name}.`, 'info', newId, 'event');
+                }
+            }
+            res.json({ id: newId, updated: false, status });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao salvar pagamento do evento' });
+    }
+});
+
+// Approval Endpoints
+app.post('/api/event-payments/:id/approve', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.sendStatus(403);
+    try {
+        const paymentResult = await db.query('SELECT ep.*, e.name as event_name FROM event_payments ep JOIN events e ON ep.event_id = e.id WHERE ep.id = $1', [req.params.id]);
+        const payment = paymentResult.rows[0];
+        if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
+
+        await db.query('UPDATE event_payments SET status = \'approved\', rejection_reason = NULL WHERE id = $1', [req.params.id]);
+        
+        const userResult = await db.query('SELECT id FROM users WHERE person_id = $1', [payment.person_id]);
+        const userForMember = userResult.rows[0];
+        if (userForMember) {
+            await createNotification(userForMember.id, 'Pagamento de Evento Aprovado', `Seu pagamento para o evento ${payment.event_name} foi aprovado!`, 'success');
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao aprovar' });
+    }
+});
+
+app.post('/api/event-payments/:id/reject', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.sendStatus(403);
+    const { reason } = req.body || {};
+    try {
+        const paymentResult = await db.query('SELECT ep.*, e.name as event_name FROM event_payments ep JOIN events e ON ep.event_id = e.id WHERE ep.id = $1', [req.params.id]);
+        const payment = paymentResult.rows[0];
+        if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
+
+        await db.query('UPDATE event_payments SET status = \'rejected\', rejection_reason = $1 WHERE id = $2', [reason || 'Inválido', req.params.id]);
+        
+        const userResult = await db.query('SELECT id FROM users WHERE person_id = $1', [payment.person_id]);
+        const userForMember = userResult.rows[0];
+        if (userForMember) {
+            await createNotification(userForMember.id, 'Pagamento de Evento Rejeitado', `Seu pagamento para o evento ${payment.event_name} foi rejeitado. Motivo: ${reason}`, 'error');
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao rejeitar' });
+    }
+});
+
+app.delete('/api/event-payments/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.sendStatus(403);
+    try {
+        await db.query('DELETE FROM event_payments WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao deletar' });
+    }
 });
 
 app.use((err, req, res, next) => {
@@ -310,14 +814,21 @@ app.use((err, req, res, next) => {
 });
 
 // --- SECURE FILE ACCESS ---
-app.get('/api/files/receipt/:filename', authenticateToken, (req, res) => {
+app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
     const { filename } = req.params;
     const fullRelativePath = path.join('uploads', filename).replace(/\\/g, '/');
 
     try {
-        // Find which payment this file belongs to
-        const payment = db.prepare('SELECT person_id FROM payments WHERE receipt_path = ?').get(fullRelativePath);
+        // Try monthly payments
+        let result = await db.query('SELECT person_id FROM payments WHERE receipt_path = $1', [fullRelativePath]);
+        let payment = result.rows[0];
         
+        // Try event payments
+        if (!payment) {
+            result = await db.query('SELECT person_id FROM event_payments WHERE receipt_path = $1', [fullRelativePath]);
+            payment = result.rows[0];
+        }
+
         if (!payment) {
             return res.status(404).json({ error: 'Arquivo não encontrado no registro' });
         }
