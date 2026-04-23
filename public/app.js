@@ -1053,23 +1053,28 @@ const renderDashboard = () => {
 const renderPeople = () => {
     peopleBody.innerHTML = '';
     
-    // Update table header if needed
-    const headerRow = document.querySelector('#people-table thead tr');
-    if (headerRow && !headerRow.querySelector('.user-col-head')) {
-        const th = document.createElement('th');
-        th.className = 'user-col-head';
-        th.textContent = 'Usuário';
-        headerRow.insertBefore(th, headerRow.children[1]);
-    }
+    // Get filter values
+    const fName = document.getElementById('filter-name')?.value.toLowerCase() || '';
+    const fUser = document.getElementById('filter-user')?.value.toLowerCase() || '';
+    const fUnit = document.getElementById('filter-unit')?.value.toLowerCase() || '';
+    const fResp = document.getElementById('filter-resp')?.value.toLowerCase() || '';
 
-    state.people.forEach(person => {
+    const filteredPeople = state.people.filter(p => {
+        const matchesName = p.name.toLowerCase().includes(fName);
+        const matchesUser = (p.username || '').toLowerCase().includes(fUser);
+        const matchesUnit = (p.unit || '').toLowerCase().includes(fUnit);
+        const matchesResp = (p.responsible || '').toLowerCase().includes(fResp);
+        return matchesName && matchesUser && matchesUnit && matchesResp;
+    });
+
+    filteredPeople.forEach(person => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><strong>${person.name.toUpperCase()}</strong></td>
-            <td><span class="badge" style="background: var(--bg-color); color: var(--text-dim); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${person.username || '-'}</span></td>
+            <td><span class="badge-user">${person.username || '-'}</span></td>
             <td><span class="unit-tag">${person.unit || 'S/U'}</span></td>
             <td>${person.responsible || '-'}</td>
-            <td>${formatDate(person.birth_date)}</td>
+            <td></td> <!-- CPF column cleared as requested -->
             <td>
                 <button class="btn-text" onclick="editPerson(${person.id})">
                     Editar
@@ -1079,6 +1084,13 @@ const renderPeople = () => {
         peopleBody.appendChild(tr);
     });
 };
+
+// Add listeners to filters
+document.addEventListener('input', (e) => {
+    if (e.target.classList.contains('table-filter')) {
+        renderPeople();
+    }
+});
 
 // --- Modals Logic ---
 const openPaymentModal = (person, month, payment = null) => {

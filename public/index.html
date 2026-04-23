@@ -228,12 +228,21 @@
                     <div class="glass-card list-container">
                         <table id="people-table">
                             <thead>
-                                <tr>
+                                <tr class="header-main">
                                     <th>Nome</th>
+                                    <th>Usuário</th>
                                     <th>Unidade</th>
                                     <th>Responsável</th>
-                                    <th>CPF</th>
+                                    <th class="cpf-header">CPF</th>
                                     <th>Ações</th>
+                                </tr>
+                                <tr class="header-filters">
+                                    <th><input type="text" id="filter-name" placeholder="🔍" class="table-filter"></th>
+                                    <th><input type="text" id="filter-user" placeholder="🔍" class="table-filter"></th>
+                                    <th><input type="text" id="filter-unit" placeholder="🔍" class="table-filter"></th>
+                                    <th><input type="text" id="filter-resp" placeholder="🔍" class="table-filter"></th>
+                                    <th></th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody id="people-body">

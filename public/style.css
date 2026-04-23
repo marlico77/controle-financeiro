@@ -1132,3 +1132,35 @@ tfoot td {
 .report-summary-box .label { font-size: 0.85rem; color: #666; margin-bottom: 0.25rem; }
 .report-summary-box .value { font-size: 1.25rem; font-weight: 700; color: #e50914; }
 @media print { body * { visibility: hidden !important; } #report-modal, #report-modal * { visibility: visible !important; } #report-modal { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; height: auto !important; background: white !important; display: block !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; } .modal-content { position: static !important; width: 100% !important; max-width: none !important; height: auto !important; background: white !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; } #report-printable { border: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; height: auto !important; overflow: visible !important; } button, .close-modal, .btn-primary { display: none !important; } table { page-break-inside: auto; } tr { page-break-inside: avoid; page-break-after: auto; } }
+
+/* Table Filters & Badges */
+.table-filter {
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-color);
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.table-filter:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.header-filters th {
+    padding: 5px 10px 15px 10px !important;
+    background: transparent !important;
+}
+
+.badge-user {
+    background: var(--bg-color);
+    color: var(--text-dim);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-family: monospace;
+}
