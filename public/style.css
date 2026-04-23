@@ -602,26 +602,27 @@ tfoot td {
 
     .nav-links li {
         margin: 0;
-        padding: 0.5rem;
+        padding: 0.5rem 0.2rem;
         flex-grow: 1;
         text-align: center;
-        font-size: 0.65rem;
+        font-size: 0.6rem;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
         justify-content: center;
-        gap: 4px;
+        gap: 6px;
         border-radius: 0;
         background: transparent !important;
         color: #888;
-        text-transform: uppercase;
+        text-transform: none;
         font-weight: 500;
+        letter-spacing: -0.2px;
     }
 
     .nav-links li .icon {
-        width: 24px;
-        height: 24px;
-        margin-bottom: 2px;
+        width: 18px;
+        height: 18px;
+        margin-bottom: 0;
     }
 
 

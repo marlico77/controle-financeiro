@@ -291,15 +291,35 @@ app.get('/api/people', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/people', authenticateToken, async (req, res) => {
-  const { name, responsible, birth_date, cpf } = req.body || {};
+  const { name, responsible, birth_date, cpf, unit, username, password } = req.body || {};
   if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
 
   try {
-      const result = await db.query('INSERT INTO people (name, responsible, birth_date, cpf) VALUES ($1, $2, $3, $4) RETURNING id', 
-        [name, responsible || null, birth_date || null, cpf || null]);
-      res.json({ id: result.rows[0].id, name });
+      await db.query('BEGIN');
+      
+      const result = await db.query(
+        'INSERT INTO people (name, responsible, birth_date, cpf, unit) VALUES ($1, $2, $3, $4, $5) RETURNING id', 
+        [name, responsible || null, birth_date || null, cpf || null, unit || null]
+      );
+      
+      const personId = result.rows[0].id;
+
+      // Also create user if provided
+      if (req.user.role === 'admin' && username) {
+          const salt = bcrypt.genSaltSync(10);
+          const hash = bcrypt.hashSync(password || 'tribo@2026', salt);
+          await db.query(
+              'INSERT INTO users (username, password_hash, role, person_id) VALUES ($1, $2, $3, $4)',
+              [username, hash, 'member', personId]
+          );
+      }
+
+      await db.query('COMMIT');
+      res.json({ id: personId, name });
   } catch (err) {
-      res.status(500).json({ error: 'Erro ao criar membro' });
+      await db.query('ROLLBACK');
+      console.error('[SERVER] Error creating member:', err);
+      res.status(500).json({ error: 'Erro ao criar membro: ' + err.message });
   }
 });
 
