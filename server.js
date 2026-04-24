@@ -138,7 +138,7 @@ app.post('/api/login', async (req, res) => {
         SELECT u.*, p.name 
         FROM users u 
         LEFT JOIN people p ON u.person_id = p.id 
-        WHERE u.username = $1
+        WHERE u.username ILIKE $1
     `, [username]);
     const user = result.rows[0];
 
@@ -226,7 +226,7 @@ app.post('/api/auth/reset-lost-password', async (req, res) => {
             SELECT u.id 
             FROM users u
             JOIN people p ON u.person_id = p.id
-            WHERE u.username = $1 AND p.cpf = $2
+            WHERE u.username ILIKE $1 AND p.cpf = $2
         `, [username, cpf]);
 
         const user = result.rows[0];
@@ -397,7 +397,7 @@ app.post('/api/people/import', authenticateToken, upload.single('file'), async (
   if (req.user.role !== 'admin') return res.sendStatus(403);
   
   // Restriction: Only master admin can import (because it creates users)
-  if (req.user.username !== 'admin') {
+  if (req.user.username.toUpperCase() !== 'ADMINISTRADOR') {
       return res.status(403).json({ error: 'Apenas o administrador master pode importar planilhas.' });
   }
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
@@ -632,7 +632,7 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
         
         if (existingUser) {
             // Protection: Sub-admins cannot edit the master admin
-            if (existingUser.username === 'admin' && req.user.username !== 'admin') {
+            if (existingUser.username.toUpperCase() === 'ADMINISTRADOR' && req.user.username.toUpperCase() !== 'ADMINISTRADOR') {
                 console.warn(`[AUTH] Tentativa de sub-admin (${req.user.username}) editar o admin master.`);
                 // We just skip the user update part for safety
             } else {
@@ -658,14 +658,14 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
 // Delete person
 app.delete('/api/people/:id', authenticateToken, async (req, res) => {
   // ONLY master admin can delete accounts/people
-  if (req.user.username !== 'admin') {
+  if (req.user.username.toUpperCase() !== 'ADMINISTRADOR') {
       return res.status(403).json({ error: 'Apenas o administrador master pode excluir registros.' });
   }
 
   try {
     // Extra protection: ensure we don't delete the person linked to the admin user
     const targetUser = await db.query('SELECT username FROM users WHERE person_id = $1', [req.params.id]);
-    if (targetUser.rows[0] && targetUser.rows[0].username === 'admin') {
+    if (targetUser.rows[0] && targetUser.rows[0].username.toUpperCase() === 'ADMINISTRADOR') {
         return res.status(403).json({ error: 'O usuário administrador master não pode ser excluído.' });
     }
 

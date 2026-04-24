@@ -1384,8 +1384,8 @@ const editPerson = (id) => {
     // Only master admin can delete members
     const deleteBtn = document.getElementById('delete-member-btn');
     if (deleteBtn) {
-        // Only the master 'admin' can see the delete button
-        deleteBtn.style.display = state.username === 'admin' ? 'block' : 'none';
+        // Only the master 'ADMINISTRADOR' can see the delete button
+        deleteBtn.style.display = (state.username && state.username.toUpperCase() === 'ADMINISTRADOR') ? 'block' : 'none';
     }
     
     personModal.style.display = 'flex';

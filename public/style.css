@@ -635,7 +635,7 @@ tfoot td {
         pointer-events: auto !important;
     }
 
-    .sidebar .logo, .sidebar .user-profile, .sidebar .nav-footer {
+    .sidebar-header, .sidebar .nav-footer {
         display: none !important;
     }
 
