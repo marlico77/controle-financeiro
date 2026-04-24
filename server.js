@@ -326,13 +326,16 @@ app.post('/api/people', authenticateToken, async (req, res) => {
       
       const personId = result.rows[0].id;
 
-      // Also create user if provided
-      if (req.user.role === 'admin' && username) {
+      // Only master admin can create users/credentials
+      if (req.user.username === 'admin' && username) {
           const hash = await bcrypt.hash(password || 'tribo@2026', 10);
           await client.query(
               'INSERT INTO users (username, password_hash, role, person_id) VALUES ($1, $2, $3, $4)',
               [username, hash, 'member', personId]
           );
+      } else if (username) {
+          // If a sub-admin tries to create a user, we just ignore the user part or return info
+          console.log(`[AUTH] Bloqueada criação de usuário por sub-admin: ${req.user.username}`);
       }
 
       await client.query('COMMIT');
@@ -347,6 +350,12 @@ app.post('/api/people', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/people/import', authenticateToken, upload.single('file'), async (req, res) => {
+  if (req.user.role !== 'admin') return res.sendStatus(403);
+  
+  // Restriction: Only master admin can import (because it creates users)
+  if (req.user.username !== 'admin') {
+      return res.status(403).json({ error: 'Apenas o administrador master pode importar planilhas.' });
+  }
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
 
   const client = await db.pool.connect();
@@ -571,8 +580,8 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Membro não encontrado' });
     }
 
-    // Update user credentials if admin
-    if (req.user.role === 'admin' && username) {
+    // Update user credentials - ONLY master admin can do this
+    if (req.user.username === 'admin' && username) {
         const userCheck = await db.query('SELECT id FROM users WHERE person_id = $1', [id]);
         const existingUser = userCheck.rows[0];
         if (existingUser) {
@@ -596,8 +605,18 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
 
 // Delete person
 app.delete('/api/people/:id', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin') return res.sendStatus(403);
+  // ONLY master admin can delete accounts/people
+  if (req.user.username !== 'admin') {
+      return res.status(403).json({ error: 'Apenas o administrador master pode excluir registros.' });
+  }
+
   try {
+    // Extra protection: ensure we don't delete the person linked to the admin user
+    const targetUser = await db.query('SELECT username FROM users WHERE person_id = $1', [req.params.id]);
+    if (targetUser.rows[0] && targetUser.rows[0].username === 'admin') {
+        return res.status(403).json({ error: 'O usuário administrador master não pode ser excluído.' });
+    }
+
     await db.query('DELETE FROM people WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
