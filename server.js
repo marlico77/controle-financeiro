@@ -318,9 +318,13 @@ app.get('/api/people', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/people', authenticateToken, async (req, res) => {
-  let { name, responsible, birth_date, cpf, unit, username, password } = req.body || {};
-  if (username) username = username.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
+  let { name, responsible, birth_date, cpf, unit } = req.body || {};
+  if (!name || name.trim().split(/\s+/).length < 2) {
+      return res.status(400).json({ error: 'O nome deve conter pelo menos Nome e Sobrenome.' });
+  }
+  if (!unit) {
+      return res.status(400).json({ error: 'A unidade é obrigatória.' });
+  }
 
   const client = await db.pool.connect();
   try {
@@ -333,24 +337,25 @@ app.post('/api/people', authenticateToken, async (req, res) => {
       
       const personId = result.rows[0].id;
 
-      // Only master admin can create users/credentials
-      if (req.user.username === 'admin' && username) {
-          const hash = await bcrypt.hash(password || 'tribo@2026', 10);
-          await client.query(
-              'INSERT INTO users (username, password_hash, role, person_id) VALUES ($1, $2, $3, $4)',
-              [username, hash, 'member', personId]
-          );
-      } else if (username) {
-          // If a sub-admin tries to create a user, we just ignore the user part or return info
-          console.log(`[AUTH] Bloqueada criação de usuário por sub-admin: ${req.user.username}`);
-      }
+      // --- AUTOMATIC USER GENERATION ---
+      const nameParts = name.trim().split(/\s+/);
+      const first = nameParts[0].toLowerCase();
+      const last = nameParts[nameParts.length - 1].toLowerCase();
+      // Normalize username (lowercase, no accents)
+      const baseUsername = `${first}.${last}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      
+      const hash = await bcrypt.hash('tribo@2026', 10);
+      await client.query(
+          'INSERT INTO users (username, password_hash, role, person_id) VALUES ($1, $2, $3, $4)',
+          [baseUsername, hash, 'member', personId]
+      );
 
       await client.query('COMMIT');
-      res.json({ id: personId, name });
+      res.json({ id: personId, name, username: baseUsername });
   } catch (err) {
       await client.query('ROLLBACK');
-      console.error('[SERVER] Error creating member:', err);
-      res.status(500).json({ error: 'Erro ao criar membro: ' + err.message });
+      console.error('Create Person Error:', err);
+      res.status(500).json({ error: 'Erro ao cadastrar membro' });
   } finally {
       client.release();
   }

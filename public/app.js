@@ -1421,7 +1421,7 @@ document.getElementById('person-form').onsubmit = async (e) => {
     e.preventDefault();
     const id = document.getElementById('p-id').value;
     const formData = {
-        name: document.getElementById('p-name').value,
+        name: document.getElementById('p-name').value.trim(),
         responsible: document.getElementById('p-responsible').value,
         unit: document.getElementById('p-unit').value,
         birth_date: document.getElementById('p-birth').value,
@@ -1429,6 +1429,16 @@ document.getElementById('person-form').onsubmit = async (e) => {
         username: document.getElementById('u-username').value,
         password: document.getElementById('u-password').value
     };
+    
+    if (!formData.name || formData.name.split(/\s+/).length < 2) {
+        showStatus('O nome deve conter pelo menos Nome e Sobrenome.', 'error');
+        return;
+    }
+
+    if (!formData.unit) {
+        showStatus('A unidade é obrigatória.', 'error');
+        return;
+    }
 
     if (formData.cpf && !isValidCPF(formData.cpf)) {
         showStatus('CPF inválido. Por favor, verifique os dados.', 'error');
