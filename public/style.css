@@ -23,7 +23,9 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     min-height: 100vh;
-    overflow-x: hidden;
+    width: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 /* Animations */
@@ -331,9 +333,11 @@ body {
 .content {
     flex-grow: 1;
     overflow-y: auto;
+    overflow-x: hidden; /* Prevent horizontal scroll on main content */
     padding: 2rem 3rem;
     background: var(--bg-color);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
 }
 
 .top-bar {
@@ -689,7 +693,7 @@ tfoot td {
         display: flex;
         flex-direction: column;
         width: 100%;
-        overflow: hidden;
+        overflow: visible; /* Let children handle overflow */
     }
 
     .table-container {
@@ -700,6 +704,7 @@ tfoot td {
         border-radius: 8px; 
         padding: 0;
         background: transparent;
+        display: block; /* Ensure it behaves as a block */
     }
 
     .table-container::-webkit-scrollbar {
