@@ -304,8 +304,8 @@ body {
     color: #888;
     transition: all 0.2s;
     margin-bottom: 0.5rem;
-    display: flex !important;
-    flex-direction: row !important;
+    display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: flex-start; /* Explicitly align contents to left */
     gap: 12px;
