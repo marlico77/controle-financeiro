@@ -15,6 +15,10 @@ const state = {
     charts: {
         pie: null,
         bar: null
+    },
+    peopleSort: {
+        column: 'name',
+        direction: 'asc'
     }
 };
 
@@ -1050,24 +1054,54 @@ const renderDashboard = () => {
     footer.appendChild(footerTr);
 };
 
+const setSort = (column) => {
+    if (state.peopleSort.column === column) {
+        state.peopleSort.direction = state.peopleSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.peopleSort.column = column;
+        state.peopleSort.direction = 'asc';
+    }
+    renderPeople();
+};
+
 const renderPeople = () => {
     peopleBody.innerHTML = '';
     
-    // Get filter values
-    const fName = document.getElementById('filter-name')?.value.toLowerCase() || '';
-    const fUser = document.getElementById('filter-user')?.value.toLowerCase() || '';
-    const fUnit = document.getElementById('filter-unit')?.value.toLowerCase() || '';
-    const fResp = document.getElementById('filter-resp')?.value.toLowerCase() || '';
+    // Global filter logic
+    const searchQuery = document.getElementById('global-search')?.value.toLowerCase() || '';
 
-    const filteredPeople = state.people.filter(p => {
-        const matchesName = p.name.toLowerCase().includes(fName);
-        const matchesUser = (p.username || '').toLowerCase().includes(fUser);
-        const matchesUnit = (p.unit || '').toLowerCase().includes(fUnit);
-        const matchesResp = (p.responsible || '').toLowerCase().includes(fResp);
-        return matchesName && matchesUser && matchesUnit && matchesResp;
+    let processedPeople = state.people.filter(p => {
+        const text = `${p.name} ${p.username || ''} ${p.unit || ''} ${p.responsible || ''} ${p.cpf || ''}`.toLowerCase();
+        return text.includes(searchQuery);
     });
 
-    filteredPeople.forEach(person => {
+    // Sort logic
+    processedPeople.sort((a, b) => {
+        const col = state.peopleSort.column;
+        const dir = state.peopleSort.direction === 'asc' ? 1 : -1;
+        
+        let valA = (a[col] || '').toString().toLowerCase();
+        let valB = (b[col] || '').toString().toLowerCase();
+        
+        if (valA < valB) return -1 * dir;
+        if (valA > valB) return 1 * dir;
+        return 0;
+    });
+
+    // Update sort icons in UI
+    document.querySelectorAll('.sortable').forEach(th => {
+        const colName = th.getAttribute('onclick').match(/'([^']+)'/)[1];
+        const icon = th.querySelector('.sort-icon');
+        if (colName === state.peopleSort.column) {
+            icon.textContent = state.peopleSort.direction === 'asc' ? ' ↑' : ' ↓';
+            th.classList.add('active-sort');
+        } else {
+            icon.textContent = '';
+            th.classList.remove('active-sort');
+        }
+    });
+
+    processedPeople.forEach(person => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><strong>${person.name.toUpperCase()}</strong></td>
@@ -1085,9 +1119,9 @@ const renderPeople = () => {
     });
 };
 
-// Add listeners to filters
+// Add listener to global search
 document.addEventListener('input', (e) => {
-    if (e.target.classList.contains('table-filter')) {
+    if (e.target.id === 'global-search') {
         renderPeople();
     }
 });
