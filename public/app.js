@@ -323,8 +323,14 @@ loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
+    const submitBtn = loginForm.querySelector('button[type="submit"]');
 
     try {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Acessando...';
+        }
+        
         // Reset state before login to avoid data leakage
         state.people = [];
         state.payments = [];
@@ -368,6 +374,11 @@ loginForm.addEventListener('submit', async (e) => {
         }
     } catch (err) {
         loginError.textContent = 'Erro ao conectar ao servidor';
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Acessar Conta';
+        }
     }
 });
 
