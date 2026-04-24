@@ -39,9 +39,11 @@ const upload = multer({
 
 // Middleware: Auth
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return res.sendStatus(401);
+    // Check if token is in header or in query string
+    const authHeader = req.headers['authorization'];
+    const token = (authHeader && authHeader.split(' ')[1]) || req.query.token;
+
+    if (token == null) return res.sendStatus(401);
 
   jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) {

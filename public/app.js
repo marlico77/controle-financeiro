@@ -749,7 +749,7 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
         if (payment.receipt_path) {
             receiptContainer.style.display = 'block';
             const filename = payment.receipt_path.split(/[\\/]/).pop();
-            document.getElementById('ep-view-receipt-btn').href = `/api/files/receipt/${filename}`;
+            document.getElementById('ep-view-receipt-btn').href = `/api/files/receipt/${filename}?token=${localStorage.getItem('token')}`;
         }
 
         if (payment.status === 'approved') {
@@ -1159,7 +1159,7 @@ const openPaymentModal = (person, month, payment = null) => {
             receiptContainer.style.display = 'block';
             // Handle both Windows (\) and Linux (/) separators
             const filename = payment.receipt_path.split(/[\\/]/).pop();
-            const securePath = `/api/files/receipt/${filename}`;
+            const securePath = `/api/files/receipt/${filename}?token=${localStorage.getItem('token')}`;
             document.getElementById('view-receipt-btn').href = securePath;
         }
 
