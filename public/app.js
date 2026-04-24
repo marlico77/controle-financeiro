@@ -4,7 +4,7 @@ const state = {
     people: [],
     payments: [],
     currentYear: new Date().getFullYear(),
-    activeTab: 'dashboard',
+    activeTab: localStorage.getItem('activeTab') || 'dashboard',
     role: localStorage.getItem('role') || null,
     personId: localStorage.getItem('personId') || null,
     notifications: [],
@@ -193,6 +193,13 @@ const checkAuth = async () => {
 
             initializeSidebar();
             initializeNotifications();
+
+            // Restore active tab
+            if (state.role !== 'admin' && (state.activeTab === 'people' || state.activeTab === 'reports')) {
+                state.activeTab = 'dashboard';
+            }
+            switchTab(state.activeTab);
+
             setTimeout(() => loadInitialData(), 50); 
         } catch (err) {
             console.error('Auth verification failed:', err);
@@ -264,49 +271,52 @@ const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
 if (mobileLogoutBtn) mobileLogoutBtn.onclick = logout;
 
 // --- Navigation ---
-navLinks.forEach(link => {
-    link.addEventListener('click', () => {
-        const target = link.dataset.target;
-        state.activeTab = target;
-        
-        navLinks.forEach(l => l.classList.remove('active'));
-        link.classList.add('active');
-
-        tabContents.forEach(tab => {
-            tab.style.display = tab.id === `${target}-page` ? 'block' : 'none';
-        });
-
-        const peopleActions = document.getElementById('people-actions');
-        if (peopleActions) {
-            peopleActions.style.display = target === 'people' ? 'flex' : 'none';
-        }
-
-        const eventsActions = document.getElementById('events-actions');
-        if (eventsActions && state.role === 'admin') {
-            eventsActions.style.display = target === 'events' ? 'flex' : 'none';
-        }
-
-        document.getElementById('page-title').textContent = 
-            target === 'dashboard' ? 'Dashboard de Mensalidades' : 
-            target === 'mensalidade' ? 'Controle de Mensalidades' :
-            target === 'events' ? 'Eventos e Atividades' :
-            target === 'reports' ? 'Relatórios' :
-            'Gerenciamento de Membros';
-
-        if (target === 'events') {
-            document.getElementById('events-master-view').style.display = 'block';
-            document.getElementById('events-detail-view').style.display = 'none';
-            if (state.role === 'admin') {
-                document.getElementById('add-event-btn').style.display = 'block';
-                document.getElementById('add-participants-btn').style.display = 'none';
-            }
-            fetchEventsData();
-        }
-
-        if (target === 'reports') {
-            populateReportSelects();
-        }
+const switchTab = (target) => {
+    state.activeTab = target;
+    localStorage.setItem('activeTab', target);
+    
+    navLinks.forEach(l => {
+        l.classList.toggle('active', l.dataset.target === target);
     });
+
+    tabContents.forEach(tab => {
+        tab.style.display = tab.id === `${target}-page` ? 'block' : 'none';
+    });
+
+    const peopleActions = document.getElementById('people-actions');
+    if (peopleActions) {
+        peopleActions.style.display = target === 'people' ? 'flex' : 'none';
+    }
+
+    const eventsActions = document.getElementById('events-actions');
+    if (eventsActions && state.role === 'admin') {
+        eventsActions.style.display = target === 'events' ? 'flex' : 'none';
+    }
+
+    const title = document.getElementById('page-title');
+    if (target === 'dashboard') title.textContent = state.role === 'admin' ? 'Dashboard de Mensalidades' : 'Meu Status de Mensalidade';
+    else if (target === 'people') title.textContent = 'Gerenciamento de Membros';
+    else if (target === 'events') title.textContent = 'Gestão de Eventos';
+    else if (target === 'reports') title.textContent = 'Relatórios do Sistema';
+    else if (target === 'mensalidade') title.textContent = 'Controle de Mensalidades';
+
+    // Refresh specific data if needed
+    if (target === 'dashboard') renderDashboard();
+    if (target === 'people') renderPeople();
+    if (target === 'events') fetchEventsData();
+    if (target === 'reports') {
+        populateReportSelects();
+    }
+    
+    // Close mobile sidebar if open
+    const sidebar = document.querySelector('.sidebar');
+    if (window.innerWidth <= 768 && sidebar.classList.contains('active')) {
+        sidebar.classList.remove('active');
+    }
+};
+
+navLinks.forEach(link => {
+    link.addEventListener('click', () => switchTab(link.dataset.target));
 });
 
 const populateReportSelects = () => {
