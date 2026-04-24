@@ -6,6 +6,8 @@ const state = {
     currentYear: new Date().getFullYear(),
     activeTab: localStorage.getItem('activeTab') || 'dashboard',
     role: localStorage.getItem('role') || null,
+    username: localStorage.getItem('username') || null,
+    name: localStorage.getItem('name') || null,
     personId: localStorage.getItem('personId') || null,
     notifications: [],
     events: [],
@@ -142,6 +144,15 @@ const checkAuth = async () => {
             // Verify status with server to ensure security
             const status = await apiFetch('/api/auth/status');
             
+            state.role = status.role;
+            state.username = status.username;
+            state.name = status.name;
+            localStorage.setItem('role', status.role);
+            localStorage.setItem('username', status.username);
+            localStorage.setItem('name', status.name);
+            
+            document.getElementById('user-name-display').textContent = status.name || 'Usuário';
+            
             if (status.mustChangePassword) {
                 loginSection.style.display = 'none';
                 mainSection.style.display = 'none';
@@ -174,7 +185,6 @@ const checkAuth = async () => {
 
                 document.getElementById('page-title').textContent = 'Meu Status de Mensalidade';
                 document.getElementById('user-role-badge').textContent = 'Membro';
-                document.getElementById('user-name-display').textContent = 'Carregando...';
             } else {
                 if (membersNav) membersNav.style.display = 'block';
                 if (dashboardStats) dashboardStats.style.display = 'grid';
@@ -187,8 +197,7 @@ const checkAuth = async () => {
                 const chartTitles = document.querySelectorAll('.chart-container h4');
                 if (chartTitles[0]) chartTitles[0].textContent = 'Distribuição por Unidade';
 
-                document.getElementById('page-title').textContent = 'Dashboard de Mensalidades';
-                document.getElementById('user-name-display').textContent = 'Administrador';
+                document.getElementById('user-role-badge').textContent = 'Administrador';
             }
 
             initializeSidebar();
@@ -239,12 +248,18 @@ loginForm.addEventListener('submit', async (e) => {
 
         if (res.ok) {
             const isForced = data.mustChangePassword;
-            state.token = data.token;
-            state.role = data.role;
-            state.personId = data.personId;
             localStorage.setItem('token', data.token);
             localStorage.setItem('role', data.role);
+            localStorage.setItem('username', data.username);
+            localStorage.setItem('name', data.name || data.username);
             localStorage.setItem('personId', data.personId || '');
+            state.token = data.token;
+            state.role = data.role;
+            state.username = data.username;
+            state.name = data.name || data.username;
+            state.personId = data.personId;
+            
+            document.getElementById('user-name-display').textContent = state.name;
 
             if (isForced) {
                 document.getElementById('force-change-modal').style.display = 'flex';
@@ -262,6 +277,8 @@ loginForm.addEventListener('submit', async (e) => {
 const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
+    localStorage.removeItem('username');
+    localStorage.removeItem('name');
     localStorage.removeItem('personId');
     window.location.reload();
 };
@@ -1297,7 +1314,13 @@ const editPerson = (id) => {
     const age = calculateAge(person.birth_date);
     document.getElementById('p-age').value = age;
     
-    document.getElementById('delete-member-btn').style.display = 'block';
+    // Only master admin can delete members
+    const deleteBtn = document.getElementById('delete-member-btn');
+    if (deleteBtn) {
+        // Only the master 'admin' can see the delete button
+        deleteBtn.style.display = state.username === 'admin' ? 'block' : 'none';
+    }
+    
     personModal.style.display = 'flex';
 };
 window.editPerson = editPerson;

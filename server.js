@@ -134,7 +134,12 @@ syncMemberUsers();
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
   try {
-    const result = await db.query('SELECT * FROM users WHERE username = $1', [username]);
+    const result = await db.query(`
+        SELECT u.*, p.name 
+        FROM users u 
+        LEFT JOIN people p ON u.person_id = p.id 
+        WHERE u.username = $1
+    `, [username]);
     const user = result.rows[0];
 
     if (!user || !bcrypt.compareSync(password, user.password_hash)) {
@@ -162,6 +167,7 @@ app.post('/api/login', async (req, res) => {
       token, 
       role: role, 
       username: user.username,
+      name: user.name || (user.username === 'admin' ? 'Administrador Master' : user.username),
       personId: personId,
       mustChangePassword: !!user.must_change_password
     });
@@ -173,13 +179,20 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/api/auth/status', authenticateToken, async (req, res) => {
     try {
-        const result = await db.query('SELECT must_change_password, role, person_id FROM users WHERE id = $1', [req.user.id]);
+        const result = await db.query(`
+            SELECT u.must_change_password, u.role, u.person_id, u.username, p.name 
+            FROM users u 
+            LEFT JOIN people p ON u.person_id = p.id 
+            WHERE u.id = $1
+        `, [req.user.id]);
         const user = result.rows[0];
         if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
         
         res.json({
             mustChangePassword: !!user.must_change_password,
             role: user.role,
+            username: user.username,
+            name: user.name || (user.username === 'admin' ? 'Administrador Master' : user.username),
             personId: user.person_id
         });
     } catch (err) {
@@ -318,7 +331,7 @@ app.get('/api/people', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/people', authenticateToken, async (req, res) => {
-  let { name, responsible, birth_date, cpf, unit } = req.body || {};
+  let { name, responsible, birth_date, cpf, unit, username, password } = req.body || {};
   if (!name || name.trim().split(/\s+/).length < 2) {
       return res.status(400).json({ error: 'O nome deve conter pelo menos Nome e Sobrenome.' });
   }
@@ -337,21 +350,32 @@ app.post('/api/people', authenticateToken, async (req, res) => {
       
       const personId = result.rows[0].id;
 
-      // --- AUTOMATIC USER GENERATION ---
-      const nameParts = name.trim().split(/\s+/);
-      const first = nameParts[0].toLowerCase();
-      const last = nameParts[nameParts.length - 1].toLowerCase();
-      // Normalize username (lowercase, no accents)
-      const baseUsername = `${first}.${last}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      
-      const hash = await bcrypt.hash('tribo@2026', 10);
-      await client.query(
-          'INSERT INTO users (username, password_hash, role, person_id) VALUES ($1, $2, $3, $4)',
-          [baseUsername, hash, 'member', personId]
-      );
+      let finalUsernameUsed = '';
+      // Handle user creation
+      if (req.user.role === 'admin') {
+          // Generate default username if not provided
+          const nameParts = name.trim().split(/\s+/);
+          const first = nameParts[0].toLowerCase();
+          const last = nameParts[nameParts.length - 1].toLowerCase();
+          const baseUsername = `${first}.${last}`;
+
+          // If a username is provided manually, use it. Otherwise generate automatically.
+          let finalUsername = username || baseUsername;
+          // Ensure no accents and lowercase
+          finalUsername = finalUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+          finalUsernameUsed = finalUsername;
+
+          const finalPassword = password || 'tribo@2026';
+          const hash = await bcrypt.hash(finalPassword, 10);
+
+          await client.query(
+              'INSERT INTO users (username, password_hash, role, person_id) VALUES ($1, $2, $3, $4)',
+              [finalUsername, hash, 'member', personId]
+          );
+      }
 
       await client.query('COMMIT');
-      res.json({ id: personId, name, username: baseUsername });
+      res.json({ id: personId, name, username: finalUsernameUsed });
   } catch (err) {
       await client.query('ROLLBACK');
       console.error('Create Person Error:', err);
@@ -593,18 +617,25 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Membro não encontrado' });
     }
 
-    // Update user credentials - ONLY master admin can do this
-    if (req.user.username === 'admin' && username) {
-        const userCheck = await db.query('SELECT id FROM users WHERE person_id = $1', [id]);
+    // Update user credentials - ALLOW all admins except for targeting master admin
+    if (req.user.role === 'admin' && username) {
+        const userCheck = await db.query('SELECT id, username FROM users WHERE person_id = $1', [id]);
         const existingUser = userCheck.rows[0];
+        
         if (existingUser) {
-            if (password) {
-                const salt = bcrypt.genSaltSync(10);
-                const hash = bcrypt.hashSync(password, salt);
-                await db.query('UPDATE users SET username = $1, password_hash = $2 WHERE id = $3', 
-                  [username, hash, existingUser.id]);
+            // Protection: Sub-admins cannot edit the master admin
+            if (existingUser.username === 'admin' && req.user.username !== 'admin') {
+                console.warn(`[AUTH] Tentativa de sub-admin (${req.user.username}) editar o admin master.`);
+                // We just skip the user update part for safety
             } else {
-                await db.query('UPDATE users SET username = $1 WHERE id = $2', [username, existingUser.id]);
+                if (password) {
+                    const salt = bcrypt.genSaltSync(10);
+                    const hash = bcrypt.hashSync(password, salt);
+                    await db.query('UPDATE users SET username = $1, password_hash = $2 WHERE id = $3', 
+                      [username, hash, existingUser.id]);
+                } else {
+                    await db.query('UPDATE users SET username = $1 WHERE id = $2', [username, existingUser.id]);
+                }
             }
         }
     }
