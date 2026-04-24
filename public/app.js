@@ -229,9 +229,8 @@ const checkAuth = async () => {
                 if (chartTitles[0]) chartTitles[0].textContent = 'Status de Pagamento';
 
                 document.getElementById('page-title').textContent = 'Meu Status de Mensalidade';
-                document.getElementById('user-role-badge').textContent = 'Membro';
-            } else {
-                if (membersNav) membersNav.style.display = 'block';
+            } else if (state.role === 'admin' || state.role === 'secretário') {
+                if (membersNav) membersNav.style.display = state.role === 'admin' ? 'block' : 'none';
                 if (dashboardStats) dashboardStats.style.display = 'grid';
                 if (chartsGrid) chartsGrid.style.display = 'grid';
                 
@@ -242,9 +241,7 @@ const checkAuth = async () => {
                 const chartTitles = document.querySelectorAll('.chart-container h4');
                 if (chartTitles[0]) chartTitles[0].textContent = 'Distribuição por Unidade';
 
-                document.getElementById('user-role-badge').textContent = 'Administrador';
-                
-                // Show authorizations for admins
+                // Show authorizations for admins and secretaries
                 const authNav = document.getElementById('nav-authorizations');
                 if (authNav) authNav.style.display = 'block';
             }
@@ -253,7 +250,10 @@ const checkAuth = async () => {
             initializeNotifications();
 
             // Restore active tab
-            if (state.role !== 'admin' && (state.activeTab === 'people' || state.activeTab === 'reports')) {
+            if (state.role === 'member' && (state.activeTab === 'people' || state.activeTab === 'reports')) {
+                state.activeTab = 'dashboard';
+            }
+            if (state.role === 'secretário' && (state.activeTab === 'people' || state.activeTab === 'reports')) {
                 state.activeTab = 'dashboard';
             }
             switchTab(state.activeTab);
@@ -657,7 +657,7 @@ const openEventDetail = async (eventId) => {
         document.getElementById('detail-event-title').textContent = data.event.name;
         
         // Toggle button visibility
-        if (state.role === 'admin') {
+        if (state.role === 'admin' || state.role === 'secretário') {
             document.getElementById('add-event-btn').style.display = 'none';
             document.getElementById('add-participants-btn').style.display = 'block';
         }
@@ -707,8 +707,8 @@ const renderEventDetailGrid = (participants, payments) => {
 };
 
 const openEventPaymentModalFromGrid = (personId, month, payment = null) => {
-    // Only allow members to pay for themselves, or admins to pay for anyone
-    if (state.role !== 'admin' && parseInt(personId) !== parseInt(state.personId)) return;
+    // Only allow members to pay for themselves, or admins/secretaries to pay for anyone
+    if (state.role !== 'admin' && state.role !== 'secretário' && parseInt(personId) !== parseInt(state.personId)) return;
 
     document.getElementById('ep-event-id').value = state.currentEvent.id;
     document.getElementById('ep-event-name').textContent = state.currentEvent.name;
@@ -856,8 +856,8 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
         } else if (payment.status === 'pending') {
             saveBtn.textContent = 'Atualizar Comprovante';
             
-            // Administrador actions for pending payments
-            if (state.role === 'admin') {
+            // Administrador/Secretário actions for pending payments
+            if (state.role === 'admin' || state.role === 'secretário') {
                 saveBtn.style.display = 'none';
                 adminActions.style.display = 'flex';
                 

@@ -679,7 +679,7 @@ app.delete('/api/people/:id', authenticateToken, async (req, res) => {
 // --- EVENTS API ---
 app.get('/api/events', authenticateToken, async (req, res) => {
     try {
-        if (req.user.role === 'admin') {
+        if (req.user.role === 'admin' || req.user.role === 'secretário') {
             const result = await db.query('SELECT * FROM events ORDER BY date ASC');
             return res.json(result.rows);
         }
@@ -697,7 +697,7 @@ app.get('/api/events', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/events', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') return res.sendStatus(403);
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { name, description, date, participant_ids } = req.body || {};
     if (!name) return res.status(400).json({ error: 'Nome do evento é obrigatório' });
     
@@ -750,13 +750,13 @@ app.get('/api/events/:id/details', authenticateToken, async (req, res) => {
         const event = eventResult.rows[0];
         if (!event) return res.status(404).json({ error: 'Evento não encontrado' });
 
-        if (req.user.role !== 'admin') {
+        if (req.user.role !== 'admin' && req.user.role !== 'secretário') {
             const participantResult = await db.query('SELECT 1 FROM event_participants WHERE event_id = $1 AND person_id = $2', [id, req.user.personId]);
             if (participantResult.rows.length === 0) return res.sendStatus(403);
         }
 
         let participants, payments;
-        if (req.user.role === 'admin') {
+        if (req.user.role === 'admin' || req.user.role === 'secretário') {
             const pResult = await db.query(`
                 SELECT p.id, p.name, p.unit 
                 FROM people p
