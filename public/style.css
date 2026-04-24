@@ -9,8 +9,8 @@
     --border-color: #e8e6df;
     --success-color: #28a745;
     --error-color: #e50914;
-    --outflow-color: #ff9800;
-    --outflow-glow: rgba(255, 152, 0, 0.15);
+    --outflow-color: #e50914;
+    --outflow-glow: rgba(229, 9, 20, 0.15);
     --glass-blur: 10px;
 }
 

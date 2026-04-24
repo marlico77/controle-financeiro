@@ -1165,7 +1165,7 @@ const updateDashboardStats = () => {
         renderPieChart(
             ['Mensalidades', 'Eventos', 'Saídas'], 
             [mensalidadesPuro, eventosTotal, totalOutflows],
-            ['#e50914', '#111111', '#ff9800'] 
+            ['#e50914', '#111111', '#8b0000'] 
         );
     } else {
         const paidMonths = state.payments.length;
@@ -1380,7 +1380,7 @@ const renderOutflows = () => {
         return `
             <tr>
                 <td>${date}</td>
-                <td><span class="unit-tag" style="background: rgba(255, 152, 0, 0.1); color: var(--outflow-color);">${out.category}</span></td>
+                <td><span class="unit-tag" style="background: rgba(229, 9, 20, 0.1); color: var(--outflow-color);">${out.category}</span></td>
                 <td style="color: var(--error-color); font-weight: 600;">- ${amount}</td>
                 <td>${receiptHtml}</td>
                 <td>
