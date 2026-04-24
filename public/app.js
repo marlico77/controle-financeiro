@@ -158,6 +158,32 @@ const initializePasswordToggles = () => {
 // Initialize toggles
 initializePasswordToggles();
 
+// --- Inactivity Timer Configuration ---
+const INACTIVITY_LIMIT = 20 * 60 * 1000; // 20 minutes
+const WARNING_TIME = 18 * 60 * 1000;    // 18 minutes (2 min warning)
+let inactivityTimeout;
+let warningTimeout;
+
+const resetInactivityTimer = () => {
+    if (inactivityTimeout) clearTimeout(inactivityTimeout);
+    if (warningTimeout) clearTimeout(warningTimeout);
+
+    if (state.token || localStorage.getItem('token')) {
+        warningTimeout = setTimeout(() => {
+            showStatus('⚠️ Sua sessão expirará em 2 minutos por inatividade.', 'info');
+        }, WARNING_TIME);
+
+        inactivityTimeout = setTimeout(() => {
+            logout();
+        }, INACTIVITY_LIMIT);
+    }
+};
+
+// Listen for user activity to reset the timer
+['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+    window.addEventListener(event, resetInactivityTimer);
+});
+
 // --- DOM Elements ---
 const loginSection = document.getElementById('login-section');
 const mainSection = document.getElementById('main-section');
@@ -257,6 +283,7 @@ const checkAuth = async () => {
                 state.activeTab = 'dashboard';
             }
             switchTab(state.activeTab);
+            resetInactivityTimer(); // Start timer after auth verification
 
             setTimeout(() => loadInitialData(), 50); 
         } catch (err) {
