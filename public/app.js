@@ -268,11 +268,14 @@ const checkAuth = async () => {
                 const chartTitles = document.querySelectorAll('.chart-container h4');
                 if (chartTitles[0]) chartTitles[0].textContent = 'Distribuição por Unidade';
 
-                // Show authorizations and logs for admins
+                // Show authorizations for admins/secretaries, but logs ONLY for master ADMINISTRADOR
                 const authNav = document.getElementById('nav-authorizations');
                 if (authNav) authNav.style.display = 'block';
+                
                 const logsNav = document.getElementById('nav-logs');
-                if (logsNav) logsNav.style.display = 'block';
+                if (logsNav) {
+                    logsNav.style.display = (state.role === 'admin' && state.username === 'ADMINISTRADOR') ? 'block' : 'none';
+                }
             }
 
             initializeSidebar();
