@@ -69,8 +69,11 @@ const calculateAge = (birthDate) => {
 
 const formatDate = (dateString) => {
     if (!dateString) return '-';
-    // dateString format is YYYY-MM-DD
-    const parts = dateString.split('-');
+    
+    // Handle ISO strings (YYYY-MM-DDTHH:mm:ss...)
+    const cleanDate = dateString.split('T')[0];
+    const parts = cleanDate.split('-');
+    
     if (parts.length !== 3) return dateString;
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
 };

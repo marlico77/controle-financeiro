@@ -658,22 +658,22 @@ tfoot td {
 
     .nav-links li {
         margin: 0;
-        padding: 0.5rem 0.6rem;
+        padding: 0.4rem 0.4rem; /* Reduzi o preenchimento lateral */
         flex-shrink: 0;
         text-align: center;
-        font-size: 0.7rem;
+        font-size: 0.65rem; /* Fonte um pouco menor para economizar espaço */
         display: flex;
-        flex-direction: column;
+        flex-direction: column; /* Ícone em cima do texto */
         align-items: center;
         justify-content: center;
-        gap: 4px;
+        gap: 3px; /* Espaço pequeno entre ícone e texto */
         border-radius: 0;
         background: transparent !important;
         color: #888;
         text-transform: none;
         font-weight: 500;
         letter-spacing: -0.2px;
-        min-width: 70px;
+        min-width: 60px; /* Reduzi de 70px para 60px para aproximar os menus */
     }
 
     .nav-links li .icon {
