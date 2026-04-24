@@ -1075,17 +1075,15 @@ const renderPeople = () => {
         return text.includes(searchQuery);
     });
 
-    // Sort logic
+    // Sort logic with accent support (localeCompare)
     processedPeople.sort((a, b) => {
         const col = state.peopleSort.column;
         const dir = state.peopleSort.direction === 'asc' ? 1 : -1;
         
-        let valA = (a[col] || '').toString().toLowerCase();
-        let valB = (b[col] || '').toString().toLowerCase();
+        let valA = (a[col] || '').toString();
+        let valB = (b[col] || '').toString();
         
-        if (valA < valB) return -1 * dir;
-        if (valA > valB) return 1 * dir;
-        return 0;
+        return valA.localeCompare(valB, 'pt-BR', { sensitivity: 'base' }) * dir;
     });
 
     // Update sort icons in UI
