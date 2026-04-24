@@ -133,6 +133,31 @@ const showAlert = (message, title = 'Aviso', icon = '⚠️') => {
     });
 };
 
+const initializePasswordToggles = () => {
+    document.querySelectorAll('.toggle-password').forEach(button => {
+        button.onclick = (e) => {
+            e.preventDefault();
+            const targetId = button.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            const openPath = button.querySelector('.eye-open');
+            const closedPath = button.querySelector('.eye-closed');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                openPath.style.display = 'none';
+                closedPath.style.display = 'block';
+            } else {
+                input.type = 'password';
+                openPath.style.display = 'block';
+                closedPath.style.display = 'none';
+            }
+        };
+    });
+};
+
+// Initialize toggles
+initializePasswordToggles();
+
 // --- DOM Elements ---
 const loginSection = document.getElementById('login-section');
 const mainSection = document.getElementById('main-section');

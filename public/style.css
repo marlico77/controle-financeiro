@@ -115,6 +115,39 @@ body {
     box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-wrapper input {
+    padding-right: 3rem; /* Space for the button */
+}
+
+.toggle-password {
+    position: absolute;
+    right: 0.5rem;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+    z-index: 2;
+}
+
+.toggle-password:hover {
+    color: var(--accent-color);
+}
+
+.toggle-password svg {
+    pointer-events: none;
+}
+
 .btn-primary {
     width: 100%;
     padding: 0.8rem;

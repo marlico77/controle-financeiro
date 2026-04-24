@@ -25,7 +25,15 @@
                     </div>
                     <div class="input-group">
                         <label for="password">Senha</label>
-                        <input type="password" id="password" required placeholder="Digite sua senha">
+                        <div class="password-wrapper">
+                            <input type="password" id="password" required placeholder="Digite sua senha">
+                            <button type="button" class="toggle-password" data-target="password" tabindex="-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20" fill="currentColor">
+                                    <path class="eye-open" d="M320 128C448 128 554.4 204.8 604.1 320C554.4 435.2 448 512 320 512C192 512 85.6 435.2 35.9 320C85.6 204.8 192 128 320 128ZM320 192C249.3 192 192 249.3 192 320C192 390.7 249.3 448 320 448C390.7 448 448 390.7 448 320C448 249.3 390.7 192 320 192ZM320 256C355.3 256 384 284.7 384 320C384 355.3 355.3 384 320 384C284.7 384 256 355.3 256 320C256 284.7 284.7 256 320 256Z"/>
+                                    <path class="eye-closed" style="display: none;" d="M632.9 572.7C641.8 584.5 639.4 601.2 627.5 610.1C615.7 618.9 598.9 616.6 590.1 604.7L494.3 476.9C445.8 501.9 387.6 512 320 512C192 512 85.6 435.2 35.9 320C57.4 270.2 92.5 228.3 135.3 198.1L47.1 80.5C38.2 68.7 40.5 52 52.4 43.1C64.2 34.3 80.9 36.6 89.8 48.5L167.3 151.7C211 133.5 262.5 128 320 128C448 128 554.4 204.8 604.1 320C624.2 366.7 628.7 413.4 618.7 455.5L632.9 572.7ZM320 192C288.7 192 260.1 203.2 237.9 221.7L411.3 452.9C433.9 419.6 448 376.6 448 320C448 249.3 390.7 192 320 192ZM320 256C341.1 256 359.8 266.1 371.7 282.1L289 171.7C278.4 186.2 272 203.8 272 223C272 249.5 288.2 272.2 311 281.3L320 256Z"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; font-size: 0.9rem;">
@@ -353,7 +361,15 @@
                         </div>
                         <div class="input-group">
                             <label for="u-password">Nova Senha (deixe vazio para manter)</label>
-                            <input type="password" id="u-password" placeholder="Digite para trocar">
+                            <div class="password-wrapper">
+                                <input type="password" id="u-password" placeholder="Digite para trocar">
+                                <button type="button" class="toggle-password" data-target="u-password" tabindex="-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20" fill="currentColor">
+                                        <path class="eye-open" d="M320 128C448 128 554.4 204.8 604.1 320C554.4 435.2 448 512 320 512C192 512 85.6 435.2 35.9 320C85.6 204.8 192 128 320 128ZM320 192C249.3 192 192 249.3 192 320C192 390.7 249.3 448 320 448C390.7 448 448 390.7 448 320C448 249.3 390.7 192 320 192ZM320 256C355.3 256 384 284.7 384 320C384 355.3 355.3 384 320 384C284.7 384 256 355.3 256 320C256 284.7 284.7 256 320 256Z"/>
+                                        <path class="eye-closed" style="display: none;" d="M632.9 572.7C641.8 584.5 639.4 601.2 627.5 610.1C615.7 618.9 598.9 616.6 590.1 604.7L494.3 476.9C445.8 501.9 387.6 512 320 512C192 512 85.6 435.2 35.9 320C57.4 270.2 92.5 228.3 135.3 198.1L47.1 80.5C38.2 68.7 40.5 52 52.4 43.1C64.2 34.3 80.9 36.6 89.8 48.5L167.3 151.7C211 133.5 262.5 128 320 128C448 128 554.4 204.8 604.1 320C624.2 366.7 628.7 413.4 618.7 455.5L632.9 572.7ZM320 192C288.7 192 260.1 203.2 237.9 221.7L411.3 452.9C433.9 419.6 448 376.6 448 320C448 249.3 390.7 192 320 192ZM320 256C341.1 256 359.8 266.1 371.7 282.1L289 171.7C278.4 186.2 272 203.8 272 223C272 249.5 288.2 272.2 311 281.3L320 256Z"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-actions">
@@ -578,7 +594,15 @@
                 </div>
                 <div class="input-group">
                     <label>Nova Senha</label>
-                    <input type="password" id="recover-new-password" required placeholder="Mín. 5 chars, 1 num, 1 especial">
+                    <div class="password-wrapper">
+                        <input type="password" id="recover-new-password" required placeholder="Mín. 5 chars, 1 num, 1 especial">
+                        <button type="button" class="toggle-password" data-target="recover-new-password" tabindex="-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20" fill="currentColor">
+                                <path class="eye-open" d="M320 128C448 128 554.4 204.8 604.1 320C554.4 435.2 448 512 320 512C192 512 85.6 435.2 35.9 320C85.6 204.8 192 128 320 128ZM320 192C249.3 192 192 249.3 192 320C192 390.7 249.3 448 320 448C390.7 448 448 390.7 448 320C448 249.3 390.7 192 320 192ZM320 256C355.3 256 384 284.7 384 320C384 355.3 355.3 384 320 384C284.7 384 256 355.3 256 320C256 284.7 284.7 256 320 256Z"/>
+                                <path class="eye-closed" style="display: none;" d="M632.9 572.7C641.8 584.5 639.4 601.2 627.5 610.1C615.7 618.9 598.9 616.6 590.1 604.7L494.3 476.9C445.8 501.9 387.6 512 320 512C192 512 85.6 435.2 35.9 320C57.4 270.2 92.5 228.3 135.3 198.1L47.1 80.5C38.2 68.7 40.5 52 52.4 43.1C64.2 34.3 80.9 36.6 89.8 48.5L167.3 151.7C211 133.5 262.5 128 320 128C448 128 554.4 204.8 604.1 320C624.2 366.7 628.7 413.4 618.7 455.5L632.9 572.7ZM320 192C288.7 192 260.1 203.2 237.9 221.7L411.3 452.9C433.9 419.6 448 376.6 448 320C448 249.3 390.7 192 320 192ZM320 256C341.1 256 359.8 266.1 371.7 282.1L289 171.7C278.4 186.2 272 203.8 272 223C272 249.5 288.2 272.2 311 281.3L320 256Z"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <button type="submit" class="btn-primary" style="margin-top: 1rem;">Redefinir Senha</button>
                 <div id="recover-error" class="error-msg"></div>
@@ -600,11 +624,27 @@
             <form id="force-change-form">
                 <div class="input-group">
                     <label>Nova Senha</label>
-                    <input type="password" id="force-new-password" required placeholder="Digite a nova senha">
+                    <div class="password-wrapper">
+                        <input type="password" id="force-new-password" required placeholder="Digite a nova senha">
+                        <button type="button" class="toggle-password" data-target="force-new-password" tabindex="-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20" fill="currentColor">
+                                <path class="eye-open" d="M320 128C448 128 554.4 204.8 604.1 320C554.4 435.2 448 512 320 512C192 512 85.6 435.2 35.9 320C85.6 204.8 192 128 320 128ZM320 192C249.3 192 192 249.3 192 320C192 390.7 249.3 448 320 448C390.7 448 448 390.7 448 320C448 249.3 390.7 192 320 192ZM320 256C355.3 256 384 284.7 384 320C384 355.3 355.3 384 320 384C284.7 384 256 355.3 256 320C256 284.7 284.7 256 320 256Z"/>
+                                <path class="eye-closed" style="display: none;" d="M632.9 572.7C641.8 584.5 639.4 601.2 627.5 610.1C615.7 618.9 598.9 616.6 590.1 604.7L494.3 476.9C445.8 501.9 387.6 512 320 512C192 512 85.6 435.2 35.9 320C57.4 270.2 92.5 228.3 135.3 198.1L47.1 80.5C38.2 68.7 40.5 52 52.4 43.1C64.2 34.3 80.9 36.6 89.8 48.5L167.3 151.7C211 133.5 262.5 128 320 128C448 128 554.4 204.8 604.1 320C624.2 366.7 628.7 413.4 618.7 455.5L632.9 572.7ZM320 192C288.7 192 260.1 203.2 237.9 221.7L411.3 452.9C433.9 419.6 448 376.6 448 320C448 249.3 390.7 192 320 192ZM320 256C341.1 256 359.8 266.1 371.7 282.1L289 171.7C278.4 186.2 272 203.8 272 223C272 249.5 288.2 272.2 311 281.3L320 256Z"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="input-group">
                     <label>Confirmar Nova Senha</label>
-                    <input type="password" id="force-confirm-password" required placeholder="Confirme a nova senha">
+                    <div class="password-wrapper">
+                        <input type="password" id="force-confirm-password" required placeholder="Confirme a nova senha">
+                        <button type="button" class="toggle-password" data-target="force-confirm-password" tabindex="-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20" fill="currentColor">
+                                <path class="eye-open" d="M320 128C448 128 554.4 204.8 604.1 320C554.4 435.2 448 512 320 512C192 512 85.6 435.2 35.9 320C85.6 204.8 192 128 320 128ZM320 192C249.3 192 192 249.3 192 320C192 390.7 249.3 448 320 448C390.7 448 448 390.7 448 320C448 249.3 390.7 192 320 192ZM320 256C355.3 256 384 284.7 384 320C384 355.3 355.3 384 320 384C284.7 384 256 355.3 256 320C256 284.7 284.7 256 320 256Z"/>
+                                <path class="eye-closed" style="display: none;" d="M632.9 572.7C641.8 584.5 639.4 601.2 627.5 610.1C615.7 618.9 598.9 616.6 590.1 604.7L494.3 476.9C445.8 501.9 387.6 512 320 512C192 512 85.6 435.2 35.9 320C57.4 270.2 92.5 228.3 135.3 198.1L47.1 80.5C38.2 68.7 40.5 52 52.4 43.1C64.2 34.3 80.9 36.6 89.8 48.5L167.3 151.7C211 133.5 262.5 128 320 128C448 128 554.4 204.8 604.1 320C624.2 366.7 628.7 413.4 618.7 455.5L632.9 572.7ZM320 192C288.7 192 260.1 203.2 237.9 221.7L411.3 452.9C433.9 419.6 448 376.6 448 320C448 249.3 390.7 192 320 192ZM320 256C341.1 256 359.8 266.1 371.7 282.1L289 171.7C278.4 186.2 272 203.8 272 223C272 249.5 288.2 272.2 311 281.3L320 256Z"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <button type="submit" class="btn-primary" style="margin-top: 1rem;">Atualizar Senha e Entrar</button>
                 <div id="force-change-error" class="error-msg"></div>
