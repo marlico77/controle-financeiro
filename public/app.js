@@ -271,12 +271,12 @@ const checkAuth = async () => {
                 document.getElementById('page-title').textContent = 'Meu Status de Mensalidade';
             } else {
                 // Admin/Secretary Access
-                if (navItems.people) navItems.people.style.display = isAdmin ? 'block' : 'none';
-                if (navItems.reports) navItems.reports.style.display = 'block';
-                if (navItems.authorizations) navItems.authorizations.style.display = 'block';
+                if (navItems.people) navItems.people.style.display = isAdmin ? 'flex' : 'none';
+                if (navItems.reports) navItems.reports.style.display = 'flex';
+                if (navItems.authorizations) navItems.authorizations.style.display = 'flex';
                 
                 // Logs ONLY for master
-                if (navItems.logs) navItems.logs.style.display = isMaster ? 'block' : 'none';
+                if (navItems.logs) navItems.logs.style.display = isMaster ? 'flex' : 'none';
 
                 document.getElementById('page-title').textContent = isAdmin ? 'Dashboard de Mensalidades' : 'Painel Administrativo';
             }

@@ -658,22 +658,23 @@ tfoot td {
 
     .nav-links li {
         margin: 0;
-        padding: 0.4rem 0.4rem; /* Reduzi o preenchimento lateral */
+        padding: 0.3rem 0.2rem; /* Preenchimento drasticamente reduzido */
         flex-shrink: 0;
         text-align: center;
-        font-size: 0.65rem; /* Fonte um pouco menor para economizar espaço */
+        font-size: 0.65rem;
         display: flex !important;
-        flex-direction: column !important; /* Ícone em cima do texto no mobile */
-        align-items: center;
-        justify-content: center;
-        gap: 3px; /* Espaço pequeno entre ícone e texto */
-        border-radius: 0;
+        flex-direction: column !important; /* Ícone estritamente acima do texto */
+        align-items: center !important; /* Alinhamento vertical ao centro */
+        justify-content: center !important;
+        gap: 2px; /* Espaço quase nulo entre ícone e texto */
+        border-radius: 4px;
         background: transparent !important;
         color: #888;
         text-transform: none;
         font-weight: 500;
         letter-spacing: -0.2px;
-        min-width: 60px; /* Reduzi de 70px para 60px para aproximar os menus */
+        min-width: auto; /* Removido o limite mínimo de largura */
+        max-width: 70px; /* Impede que textos longos ocupem muito espaço */
     }
 
     .nav-links li .icon {
