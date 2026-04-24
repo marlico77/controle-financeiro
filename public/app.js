@@ -1136,11 +1136,11 @@ const updateDashboardStats = () => {
             if (p.status === 'approved') mensalidadesPuro += parseFloat(p.amount);
         });
 
-        // Gráfico simplificado: Mensalidades vs Eventos com tons pastéis
+        // Gráfico simplificado: Mensalidades vs Eventos com as cores do clube
         renderPieChart(
             ['Mensalidades', 'Eventos'], 
             [mensalidadesPuro, eventosTotal],
-            ['#64748b', '#94a3b8'] 
+            ['#e50914', '#111111'] 
         );
     } else {
         const paidMonths = state.payments.length;
@@ -1148,7 +1148,7 @@ const updateDashboardStats = () => {
         const totalCashElem = document.getElementById('stat-total-cash');
         if (totalCashElem) totalCashElem.textContent = `R$ ${totalCash.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         
-        renderPieChart(['Meses Pagos', 'Pendentes'], [paidMonths, pendingMonths], ['#34a853', '#e8e6df']);
+        renderPieChart(['Meses Pagos', 'Pendentes'], [paidMonths, pendingMonths], ['#e50914', '#111111']);
     }
     
     renderBarChart(monthlyData);
@@ -1187,7 +1187,7 @@ const renderEventDashboard = (participants, payments) => {
     renderPieChart(
         ['Direção', 'Desbravadores', 'Outros'],
         [evDirecao, evDesbrava, evOutros],
-        ['#64748b', '#94a3b8', '#cbd5e1'],
+        ['#e50914', '#111111', '#707070'],
         'evPieChart',
         'evPie'
     );
@@ -1229,7 +1229,7 @@ const renderMensalidadeDashboard = () => {
     renderPieChart(
         ['Direção', 'Desbravadores', 'Outros'],
         [mDirecao, mDesbrava, mOutros],
-        ['#64748b', '#94a3b8', '#cbd5e1'],
+        ['#e50914', '#111111', '#707070'],
         'mensPieChart',
         'mensPie'
     );
@@ -1291,7 +1291,7 @@ const renderBarChart = (monthlyData, canvasId = 'barChart', stateKey = 'bar') =>
             datasets: [{
                 label: 'Receita (R$)',
                 data: monthlyData,
-                backgroundColor: '#94a3b8', // Cor única e neutra para todas as barras
+                backgroundColor: '#e50914', // Vermelho para as barras
                 borderRadius: 5,
                 maxBarThickness: 40
             }]
@@ -1482,10 +1482,16 @@ let renderPeople = () => {
     });
 };
 
-// Add listener to global search
+// Add listeners to search inputs
 document.addEventListener('input', (e) => {
     if (e.target.id === 'global-search') {
         renderPeople();
+    } else if (e.target.id === 'mens-search') {
+        renderDashboard();
+    } else if (e.target.id === 'ev-detail-search') {
+        if (state.currentEventParticipants && state.currentEventPayments) {
+            renderEventDetailGrid(state.currentEventParticipants, state.currentEventPayments);
+        }
     }
 });
 
