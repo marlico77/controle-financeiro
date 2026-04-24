@@ -243,6 +243,10 @@ const checkAuth = async () => {
                 if (chartTitles[0]) chartTitles[0].textContent = 'Distribuição por Unidade';
 
                 document.getElementById('user-role-badge').textContent = 'Administrador';
+                
+                // Show authorizations for admins
+                const authNav = document.getElementById('nav-authorizations');
+                if (authNav) authNav.style.display = 'block';
             }
 
             initializeSidebar();
@@ -377,6 +381,7 @@ const switchTab = (target) => {
     else if (target === 'events') title.textContent = 'Gestão de Eventos';
     else if (target === 'reports') title.textContent = 'Relatórios do Sistema';
     else if (target === 'mensalidade') title.textContent = 'Controle de Mensalidades';
+    else if (target === 'authorizations') title.textContent = 'Autorizações de Saída';
 
     // Refresh specific data if needed
     if (target === 'dashboard') renderDashboard();
@@ -2014,4 +2019,124 @@ const startHeartbeat = () => {
 };
 
 if (state.token) startHeartbeat();
+// --- Authorization Generation ---
+window.generateAuthDocument = async (type) => {
+    const eventName = document.getElementById('auth-event-name').value;
+    const eventDate = document.getElementById('auth-event-date').value;
+    const eventLocation = document.getElementById('auth-event-location').value;
+    const departureLocation = document.getElementById('auth-departure-location').value;
+    const departureTime = document.getElementById('auth-departure-time').value;
+    const returnTime = document.getElementById('auth-return-time').value;
+
+    if (!eventName || !eventDate || !eventLocation || !departureLocation || !departureTime || !returnTime) {
+        showStatus('Por favor, preencha todos os campos do formulário.', 'error');
+        return;
+    }
+
+    const formattedDate = formatDate(eventDate);
+    const currentYear = new Date().getFullYear();
+
+    // Helper to get base64 logo for .doc export
+    const getLogoBase64 = async () => {
+        try {
+            const response = await fetch('logo.png');
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            console.error('Error loading logo for doc:', e);
+            return 'logo.png'; // Fallback to relative path if fetch fails
+        }
+    };
+
+    const logoSrc = type === 'doc' ? await getLogoBase64() : 'logo.png';
+
+    const headerHtml = type === 'doc' ? `
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
+            <tr>
+                <td width="80" valign="top">
+                    <img src="${logoSrc}" width="75" height="75" style="display: block;">
+                </td>
+                <td align="center" valign="middle">
+                    <h2 style="margin: 0; font-size: 1.3rem; text-transform: uppercase; font-family: Arial;">CLUBE DE DESBRAVADORES TRIBO DE DAVI-AP</h2>
+                    <h3 style="margin: 10px 0 0 0; font-size: 1.1rem; text-decoration: underline; font-family: Arial;">Autorização de saída</h3>
+                </td>
+                <td width="80"></td>
+            </tr>
+        </table>
+    ` : `
+        <div style="display: flex; align-items: center; margin-bottom: 30px; position: relative; min-height: 80px;">
+            <img src="${logoSrc}" style="height: 75px; width: 75px; position: absolute; left: 0; top: -10px; object-fit: contain;">
+            <div style="width: 100%; text-align: center;">
+                <h2 style="margin: 0; font-size: 1.3rem; text-transform: uppercase; padding: 0 80px;">CLUBE DE DESBRAVADORES TRIBO DE DAVI-AP</h2>
+                <h3 style="margin: 5px 0 0 0; font-size: 1.1rem; text-decoration: underline;">Autorização de saída</h3>
+            </div>
+        </div>
+    `;
+
+    const htmlContent = `
+        <div style="font-family: 'Arial', sans-serif; color: black; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; background: white;">
+            ${headerHtml}
+
+            <p style="margin-top: 40px; text-align: justify;">
+                Eu ____________________________________________________________________ responsável pelo(a) desbravador(a) 
+                ______________________________________________________________________, inscrito(a) no CPF 
+                ______________________________________________________________________, autorizo-o(a) a participar do evento 
+                <strong>${eventName}</strong> que será realizado no dia <strong>${formattedDate}</strong>, no local <strong>${eventLocation}</strong>. 
+                Os desbravadores deverão chegar às <strong>${departureTime}</strong> horas em <strong>${departureLocation}</strong>, 
+                onde se reunirão para a saída. O evento se encerrará às <strong>${returnTime}</strong>h. 
+                Após esse horário os responsáveis deverão buscar os desbravadores no mesmo local de partida.
+            </p>
+
+            <p style="margin-top: 30px; text-align: center; font-weight: bold;">
+                Estou ciente de que estará acompanhado(a) pela direção do Clube de Desbravadores TRIBO DE DAVI, 
+                estando sob sua responsabilidade durante todo esse período.
+            </p>
+
+            <div style="margin-top: 50px; text-align: right; padding-right: 50px;">
+                _________/_________/ ${currentYear}
+            </div>
+
+            <div style="margin-top: 60px;">
+                <p style="margin: 5px 0;">Nome do responsável: ____________________________________________________________________</p>
+                <p style="margin: 5px 0;">Nº do CPF do responsável: ________________________________________________________________</p>
+                <p style="margin: 5px 0;">Telefone de contato: (____) ________________________________________________________________</p>
+            </div>
+
+            <div style="margin-top: 80px; text-align: center;">
+                <div style="border-top: 1px solid black; width: 400px; margin: 0 auto; padding-top: 5px;">
+                    Assinatura do responsável
+                </div>
+            </div>
+        </div>
+    `;
+
+    if (type === 'pdf') {
+        const reportPrintable = document.getElementById('report-printable');
+        reportPrintable.innerHTML = htmlContent;
+        document.getElementById('report-modal').style.display = 'flex';
+    } else if (type === 'doc') {
+        const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' "+
+            "xmlns:w='urn:schemas-microsoft-com:office:word' "+
+            "xmlns='http://www.w3.org/TR/REC-html40'>"+
+            "<head><meta charset='utf-8'><title>Autorização de Saída</title></head><body>";
+        const footer = "</body></html>";
+        const sourceHTML = header + htmlContent + footer;
+        
+        const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+        const fileDownload = document.createElement("a");
+        document.body.appendChild(fileDownload);
+        fileDownload.href = source;
+        fileDownload.download = `Autorizacao_${eventName.replace(/\s+/g, '_')}.doc`;
+        fileDownload.click();
+        document.body.removeChild(fileDownload);
+    }
+};
+
+document.getElementById('generate-auth-pdf').onclick = () => window.generateAuthDocument('pdf');
+document.getElementById('generate-auth-doc').onclick = () => window.generateAuthDocument('doc');
+
 checkAuth();

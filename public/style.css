@@ -1258,3 +1258,39 @@ tfoot td {
     font-size: 0.8rem;
     font-family: monospace;
 }
+
+/* Print styles for Authorizations */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #report-modal, #report-modal * {
+        visibility: visible;
+    }
+    #report-modal {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: auto;
+        background: white;
+        backdrop-filter: none;
+    }
+    .modal-content {
+        box-shadow: none;
+        border: none;
+        max-width: 100%;
+        width: 100%;
+        height: auto;
+        overflow: visible;
+        background: white;
+    }
+    .close-modal, .btn-primary {
+        display: none !important;
+    }
+    .report-canvas {
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+}

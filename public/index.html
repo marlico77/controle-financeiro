@@ -97,6 +97,11 @@
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 112L304 112L304 200C304 239.8 336.2 272 376 272L464 272L464 512C464 520.8 456.8 528 448 528L192 528C183.2 528 176 520.8 176 128C176 119.2 183.2 112 192 112zM352 131.9L444.1 224L376 224C362.7 224 352 213.3 352 200L352 131.9zM192 64C156.7 64 128 92.7 128 128L128 512C128 547.3 156.7 576 192 576L448 576C483.3 576 512 547.3 512 512L512 250.5C512 233.5 505.3 217.2 493.3 205.2L370.7 82.7C358.7 70.7 342.5 64 325.5 64L192 64zM291.2 329.6C283.2 319 268.2 316.8 257.6 324.8C247 332.8 244.8 347.8 252.8 358.4L290 408L252.8 457.6C244.8 468.2 247 483.2 257.6 491.2C268.2 499.2 283.2 497 291.2 486.4L320 448L348.8 486.4C356.8 497 371.8 499.2 382.4 491.2C393 483.2 395.2 468.2 387.2 457.6L350 408L387.2 358.4C395.2 347.8 393 332.8 382.4 324.8C371.8 316.8 356.8 319 348.8 329.6L320 368L291.2 329.6z"/></svg>
                         </span>Relatórios
                     </li>
+                    <li data-target="authorizations" id="nav-authorizations" style="display: none;">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 64C156.7 64 128 92.7 128 128L128 512C128 547.3 156.7 576 192 576L448 576C483.3 576 512 547.3 512 512L512 128C512 92.7 483.3 64 448 64L192 64zM240 176L400 176C413.3 176 424 186.7 424 200C424 213.3 413.3 224 400 224L240 224C226.7 224 216 213.3 216 200C216 186.7 226.7 176 240 176zM240 272L400 272C413.3 272 424 282.7 424 296C424 309.3 413.3 320 400 320L240 320C226.7 320 216 309.3 216 296C216 282.7 226.7 272 240 272zM240 368L336 368C349.3 368 360 378.7 360 392C360 405.3 349.3 416 336 416L240 416C226.7 416 216 405.3 216 392C216 378.7 226.7 368 240 368z"/></svg>
+                        </span>Autorizações
+                    </li>
                 </ul>
                 <div class="nav-footer">
                     <button id="logout-btn" class="btn-text">Sair</button>
@@ -268,6 +273,50 @@
                             <p style="color: var(--text-dim);">Gere extratos detalhados de mensalidades, membros ou eventos.</p>
                         </div>
                         <button id="open-report-selector-btn" class="btn-primary" style="max-width: 300px; background: black; color: white; padding: 1.2rem 2rem; font-weight: 700;">Gerar Novo Relatório</button>
+                    </div>
+                </div>
+
+                <!-- Authorizations Page -->
+                <div id="authorizations-page" class="tab-content" style="display: none;">
+                    <div class="glass-card" style="padding: 2rem; max-width: 800px; margin: 0 auto;">
+                        <div style="margin-bottom: 2rem; text-align: center;">
+                            <h3 style="color: var(--accent-color); margin-bottom: 0.5rem; font-size: 1.8rem;">Gerar Autorização de Saída</h3>
+                            <p style="color: var(--text-dim);">Preencha os detalhes do evento para gerar o documento padronizado.</p>
+                        </div>
+                        <form id="auth-form">
+                            <div class="input-group">
+                                <label for="auth-event-name">Nome do Evento</label>
+                                <input type="text" id="auth-event-name" required placeholder="Ex: Saída ao museu Catavento">
+                            </div>
+                            <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                <div class="input-group">
+                                    <label for="auth-event-date">Data do Evento</label>
+                                    <input type="date" id="auth-event-date" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="auth-event-location">Local do Evento</label>
+                                    <input type="text" id="auth-event-location" required placeholder="Ex: Sitio Avenida Mercúrio, Parque Dom Pedro-SP">
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label for="auth-departure-location">Local de Saída</label>
+                                <input type="text" id="auth-departure-location" required placeholder="Ex: R. Pedro Alexandrino Soares, 557 - Jardim Boa Vista">
+                            </div>
+                            <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                <div class="input-group">
+                                    <label for="auth-departure-time">Horário de Saída</label>
+                                    <input type="time" id="auth-departure-time" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="auth-return-time">Horário de Retorno Previsto</label>
+                                    <input type="time" id="auth-return-time" required>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                                <button type="button" id="generate-auth-pdf" class="btn-primary" style="flex: 1; background: #e50914;">Gerar PDF</button>
+                                <button type="button" id="generate-auth-doc" class="btn-primary" style="flex: 1; background: #2980b9;">Gerar .DOC</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </main>
@@ -545,16 +594,14 @@
         </div>
     </div>
 
-    <!-- Report Preview Modal -->
-    <div id="report-modal" class="modal">
-        <div class="glass-card modal-content" style="max-width: 900px; height: 90vh; display: flex; flex-direction: column;">
-            <span class="close-modal">&times;</span>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-right: 2rem;">
-                <h3 style="color: var(--accent-color); margin: 0;">Visualização do Relatório</h3>
-                <button class="btn-primary" onclick="window.print()" style="background: black; color: white; padding: 0.6rem 1.2rem;">Imprimir / Salvar PDF</button>
+    <div id="report-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div class="modal-content glass-card" style="max-width: 1000px; width: 90%; max-height: 95vh; overflow-y: auto; background: var(--bg-color); padding: 2rem;">
+            <span class="close-modal" style="top: 1rem; right: 1.5rem;">&times;</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 2rem; border-bottom: 1px solid var(--border-color); padding: 0 0.5rem 1.5rem 0.5rem;">
+                <h3 style="color: var(--accent-color); margin: 0; font-size: 1.6rem; font-weight: 700;">Visualização do Relatório</h3>
+                <button onclick="window.print()" class="btn-primary" style="width: auto; background: black; color: white; padding: 0.7rem 2rem; font-size: 1rem; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">Imprimir / Salvar PDF</button>
             </div>
-            
-            <div id="report-printable" class="report-canvas" style="flex: 1; overflow-y: auto; background: white; color: black; padding: 3rem; border-radius: 8px; border: 1px solid #ddd;">
+            <div id="report-printable" class="report-canvas" style="background: white; padding: 4rem; border-radius: 4px; border: 1px solid #ddd; color: black; box-shadow: 0 10px 30px rgba(0,0,0,0.1); min-height: 1000px;">
                 <!-- Generated Report HTML -->
             </div>
         </div>
