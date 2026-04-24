@@ -426,7 +426,7 @@ let switchTab = (target) => {
     else if (target === 'reports') title.textContent = 'Relatórios do Sistema';
     else if (target === 'mensalidade') title.textContent = 'Controle de Mensalidades';
     else if (target === 'authorizations') title.textContent = 'Autorizações de Saída';
-    else if (target === 'outflows') title.textContent = 'Saídas de Caixa (Despesas)';
+    else if (target === 'outflows') title.textContent = 'Gestão de Despesas';
     else if (target === 'logs') title.textContent = 'Logs de Auditoria';
 
     // Refresh specific data if needed
@@ -1161,9 +1161,9 @@ const updateDashboardStats = () => {
             if (p.status === 'approved') mensalidadesPuro += parseFloat(p.amount);
         });
 
-        // Gráfico simplificado: Mensalidades vs Eventos vs Saídas
+        // Gráfico simplificado: Mensalidades vs Eventos vs Despesas
         renderPieChart(
-            ['Mensalidades', 'Eventos', 'Saídas'], 
+            ['Mensalidades', 'Eventos', 'Despesas'], 
             [mensalidadesPuro, eventosTotal, totalOutflows],
             ['#e50914', '#111111', '#8b0000'] 
         );
@@ -1363,7 +1363,7 @@ const renderOutflows = () => {
     if (!body) return;
 
     if (state.outflows.length === 0) {
-        body.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">Nenhuma saída registrada.</td></tr>';
+        body.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">Nenhuma despesa registrada.</td></tr>';
         return;
     }
 
@@ -1392,7 +1392,7 @@ const renderOutflows = () => {
 };
 
 window.deleteOutflow = async (id) => {
-    if (await showConfirm('Tem certeza que deseja excluir esta saída?')) {
+    if (await showConfirm('Tem certeza que deseja excluir esta despesa?')) {
         try {
             await apiFetch(`/api/outflows/${id}`, { method: 'DELETE' });
             await loadInitialData();
@@ -1424,7 +1424,7 @@ if (outflowForm) {
             });
 
             if (res.ok) {
-                showStatus('Saída registrada com sucesso!', 'success');
+                showStatus('Despesa registrada com sucesso!', 'success');
                 e.target.reset();
                 await loadInitialData();
                 renderOutflows();
@@ -1433,7 +1433,7 @@ if (outflowForm) {
                 showStatus(data.error, 'error');
             }
         } catch (err) {
-            showStatus('Erro ao salvar saída', 'error');
+            showStatus('Erro ao salvar despesa', 'error');
         }
     };
 }
