@@ -1358,3 +1358,40 @@ tfoot td {
         margin: 0 !important;
     }
 }
+
+/* Floating Scrollbar Utility */
+.floating-scrollbar-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 12px;
+    background: transparent;
+    z-index: 999;
+    display: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    pointer-events: auto;
+}
+
+.floating-scrollbar-content {
+    height: 1px;
+}
+
+/* Custom scrollbar for the floating one */
+.floating-scrollbar-container::-webkit-scrollbar {
+    height: 8px;
+}
+.floating-scrollbar-container::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.1);
+}
+.floating-scrollbar-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+@media (max-width: 768px) {
+    .floating-scrollbar-container {
+        bottom: 70px; /* Acima da barra de navegação mobile */
+    }
+}

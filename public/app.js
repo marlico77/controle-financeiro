@@ -16,7 +16,11 @@ const state = {
     eventDetailYear: new Date().getFullYear(),
     charts: {
         pie: null,
-        bar: null
+        bar: null,
+        evPie: null,
+        evBar: null,
+        mensPie: null,
+        mensBar: null
     },
     peopleSort: {
         column: 'name',
@@ -389,7 +393,7 @@ if (confirmForceLoginBtn) {
 }
 
 // --- Navigation ---
-const switchTab = (target) => {
+let switchTab = (target) => {
     state.activeTab = target;
     localStorage.setItem('activeTab', target);
     
@@ -621,6 +625,14 @@ const loadInitialData = async () => {
         }
 
         state.payments = await apiFetch(`/api/payments?year=${state.currentYear}`);
+        
+        // Buscar pagamentos de eventos também para compor o total do caixa
+        if (state.role === 'admin') {
+            state.eventPayments = await apiFetch('/api/event-payments');
+        } else {
+            state.eventPayments = await apiFetch(`/api/event-payments?person_id=${state.personId}`);
+        }
+
         renderDashboard();
         
         if (state.role === 'admin') {
@@ -762,6 +774,7 @@ const openEventDetail = async (eventId) => {
         const data = await apiFetch(`/api/events/${eventId}/details`);
         state.currentEvent = data.event;
         state.currentEventParticipants = data.participants;
+        state.currentEventPayments = data.payments;
         
         document.getElementById('events-master-view').style.display = 'none';
         document.getElementById('events-detail-view').style.display = 'block';
@@ -772,16 +785,29 @@ const openEventDetail = async (eventId) => {
             document.getElementById('add-event-btn').style.display = 'none';
             document.getElementById('add-participants-btn').style.display = 'block';
         }
+
+        // Reset details toggle (apenas na abertura inicial)
+        document.getElementById('event-details-table-container').style.display = 'none';
+        document.getElementById('toggle-event-details').textContent = 'Ver Detalhamento Membro a Membro ↓';
         
+        // Limpar busca anterior ao abrir novo evento
+        const evSearch = document.getElementById('ev-detail-search');
+        if (evSearch) evSearch.value = '';
+        
+        renderEventDashboard(data.participants, data.payments);
         renderEventDetailGrid(data.participants, data.payments);
     } catch (err) {
         showStatus(err.message, 'error');
     }
 };
 
-const renderEventDetailGrid = (participants, payments) => {
+let renderEventDetailGrid = (participants, payments) => {
     const body = document.getElementById('event-detail-body');
-    body.innerHTML = participants.map(p => {
+    const searchTerm = document.getElementById('ev-detail-search')?.value.toLowerCase() || '';
+    
+    const filteredParticipants = participants.filter(p => p.name.toLowerCase().includes(searchTerm));
+
+    body.innerHTML = filteredParticipants.map(p => {
         let rows = `<td><strong>${p.name}</strong> <br> <small>${p.unit || '-'}</small></td>`;
         let yearlyTotal = 0;
 
@@ -1042,12 +1068,14 @@ const updateDashboardStats = () => {
     let totalCash = 0;
     let direcaoTotal = 0;
     let desbravadoresTotal = 0;
+    let eventosTotal = 0;
     let outrosTotal = 0;
     
     const monthlyData = new Array(12).fill(0);
     
+    // Somar Mensalidades
     state.payments.forEach(p => {
-        if (p.status !== 'approved') return; // Only count approved payments
+        if (p.status !== 'approved') return;
         
         const amount = parseFloat(p.amount);
         totalCash += amount;
@@ -1065,35 +1093,159 @@ const updateDashboardStats = () => {
         }
     });
 
+    // Somar Eventos ao Caixa e distribuir por Unidade
+    if (state.eventPayments) {
+        state.eventPayments.forEach(p => {
+            if (p.status !== 'approved') return;
+            const amount = parseFloat(p.amount);
+            totalCash += amount;
+            eventosTotal += amount;
+            
+            // Distribuir o valor do evento para a unidade correspondente do membro
+            const person = state.people.find(pers => pers.id === p.person_id);
+            const unit = (person?.unit || '').toUpperCase();
+
+            if (unit.includes('DIREÇÃO') || unit.includes('DIRECAO')) {
+                direcaoTotal += amount;
+            } else if (unit.includes('DESBRAVADOR')) {
+                desbravadoresTotal += amount;
+            } else {
+                outrosTotal += amount;
+            }
+
+            // Se tiver mês definido no pagamento do evento, soma ao gráfico mensal
+            if (p.month) {
+                monthlyData[p.month - 1] += amount;
+            }
+        });
+    }
+
     if (state.role === 'admin') {
         document.getElementById('stat-total-cash').textContent = `R$ ${totalCash.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         const direcaoStat = document.getElementById('stat-direcao');
         const desbravaStat = document.getElementById('stat-desbravadores');
+        const eventosStat = document.getElementById('stat-eventos');
+        
         if (direcaoStat) direcaoStat.textContent = `R$ ${direcaoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         if (desbravaStat) desbravaStat.textContent = `R$ ${desbravadoresTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        renderPieChart(['Direção', 'Desbravadores', 'Outros'], [direcaoTotal, desbravadoresTotal, outrosTotal]);
+        if (eventosStat) eventosStat.textContent = `R$ ${eventosTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        
+        // Para o gráfico de pizza, queremos o total puro de mensalidades (sem eventos)
+        let mensalidadesPuro = 0;
+        state.payments.forEach(p => {
+            if (p.status === 'approved') mensalidadesPuro += parseFloat(p.amount);
+        });
+
+        // Gráfico simplificado: Mensalidades vs Eventos com tons pastéis
+        renderPieChart(
+            ['Mensalidades', 'Eventos'], 
+            [mensalidadesPuro, eventosTotal],
+            ['#64748b', '#94a3b8'] 
+        );
     } else {
-        // Member view: Personal Stats
         const paidMonths = state.payments.length;
         const pendingMonths = 12 - paidMonths;
-        
-        console.log('Member Statistics:', { paidMonths, pendingMonths });
-
         const totalCashElem = document.getElementById('stat-total-cash');
         if (totalCashElem) totalCashElem.textContent = `R$ ${totalCash.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         
-        renderPieChart(['Meses Pagos', 'Pendentes'], [paidMonths, pendingMonths], ['#e50914', '#e8e6df']);
+        renderPieChart(['Meses Pagos', 'Pendentes'], [paidMonths, pendingMonths], ['#34a853', '#e8e6df']);
     }
     
     renderBarChart(monthlyData);
 };
 
-const renderPieChart = (labels, data, colors = ['#e50914', '#1a1a1a', '#e8e6df']) => {
-    const ctx = document.getElementById('pieChart').getContext('2d');
+const renderEventDashboard = (participants, payments) => {
+    let evTotal = 0;
+    let evDirecao = 0;
+    let evDesbrava = 0;
+    let evOutros = 0;
+    const evMonthlyData = new Array(12).fill(0);
+
+    payments.forEach(p => {
+        if (p.status !== 'approved') return;
+        const amount = parseFloat(p.amount);
+        evTotal += amount;
+        if (p.month) evMonthlyData[p.month - 1] += amount;
+
+        const person = participants.find(pers => pers.id === p.person_id);
+        const unit = (person?.unit || '').toUpperCase();
+
+        if (unit.includes('DIREÇÃO') || unit.includes('DIRECAO')) {
+            evDirecao += amount;
+        } else if (unit.includes('DESBRAVADOR')) {
+            evDesbrava += amount;
+        } else {
+            evOutros += amount;
+        }
+    });
+
+    document.getElementById('ev-stat-total').textContent = `R$ ${evTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    document.getElementById('ev-stat-direcao').textContent = `R$ ${evDirecao.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    document.getElementById('ev-stat-desbrava').textContent = `R$ ${evDesbrava.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+
+    // Gráfico de Pizza do Evento (Direção vs Desbravadores vs Outros)
+    renderPieChart(
+        ['Direção', 'Desbravadores', 'Outros'],
+        [evDirecao, evDesbrava, evOutros],
+        ['#64748b', '#94a3b8', '#cbd5e1'],
+        'evPieChart',
+        'evPie'
+    );
+
+    // Gráfico de Barras do Evento
+    renderBarChart(evMonthlyData, 'evBarChart', 'evBar');
+};
+
+const renderMensalidadeDashboard = () => {
+    let mTotal = 0;
+    let mDirecao = 0;
+    let mDesbrava = 0;
+    let mOutros = 0;
+    const mMonthlyData = new Array(12).fill(0);
+
+    state.payments.forEach(p => {
+        if (p.status !== 'approved') return;
+        const amount = parseFloat(p.amount);
+        mTotal += amount;
+        mMonthlyData[p.month - 1] += amount;
+
+        const person = state.people.find(pers => pers.id === p.person_id);
+        const unit = (person?.unit || '').toUpperCase();
+
+        if (unit.includes('DIREÇÃO') || unit.includes('DIRECAO')) {
+            mDirecao += amount;
+        } else if (unit.includes('DESBRAVADOR')) {
+            mDesbrava += amount;
+        } else {
+            mOutros += amount;
+        }
+    });
+
+    document.getElementById('mens-stat-total').textContent = `R$ ${mTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    document.getElementById('mens-stat-direcao').textContent = `R$ ${mDirecao.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    document.getElementById('mens-stat-desbrava').textContent = `R$ ${mDesbrava.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+
+    // Gráfico de Pizza de Mensalidades (Direção vs Desbravadores vs Outros)
+    renderPieChart(
+        ['Direção', 'Desbravadores', 'Outros'],
+        [mDirecao, mDesbrava, mOutros],
+        ['#64748b', '#94a3b8', '#cbd5e1'],
+        'mensPieChart',
+        'mensPie'
+    );
+
+    // Gráfico de Barras de Mensalidades
+    renderBarChart(mMonthlyData, 'mensBarChart', 'mensBar');
+};
+
+const renderPieChart = (labels, data, colors = ['#e50914', '#1a1a1a', '#e8e6df'], canvasId = 'pieChart', stateKey = 'pie') => {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     
-    if (state.charts.pie) state.charts.pie.destroy();
+    if (state.charts[stateKey]) state.charts[stateKey].destroy();
     
-    state.charts.pie = new Chart(ctx, {
+    state.charts[stateKey] = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: labels,
@@ -1125,19 +1277,21 @@ const renderPieChart = (labels, data, colors = ['#e50914', '#1a1a1a', '#e8e6df']
     });
 };
 
-const renderBarChart = (monthlyData) => {
-    const ctx = document.getElementById('barChart').getContext('2d');
+const renderBarChart = (monthlyData, canvasId = 'barChart', stateKey = 'bar') => {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     
-    if (state.charts.bar) state.charts.bar.destroy();
+    if (state.charts[stateKey]) state.charts[stateKey].destroy();
     
-    state.charts.bar = new Chart(ctx, {
+    state.charts[stateKey] = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: months,
             datasets: [{
                 label: 'Receita (R$)',
                 data: monthlyData,
-                backgroundColor: '#e50914',
+                backgroundColor: '#94a3b8', // Cor única e neutra para todas as barras
                 borderRadius: 5,
                 maxBarThickness: 40
             }]
@@ -1182,15 +1336,21 @@ const renderBarChart = (monthlyData) => {
 // --- Rendering ---
 const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-const renderDashboard = () => {
+let renderDashboard = () => {
     paymentsBody.innerHTML = '';
     const footer = document.getElementById('payments-footer');
     footer.innerHTML = '';
     
+    // Atualizar Dashboard de Mensalidades
+    renderMensalidadeDashboard();
+    
+    const searchTerm = document.getElementById('mens-search')?.value.toLowerCase() || '';
+    const filteredPeople = state.people.filter(p => p.name.toLowerCase().includes(searchTerm));
+    
     const monthlyTotals = new Array(12).fill(0);
     let grandTotal = 0;
 
-    state.people.forEach(person => {
+    filteredPeople.forEach(person => {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td><strong>${person.name}</strong></td>`;
         
@@ -1269,7 +1429,7 @@ const setSort = (column) => {
     renderPeople();
 };
 
-const renderPeople = () => {
+let renderPeople = () => {
     peopleBody.innerHTML = '';
     
     // Global filter logic
@@ -1860,12 +2020,74 @@ if (sidebarToggle) {
     };
 }
 
-    // Event Detail: Add Participants
-    const addPartBtn = document.getElementById('add-participants-btn');
+    // Event Details Toggle
+    const toggleBtn = document.getElementById('toggle-event-details');
+    if (toggleBtn) {
+        toggleBtn.onclick = () => {
+            const container = document.getElementById('event-details-table-container');
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                toggleBtn.textContent = 'Ocultar Detalhamento ↑';
+            } else {
+                container.style.display = 'none';
+                toggleBtn.textContent = 'Ver Detalhamento Membro a Membro ↓';
+            }
+            initStickyScrollbars(); // Refresh scrollbars when table appears
+        };
+    }
+
+    // Mensalidade Details Toggle
+    const toggleMensBtn = document.getElementById('toggle-mens-details');
+    if (toggleMensBtn) {
+        toggleMensBtn.onclick = () => {
+            const container = document.getElementById('mens-details-table-container');
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                toggleMensBtn.textContent = 'Ocultar Detalhamento ↑';
+            } else {
+                container.style.display = 'none';
+                toggleMensBtn.textContent = 'Ver Detalhamento Membro a Membro ↓';
+            }
+            initStickyScrollbars(); // Refresh scrollbars when table appears
+        };
+    }
     if (addPartBtn) addPartBtn.onclick = openAddParticipantsModal;
     
     const saveNewPartBtn = document.getElementById('save-new-participants-btn');
     if (saveNewPartBtn) saveNewPartBtn.onclick = saveNewParticipants;
+
+    // Search listeners - Garantindo funcionamento imediato e robusto
+    const initSearchListeners = () => {
+        const mensSearch = document.getElementById('mens-search');
+        if (mensSearch) {
+            mensSearch.addEventListener('input', () => {
+                const container = document.getElementById('mens-details-table-container');
+                if (container.style.display === 'none') {
+                    container.style.display = 'block';
+                    document.getElementById('toggle-mens-details').textContent = 'Ocultar Detalhamento ↑';
+                }
+                renderDashboard();
+            });
+        }
+
+        const evDetailSearch = document.getElementById('ev-detail-search');
+        if (evDetailSearch) {
+            evDetailSearch.addEventListener('input', () => {
+                const container = document.getElementById('event-details-table-container');
+                if (container.style.display === 'none') {
+                    container.style.display = 'block';
+                    document.getElementById('toggle-event-details').textContent = 'Ocultar Detalhamento ↑';
+                }
+                if (state.currentEventParticipants && state.currentEventPayments) {
+                    renderEventDetailGrid(state.currentEventParticipants, state.currentEventPayments);
+                }
+            });
+        }
+    };
+
+    // Inicialização imediata e via evento para segurança total
+    initSearchListeners();
+    document.addEventListener('DOMContentLoaded', initSearchListeners);
     
     const searchNewPartInput = document.getElementById('add-member-search');
     if (searchNewPartInput) {
@@ -2251,3 +2473,118 @@ document.getElementById('generate-auth-pdf').onclick = () => window.generateAuth
 document.getElementById('generate-auth-doc').onclick = () => window.generateAuthDocument('doc');
 
 checkAuth();
+// --- Sticky Horizontal Scrollbar Logic ---
+const initStickyScrollbars = () => {
+    // Incluindo .list-container para a aba de Membros
+    const containers = document.querySelectorAll('.table-container, .list-container');
+    
+    containers.forEach(container => {
+        // Avoid double initialization
+        if (container.dataset.hasStickyScroll) return;
+        container.dataset.hasStickyScroll = "true";
+
+        const floatingScroll = document.createElement('div');
+        floatingScroll.className = 'floating-scrollbar-container';
+        const style = document.createElement('style');
+        style.textContent = `
+            .floating-scrollbar-container::-webkit-scrollbar-thumb {
+                background: #888;
+                border-radius: 10px;
+            }
+        `;
+        document.head.appendChild(style);
+
+        const content = document.createElement('div');
+        content.className = 'floating-scrollbar-content';
+        floatingScroll.appendChild(content);
+        document.body.appendChild(floatingScroll);
+
+        const updateSize = () => {
+            const table = container.querySelector('table');
+            if (table) {
+                content.style.width = table.offsetWidth + 'px';
+                floatingScroll.style.width = container.offsetWidth + 'px';
+                floatingScroll.style.left = container.getBoundingClientRect().left + 'px';
+            }
+        };
+
+        const syncScroll = () => {
+            if (container.scrollLeft !== floatingScroll.scrollLeft) {
+                container.scrollLeft = floatingScroll.scrollLeft;
+            }
+        };
+
+        const syncContainerScroll = () => {
+            if (floatingScroll.scrollLeft !== container.scrollLeft) {
+                floatingScroll.scrollLeft = container.scrollLeft;
+            }
+        };
+
+        floatingScroll.onscroll = syncScroll;
+        container.onscroll = syncContainerScroll;
+
+        // Intersection Observer to show/hide the floating scrollbar
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    checkVisibility();
+                } else {
+                    floatingScroll.style.display = 'none';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        const checkVisibility = () => {
+            const rect = container.getBoundingClientRect();
+            const windowHeight = window.innerHeight;
+            const mobileOffset = window.innerWidth <= 768 ? 75 : 10; // Margem de segurança
+            
+            // Show only if the container is overflowing and the bottom of the container is below the screen
+            const isOverflowing = container.scrollWidth > container.clientWidth;
+            
+            // Se o fundo da tabela subir acima da linha de visão do rodapé, escondemos a barra flutuante
+            const isBottomVisible = rect.bottom <= (windowHeight - mobileOffset);
+            const isTopVisible = rect.top < windowHeight;
+
+            if (isOverflowing && isTopVisible && !isBottomVisible) {
+                floatingScroll.style.display = 'block';
+                updateSize();
+            } else {
+                floatingScroll.style.display = 'none';
+            }
+        };
+
+        observer.observe(container);
+        window.addEventListener('scroll', checkVisibility);
+        window.addEventListener('resize', updateSize);
+        
+        // Initial check
+        setTimeout(checkVisibility, 500);
+    });
+};
+
+// Call this whenever tables are rendered
+const originalRenderDashboard = renderDashboard;
+renderDashboard = (...args) => {
+    originalRenderDashboard(...args);
+    setTimeout(initStickyScrollbars, 100);
+};
+
+const originalRenderPeople = renderPeople;
+renderPeople = (...args) => {
+    originalRenderPeople(...args);
+    setTimeout(initStickyScrollbars, 100);
+};
+
+const originalRenderEventDetailGrid = renderEventDetailGrid;
+renderEventDetailGrid = (...args) => {
+    originalRenderEventDetailGrid(...args);
+    setTimeout(initStickyScrollbars, 100);
+};
+
+// Also init on tab switch
+const originalSwitchTab = switchTab;
+switchTab = (target) => {
+    originalSwitchTab(target);
+    setTimeout(initStickyScrollbars, 200);
+};
