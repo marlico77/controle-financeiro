@@ -72,6 +72,21 @@ const logAction = async (req, action, details = {}) => {
     }
 };
 
+// --- Log Cleanup Policy (24h) ---
+const cleanupLogs = async () => {
+    try {
+        const result = await db.query("DELETE FROM system_logs WHERE created_at < NOW() - INTERVAL '1 day'");
+        if (result.rowCount > 0) {
+            console.log(`[CLEANUP] ${result.rowCount} logs antigos removidos.`);
+        }
+    } catch (err) {
+        console.error('Error cleaning up logs:', err);
+    }
+};
+
+// Executa limpeza a cada hora
+setInterval(cleanupLogs, 60 * 60 * 1000);
+
 // Middleware: Auth
 const authenticateToken = (req, res, next) => {
     // Check if token is in header or in query string
@@ -1074,6 +1089,9 @@ app.get('/api/admin/logs', authenticateToken, async (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
+    
+    // Initial cleanup on startup
+    cleanupLogs();
     
     // Log system startup
     const mockReq = { 
