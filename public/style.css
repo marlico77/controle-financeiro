@@ -283,9 +283,9 @@ body {
 }
 
 .user-info p {
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
+    font-size: 0.95rem;
+    text-transform: uppercase; /* Mantido em maiúsculo conforme solicitado */
+    letter-spacing: 1px;
     color: #fff;
     font-weight: 700;
 }
@@ -294,6 +294,7 @@ body {
     list-style: none;
     flex-grow: 1;
     width: 100%;
+    margin-bottom: 2rem; /* Garantir espaço para o botão de sair */
 }
 
 .nav-links li {
@@ -341,8 +342,9 @@ body {
 .nav-footer {
     width: 100%;
     text-align: left;
-    padding: 1.5rem 0.5rem;
+    padding: 3rem 0.5rem 1.5rem; /* Mais espaço no topo para afastar das opções */
     margin-top: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.05); /* Separador sutil */
 }
 
 #logout-btn {

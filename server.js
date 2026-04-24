@@ -175,7 +175,7 @@ app.post('/api/login', async (req, res) => {
       token, 
       role: finalRole, 
       username: dbUsername,
-      name: user.name || (dbUsername === 'admin' ? 'Administrador Master' : dbUsername),
+      name: user.name || dbUsername,
       personId: personId,
       mustChangePassword: !!must_change_password
     });
@@ -200,7 +200,7 @@ app.get('/api/auth/status', authenticateToken, async (req, res) => {
             mustChangePassword: !!user.must_change_password,
             role: user.role,
             username: user.username,
-            name: user.name || (user.username === 'admin' ? 'Administrador Master' : user.username),
+            name: user.name || user.username,
             personId: user.person_id
         });
     } catch (err) {
