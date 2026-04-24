@@ -97,10 +97,16 @@ const syncMemberUsers = async () => {
         const defaultHash = await bcrypt.hash('tribo@2026', 10);
 
         for (const p of people) {
-            // Generate username: first.last
-            const parts = p.name.trim().toLowerCase().split(/\s+/);
-            let username = parts.length >= 2 ? `${parts[0]}.${parts[parts.length - 1]}` : parts[0];
-
+            // Generate username: first.last (no accents, lowercase)
+            const nameParts = p.name.trim().split(' ');
+            const first = nameParts[0].toLowerCase();
+            const last = nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
+            
+            let baseUsername = last ? `${first}.${last}` : first;
+            // Remove accents/diacritics
+            baseUsername = baseUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            const username = baseUsername;
             // Check if person already has a user
             const existing = await db.query('SELECT id FROM users WHERE person_id = $1', [p.id]);
             if (existing.rows.length === 0) {
@@ -312,7 +318,8 @@ app.get('/api/people', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/people', authenticateToken, async (req, res) => {
-  const { name, responsible, birth_date, cpf, unit, username, password } = req.body || {};
+  let { name, responsible, birth_date, cpf, unit, username, password } = req.body || {};
+  if (username) username = username.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
 
   const client = await db.pool.connect();
@@ -563,7 +570,8 @@ app.delete('/api/payments/:id', authenticateToken, async (req, res) => {
 // Update person
 app.put('/api/people/:id', authenticateToken, async (req, res) => {
   try {
-    const { name, responsible, birth_date, cpf, unit, username, password } = req.body || {};
+    let { name, responsible, birth_date, cpf, unit, username, password } = req.body || {};
+    if (username) username = username.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const { id } = req.params;
     
     if (req.user.role !== 'admin' && parseInt(id) !== req.user.personId) {
