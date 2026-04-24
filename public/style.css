@@ -640,33 +640,43 @@ tfoot td {
     .nav-links {
         display: flex;
         width: 100%;
-        justify-content: space-around;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        justify-content: flex-start;
         align-items: center;
         margin: 0;
+        scrollbar-width: none;
+        padding: 0 1rem;
+        gap: 0;
+    }
+
+    .nav-links::-webkit-scrollbar {
+        display: none;
     }
 
     .nav-links li {
         margin: 0;
-        padding: 0.5rem 0.2rem;
-        flex-grow: 1;
+        padding: 0.5rem 1rem;
+        flex-shrink: 0;
         text-align: center;
-        font-size: 0.6rem;
+        font-size: 0.7rem;
         display: flex;
-        flex-direction: row;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 6px;
+        gap: 4px;
         border-radius: 0;
         background: transparent !important;
         color: #888;
         text-transform: none;
         font-weight: 500;
         letter-spacing: -0.2px;
+        min-width: 80px;
     }
 
     .nav-links li .icon {
-        width: 18px;
-        height: 18px;
+        width: 22px;
+        height: 22px;
         margin-bottom: 0;
     }
 
@@ -679,6 +689,7 @@ tfoot td {
     .content {
         padding: 1rem;
         padding-bottom: 100px; /* Space for bottom nav */
+        overflow-x: visible;
     }
 
     .top-bar {
@@ -738,19 +749,20 @@ tfoot td {
         padding: 0;
         background: transparent;
         display: block; /* Ensure it behaves as a block */
+        max-width: 100%;
     }
 
     .table-container::-webkit-scrollbar {
-        height: 4px;
+        height: 6px;
     }
 
     .table-container::-webkit-scrollbar-thumb {
-        background: var(--border-color);
-        border-radius: 2px;
+        background: var(--accent-color);
+        border-radius: 3px;
     }
 
     table {
-        min-width: 750px; /* Force minimum width for horizontal scroll */
+        min-width: 850px; /* Force minimum width for horizontal scroll */
         background: var(--card-bg);
         border-radius: 8px;
     }
