@@ -187,6 +187,28 @@ const syncMemberUsers = async () => {
         console.error('Error syncing members:', err);
     }
 };
+// --- Init Database Tables ---
+const initDB = async () => {
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS outflows (
+                id SERIAL PRIMARY KEY,
+                amount DECIMAL(10,2) NOT NULL,
+                category VARCHAR(100) NOT NULL,
+                date DATE NOT NULL,
+                description TEXT,
+                receipt_path VARCHAR(255),
+                receipt_content BYTEA,
+                receipt_mime VARCHAR(50),
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('[DB] Table outflows verified/created.');
+    } catch (err) {
+        console.error('[DB] Error initializing tables:', err);
+    }
+};
+initDB();
 syncMemberUsers();
 
 // --- AUTH API ---
@@ -1024,6 +1046,55 @@ app.delete('/api/event-payments/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// --- OUTFLOWS (SAÍDAS) API ---
+app.get('/api/outflows', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    try {
+        const result = await db.query('SELECT * FROM outflows ORDER BY date DESC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao buscar saídas' });
+    }
+});
+
+app.post('/api/outflows', authenticateToken, upload.single('receipt'), async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { amount, category, date, description } = req.body;
+    
+    if (!amount || !category || !date) {
+        return res.status(400).json({ error: 'Valor, categoria e data são obrigatórios.' });
+    }
+
+    const receipt_content = req.file ? req.file.buffer : null;
+    const receipt_mime = req.file ? req.file.mimetype : null;
+    const receipt_filename = req.file ? `${Date.now()}-outflow-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
+    const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
+
+    try {
+        await db.query(`
+            INSERT INTO outflows (amount, category, date, description, receipt_path, receipt_content, receipt_mime) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [amount, category, date, description || null, receipt_path, receipt_content, receipt_mime]);
+        
+        logAction(req, 'CREATE_OUTFLOW', { amount, category, date });
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao salvar saída' });
+    }
+});
+
+app.delete('/api/outflows/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    try {
+        await db.query('DELETE FROM outflows WHERE id = $1', [req.params.id]);
+        logAction(req, 'DELETE_OUTFLOW', { id: req.params.id });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao deletar saída' });
+    }
+});
+
 app.use((err, req, res, next) => {
   console.error('SERVER ERROR:', err);
   res.status(500).json({ error: 'Erro interno no servidor: ' + err.message });
@@ -1045,13 +1116,25 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
             payment = result.rows[0];
         }
 
+        // Try outflows (Admin only access implied by general rule below)
+        let isOutflow = false;
+        if (!payment) {
+            result = await db.query('SELECT receipt_content, receipt_mime FROM outflows WHERE receipt_path = $1', [fullRelativePath]);
+            payment = result.rows[0];
+            isOutflow = true;
+        }
+
         if (!payment) {
             return res.status(404).json({ error: 'Arquivo não encontrado no registro' });
         }
 
-        // Authorization: Admin or Owner
-        if (req.user.role !== 'admin' && req.user.personId !== payment.person_id) {
+        // Authorization: Admin or Owner (Outflows are admin only)
+        if (req.user.role !== 'admin' && !isOutflow && req.user.personId !== payment.person_id) {
             console.warn(`[SECURITY] Acesso negado ao arquivo ${filename} para o usuário ${req.user.username}`);
+            return res.sendStatus(403);
+        }
+        
+        if (isOutflow && req.user.role !== 'admin' && req.user.role !== 'secretário') {
             return res.sendStatus(403);
         }
 

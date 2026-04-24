@@ -12,6 +12,7 @@ const state = {
     notifications: [],
     events: [],
     eventPayments: [],
+    outflows: [],
     currentEvent: null,
     eventDetailYear: new Date().getFullYear(),
     charts: {
@@ -254,6 +255,7 @@ const checkAuth = async () => {
                 events: document.querySelector('[data-target="events"]'),
                 reports: document.querySelector('[data-target="reports"]'),
                 authorizations: document.getElementById('nav-authorizations'),
+                outflows: document.getElementById('nav-outflows'),
                 logs: document.getElementById('nav-logs')
             };
 
@@ -262,6 +264,7 @@ const checkAuth = async () => {
                 if (navItems.people) navItems.people.style.display = 'none';
                 if (navItems.reports) navItems.reports.style.display = 'none';
                 if (navItems.authorizations) navItems.authorizations.style.display = 'none';
+                if (navItems.outflows) navItems.outflows.style.display = 'none';
                 if (navItems.logs) navItems.logs.style.display = 'none';
                 
                 // Adjust Dashboard for common user
@@ -278,6 +281,7 @@ const checkAuth = async () => {
                 if (navItems.people) navItems.people.style.display = isAdmin ? 'flex' : 'none';
                 if (navItems.reports) navItems.reports.style.display = 'flex';
                 if (navItems.authorizations) navItems.authorizations.style.display = 'flex';
+                if (navItems.outflows) navItems.outflows.style.display = 'flex';
                 
                 // Logs ONLY for master
                 if (navItems.logs) navItems.logs.style.display = isMaster ? 'flex' : 'none';
@@ -422,12 +426,14 @@ let switchTab = (target) => {
     else if (target === 'reports') title.textContent = 'Relatórios do Sistema';
     else if (target === 'mensalidade') title.textContent = 'Controle de Mensalidades';
     else if (target === 'authorizations') title.textContent = 'Autorizações de Saída';
+    else if (target === 'outflows') title.textContent = 'Saídas de Caixa (Despesas)';
     else if (target === 'logs') title.textContent = 'Logs de Auditoria';
 
     // Refresh specific data if needed
     if (target === 'dashboard') renderDashboard();
     if (target === 'people') renderPeople();
     if (target === 'events') fetchEventsData();
+    if (target === 'outflows') renderOutflows();
     if (target === 'logs') fetchLogs();
     if (target === 'reports') {
         populateReportSelects();
@@ -626,11 +632,13 @@ const loadInitialData = async () => {
 
         state.payments = await apiFetch(`/api/payments?year=${state.currentYear}`);
         
-        // Buscar pagamentos de eventos também para compor o total do caixa
-        if (state.role === 'admin') {
+        // Buscar pagamentos de eventos e saídas também para compor o total do caixa
+        if (state.role === 'admin' || state.role === 'secretário') {
             state.eventPayments = await apiFetch('/api/event-payments');
+            state.outflows = await apiFetch('/api/outflows');
         } else {
             state.eventPayments = await apiFetch(`/api/event-payments?person_id=${state.personId}`);
+            state.outflows = [];
         }
 
         renderDashboard();
@@ -1120,15 +1128,32 @@ const updateDashboardStats = () => {
         });
     }
 
-    if (state.role === 'admin') {
+    // Subtrair Saídas (Outflows) do Caixa Geral
+    let totalOutflows = 0;
+    if (state.outflows) {
+        state.outflows.forEach(out => {
+            const amount = parseFloat(out.amount);
+            totalOutflows += amount;
+            totalCash -= amount; // Subtrai do total em caixa
+        });
+    }
+
+    if (state.role === 'admin' || state.role === 'secretário') {
         document.getElementById('stat-total-cash').textContent = `R$ ${totalCash.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         const direcaoStat = document.getElementById('stat-direcao');
         const desbravaStat = document.getElementById('stat-desbravadores');
         const eventosStat = document.getElementById('stat-eventos');
+        const outflowsCard = document.getElementById('stat-outflows-card');
+        const outflowsTotalElem = document.getElementById('stat-total-outflows');
         
         if (direcaoStat) direcaoStat.textContent = `R$ ${direcaoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         if (desbravaStat) desbravaStat.textContent = `R$ ${desbravadoresTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         if (eventosStat) eventosStat.textContent = `R$ ${eventosTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        
+        if (outflowsCard && outflowsTotalElem) {
+            outflowsCard.style.display = 'block';
+            outflowsTotalElem.textContent = `R$ ${totalOutflows.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        }
         
         // Para o gráfico de pizza, queremos o total puro de mensalidades (sem eventos)
         let mensalidadesPuro = 0;
@@ -1136,11 +1161,11 @@ const updateDashboardStats = () => {
             if (p.status === 'approved') mensalidadesPuro += parseFloat(p.amount);
         });
 
-        // Gráfico simplificado: Mensalidades vs Eventos com as cores do clube
+        // Gráfico simplificado: Mensalidades vs Eventos vs Saídas
         renderPieChart(
-            ['Mensalidades', 'Eventos'], 
-            [mensalidadesPuro, eventosTotal],
-            ['#e50914', '#111111'] 
+            ['Mensalidades', 'Eventos', 'Saídas'], 
+            [mensalidadesPuro, eventosTotal, totalOutflows],
+            ['#e50914', '#111111', '#ff9800'] 
         );
     } else {
         const paidMonths = state.payments.length;
@@ -1332,6 +1357,86 @@ const renderBarChart = (monthlyData, canvasId = 'barChart', stateKey = 'bar') =>
         }
     });
 };
+
+const renderOutflows = () => {
+    const body = document.getElementById('outflows-body');
+    if (!body) return;
+
+    if (state.outflows.length === 0) {
+        body.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">Nenhuma saída registrada.</td></tr>';
+        return;
+    }
+
+    body.innerHTML = state.outflows.map(out => {
+        const date = formatDate(out.date);
+        const amount = parseFloat(out.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        
+        let receiptHtml = '-';
+        if (out.receipt_path) {
+            const filename = out.receipt_path.split(/[\\/]/).pop();
+            receiptHtml = `<a href="/api/files/receipt/${filename}?token=${state.token}" target="_blank" class="btn-text btn-small">Ver Recibo</a>`;
+        }
+
+        return `
+            <tr>
+                <td>${date}</td>
+                <td><span class="unit-tag" style="background: rgba(255, 152, 0, 0.1); color: var(--outflow-color);">${out.category}</span></td>
+                <td style="color: var(--error-color); font-weight: 600;">- ${amount}</td>
+                <td>${receiptHtml}</td>
+                <td>
+                    <button class="btn-text btn-small" onclick="deleteOutflow(${out.id})">Excluir</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+};
+
+window.deleteOutflow = async (id) => {
+    if (await showConfirm('Tem certeza que deseja excluir esta saída?')) {
+        try {
+            await apiFetch(`/api/outflows/${id}`, { method: 'DELETE' });
+            await loadInitialData();
+            if (state.activeTab === 'outflows') renderOutflows();
+        } catch (err) {
+            showStatus(err.message, 'error');
+        }
+    }
+};
+
+const outflowForm = document.getElementById('outflow-form');
+if (outflowForm) {
+    outflowForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append('amount', document.getElementById('out-amount').value);
+        formData.append('category', document.getElementById('out-category').value);
+        formData.append('date', document.getElementById('out-date').value);
+        formData.append('description', document.getElementById('out-desc').value);
+        
+        const file = document.getElementById('out-receipt').files[0];
+        if (file) formData.append('receipt', file);
+
+        try {
+            const res = await fetch('/api/outflows', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${state.token}` },
+                body: formData
+            });
+
+            if (res.ok) {
+                showStatus('Saída registrada com sucesso!', 'success');
+                e.target.reset();
+                await loadInitialData();
+                renderOutflows();
+            } else {
+                const data = await res.json();
+                showStatus(data.error, 'error');
+            }
+        } catch (err) {
+            showStatus('Erro ao salvar saída', 'error');
+        }
+    };
+}
 
 // --- Rendering ---
 const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -2585,6 +2690,12 @@ renderPeople = (...args) => {
 const originalRenderEventDetailGrid = renderEventDetailGrid;
 renderEventDetailGrid = (...args) => {
     originalRenderEventDetailGrid(...args);
+    setTimeout(initStickyScrollbars, 100);
+};
+
+const originalRenderOutflows = renderOutflows;
+renderOutflows = (...args) => {
+    originalRenderOutflows(...args);
     setTimeout(initStickyScrollbars, 100);
 };
 

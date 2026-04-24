@@ -108,6 +108,11 @@
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M192 64C156.7 64 128 92.7 128 128L128 512C128 547.3 156.7 576 192 576L448 576C483.3 576 512 547.3 512 512L512 128C512 92.7 483.3 64 448 64L192 64zM240 176L400 176C413.3 176 424 186.7 424 200C424 213.3 413.3 224 400 224L240 224C226.7 224 216 213.3 216 200C216 186.7 226.7 176 240 176zM240 272L400 272C413.3 272 424 282.7 424 296C424 309.3 413.3 320 400 320L240 320C226.7 320 216 309.3 216 296C216 282.7 226.7 272 240 272zM240 368L336 368C349.3 368 360 378.7 360 392C360 405.3 349.3 416 336 416L240 416C226.7 416 216 405.3 216 392C216 378.7 226.7 368 240 368z"/></svg>
                         </span>Autorizações
                     </li>
+                    <li data-target="outflows" id="nav-outflows" style="display: none;">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M512 192L469.3 192L469.3 128C469.3 92.7 440.6 64 405.3 64L234.7 64C199.4 64 170.7 92.7 170.7 128L170.7 192L128 192C92.7 192 64 220.7 64 256L64 448C64 483.3 92.7 512 128 512L512 512C547.3 512 576 483.3 576 448L576 256C576 220.7 547.3 192 512 192zM213.3 128C213.3 116.2 222.9 106.7 234.7 106.7L405.3 106.7C417.1 106.7 426.7 116.2 426.7 128L426.7 192L213.3 192L213.3 128zM128 234.7L512 234.7C523.8 234.7 533.3 244.3 533.3 256L533.3 277.3L106.7 277.3L106.7 256C106.7 244.3 116.2 234.7 128 234.7zM106.7 320L533.3 320L533.3 448C533.3 459.8 523.8 469.3 512 469.3L128 469.3C116.2 469.3 106.7 459.8 106.7 448L106.7 320zM213.3 384C213.3 366.3 227.6 352 245.3 352L394.7 352C412.4 352 426.7 366.3 426.7 384C426.7 401.7 412.4 416 394.7 416L245.3 416C227.6 416 213.3 401.7 213.3 384z"/></svg>
+                        </span>Saídas de Caixa
+                    </li>
                     <li data-target="logs" id="nav-logs" style="display: none;">
                         <span class="icon">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" style="width: 20px; height: 20px; fill: currentColor;"><path d="M224 160C224 107 267 64 320 64C373 64 416 107 416 160L416 163.6C416 179.3 403.3 192 387.6 192L252.5 192C236.8 192 224.1 179.3 224.1 163.6L224.1 160zM569.6 172.8C580.2 186.9 577.3 207 563.2 217.6L465.4 290.9C470.7 299.8 474.7 309.6 477.2 320L576 320C593.7 320 608 334.3 608 352C608 369.7 593.7 384 576 384L480 384L480 416C480 418.6 479.9 421.3 479.8 423.9L563.2 486.4C577.3 497 580.2 517.1 569.6 531.2C559 545.3 538.9 548.2 524.8 537.6L461.7 490.3C438.5 534.5 395.2 566.5 344 574.2L344 344C344 330.7 333.3 320 320 320C306.7 320 296 330.7 296 344L296 574.2C244.8 566.5 201.5 534.5 178.3 490.3L115.2 537.6C101.1 548.2 81 545.3 70.4 531.2C59.8 517.1 62.7 497 76.8 486.4L160.2 423.9C160.1 421.3 160 418.7 160 416L160 384L64 384C46.3 384 32 369.7 32 352C32 334.3 46.3 320 64 320L162.8 320C165.3 309.6 169.3 299.8 174.6 290.9L76.8 217.6C62.7 207 59.8 186.9 70.4 172.8C81 158.7 101.1 155.8 115.2 166.4L224 248C236.3 242.9 249.8 240 264 240L376 240C390.2 240 403.7 242.8 416 248L524.8 166.4C538.9 155.8 559 158.7 569.6 172.8z"/></svg>
@@ -183,6 +188,10 @@
                         <div class="glass-card stat-card">
                             <span class="stat-label">Eventos</span>
                             <h3 id="stat-eventos">R$ 0,00</h3>
+                        </div>
+                        <div class="glass-card stat-card outflow-theme" id="stat-outflows-card" style="display: none;">
+                            <span class="stat-label">Total em Saídas</span>
+                            <h3 id="stat-total-outflows">R$ 0,00</h3>
                         </div>
                     </div>
 
@@ -451,6 +460,71 @@
                                     <tr><td colspan="5" style="text-align: center; padding: 2rem;">Carregando logs...</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Outflows Page -->
+                <div id="outflows-page" class="tab-content" style="display: none;">
+                    <div class="grid-2-1" style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; align-items: start;">
+                        <!-- Registration Form -->
+                        <div class="glass-card" style="padding: 1.5rem;">
+                            <h3 style="color: var(--outflow-color); margin-bottom: 1.5rem; font-size: 1.3rem;">Cadastrar Saída</h3>
+                            <form id="outflow-form">
+                                <div class="input-group">
+                                    <label for="out-amount">Valor (R$)</label>
+                                    <input type="number" id="out-amount" step="0.01" required placeholder="0,00">
+                                </div>
+                                <div class="input-group">
+                                    <label for="out-category">Categoria</label>
+                                    <select id="out-category" required>
+                                        <option value="">Selecione...</option>
+                                        <option value="Transporte">Contrato de Transporte</option>
+                                        <option value="Alimentação">Alimentação</option>
+                                        <option value="Reembolso">Reembolso</option>
+                                        <option value="Inscrições">Inscrições / Taxas</option>
+                                        <option value="Materiais">Materiais / Compras</option>
+                                        <option value="Outros">Outros</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label for="out-date">Data do Pagamento</label>
+                                    <input type="date" id="out-date" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="out-receipt">Comprovante (Opcional)</label>
+                                    <input type="file" id="out-receipt" accept="image/*,.pdf">
+                                </div>
+                                <div class="input-group">
+                                    <label for="out-desc">Descrição / Observações</label>
+                                    <textarea id="out-desc" style="width: 100%; min-height: 60px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;"></textarea>
+                                </div>
+                                <button type="submit" class="btn-primary" style="background: var(--outflow-color); color: white; font-weight: 700;">Salvar Saída</button>
+                            </form>
+                        </div>
+
+                        <!-- Data Table -->
+                        <div class="glass-card table-container" style="padding: 0;">
+                            <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                                <h4 style="margin: 0;">Histórico de Saídas</h4>
+                            </div>
+                            <div class="table-responsive">
+                                <table id="outflows-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Categoria</th>
+                                            <th>Valor</th>
+                                            <th>Comprovante</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="outflows-body">
+                                        <!-- Populated by JS -->
+                                        <tr><td colspan="5" style="text-align: center; padding: 2rem;">Carregando saídas...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
