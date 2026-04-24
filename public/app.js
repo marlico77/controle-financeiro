@@ -241,10 +241,14 @@ loginForm.addEventListener('submit', async (e) => {
         const res = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ username, password, force: e.detail && e.detail.force })
         });
         const data = await res.json();
-        console.log('Login Response:', data);
+
+        if (res.status === 409) {
+            document.getElementById('session-modal').style.display = 'flex';
+            return;
+        }
 
         if (res.ok) {
             const isForced = data.mustChangePassword;
@@ -286,6 +290,18 @@ const logout = () => {
 if (logoutBtn) logoutBtn.onclick = logout;
 const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
 if (mobileLogoutBtn) mobileLogoutBtn.onclick = logout;
+
+const confirmForceLoginBtn = document.getElementById('confirm-force-login');
+if (confirmForceLoginBtn) {
+    confirmForceLoginBtn.onclick = () => {
+        // Trigger the submit event again but with a custom detail
+        loginForm.dispatchEvent(new CustomEvent('submit', { 
+            detail: { force: true },
+            cancelable: true 
+        }));
+        document.getElementById('session-modal').style.display = 'none';
+    };
+}
 
 // --- Navigation ---
 const switchTab = (target) => {
@@ -382,6 +398,7 @@ const apiFetch = async (url, options = {}) => {
     const data = await res.json();
     if (!res.ok) {
         if (res.status === 401) {
+            alert('Sessão Encerrada: Sua conta foi acessada em outro dispositivo ou a sessão expirou.');
             logout();
             throw new Error('Sessão expirada');
         }
@@ -1936,4 +1953,20 @@ if (openSelectorBtn) {
 const confirmGenBtn = document.getElementById('confirm-generate-report-btn');
 if (confirmGenBtn) confirmGenBtn.onclick = confirmGenerateReport;
 
+
+// --- Heartbeat Check (Instant Kick) ---
+let heartbeatInterval = null;
+const startHeartbeat = () => {
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+    heartbeatInterval = setInterval(async () => {
+        if (!state.token) return clearInterval(heartbeatInterval);
+        try {
+            await apiFetch('/api/auth/status');
+        } catch (e) {
+            // apiFetch handles 401/logout
+        }
+    }, 15000); // Check every 15 seconds
+};
+
+if (state.token) startHeartbeat();
 checkAuth();

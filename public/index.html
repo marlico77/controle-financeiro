@@ -612,6 +612,21 @@
         </div>
     </div>
 
+    <!-- Session Conflict Modal -->
+    <div id="session-modal" class="modal" style="z-index: 10002;">
+        <div class="modal-content glass-card animate-fade-in" style="max-width: 400px; text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📱</div>
+            <h2 style="margin-bottom: 1rem; color: var(--accent-color);">Sessão Ativa</h2>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 2rem;">
+                Já existe um dispositivo conectado a esta conta. Deseja encerrar a outra sessão para entrar aqui?
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                <button id="confirm-force-login" class="btn-primary">Derrubar Sessão e Entrar</button>
+                <button onclick="document.getElementById('session-modal').style.display='none'" class="btn-text">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
     <script src="app.js"></script>
 </body>
 </html>

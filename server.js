@@ -146,30 +146,38 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
-    const role = user.role || 'member'; // Fallback to member
-    const personId = user.person_id || null;
+    const { role, username: dbUsername, person_id, current_session_id, must_change_password, id: userId } = user;
+    const { force } = req.body || {};
+
+    // Check for active session conflict
+    if (current_session_id && !force) {
+        return res.status(409).json({ error: 'session_active', message: 'Já existe um dispositivo conectado.' });
+    }
+
+    const finalRole = role || 'member';
+    const personId = person_id || null;
     
     // Single Session Logic: Generate unique Session ID
     const sessionId = Date.now().toString() + Math.random().toString(36).substring(2, 10);
-    await db.query('UPDATE users SET current_session_id = $1 WHERE id = $2', [sessionId, user.id]);
+    await db.query('UPDATE users SET current_session_id = $1 WHERE id = $2', [sessionId, userId]);
 
     const token = jwt.sign({ 
-      id: user.id, 
-      username: user.username, 
-      role: role, 
+      id: userId, 
+      username: dbUsername, 
+      role: finalRole, 
       personId: personId,
       sid: sessionId
     }, JWT_SECRET, { expiresIn: '12h' });
 
-    console.log(`Login Successful: ${user.username} as ${role} (SID: ${sessionId})`);
+    console.log(`Login Successful: ${dbUsername} as ${finalRole} (SID: ${sessionId}) ${force ? '[FORCED]' : ''}`);
 
     res.json({ 
       token, 
-      role: role, 
-      username: user.username,
-      name: user.name || (user.username === 'admin' ? 'Administrador Master' : user.username),
+      role: finalRole, 
+      username: dbUsername,
+      name: user.name || (dbUsername === 'admin' ? 'Administrador Master' : dbUsername),
       personId: personId,
-      mustChangePassword: !!user.must_change_password
+      mustChangePassword: !!must_change_password
     });
   } catch (err) {
     console.error('Login error:', err);
