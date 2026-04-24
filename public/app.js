@@ -113,6 +113,26 @@ const showConfirm = (message, title = 'Confirmar Ação') => {
     });
 };
 
+const showAlert = (message, title = 'Aviso', icon = '⚠️') => {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('alert-modal');
+        const titleEl = document.getElementById('alert-title');
+        const messageEl = document.getElementById('alert-message');
+        const iconEl = document.getElementById('alert-icon');
+        const okBtn = document.getElementById('alert-ok');
+
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        iconEl.textContent = icon;
+        modal.style.display = 'flex';
+
+        okBtn.onclick = () => {
+            modal.style.display = 'none';
+            resolve();
+        };
+    });
+};
+
 // --- DOM Elements ---
 const loginSection = document.getElementById('login-section');
 const mainSection = document.getElementById('main-section');
@@ -398,7 +418,7 @@ const apiFetch = async (url, options = {}) => {
     const data = await res.json();
     if (!res.ok) {
         if (res.status === 401) {
-            alert('Sessão Encerrada: Sua conta foi acessada em outro dispositivo ou a sessão expirou.');
+            await showAlert('Sessão Encerrada: Sua conta foi acessada em outro dispositivo ou a sessão expirou.', 'Sessão Encerrada', '🚫');
             logout();
             throw new Error('Sessão expirada');
         }
