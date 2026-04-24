@@ -274,7 +274,8 @@ const checkAuth = async () => {
                 
                 const logsNav = document.getElementById('nav-logs');
                 if (logsNav) {
-                    logsNav.style.display = (state.role === 'admin' && state.username === 'ADMINISTRADOR') ? 'block' : 'none';
+                    const isMaster = state.role === 'admin' && (state.username || '').toUpperCase() === 'ADMINISTRADOR';
+                    logsNav.style.display = isMaster ? 'block' : 'none';
                 }
             }
 
