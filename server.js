@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const xlsx = require('xlsx');
 const db = require('./database');
+const UAParser = require('ua-parser-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,6 +37,40 @@ const upload = multer({
     storage,
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
+
+// --- System Logs Helper ---
+const logAction = async (req, action, details = {}) => {
+    try {
+        const ua = req.headers['user-agent'];
+        const parser = new UAParser(ua);
+        const result = parser.getResult();
+        
+        let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+        if (ip === '::1') ip = '127.0.0.1';
+        if (ip.startsWith('::ffff:')) ip = ip.split(':').pop();
+        
+        const userId = req.user ? req.user.id : (details.userId || null);
+        const username = req.user ? req.user.username : (details.username || 'guest');
+
+        await db.query(`
+            INSERT INTO system_logs 
+            (user_id, username, action, details, ip_address, user_agent, device_type, os, browser) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `, [
+            userId, 
+            username, 
+            action, 
+            JSON.stringify(details), 
+            ip, 
+            ua, 
+            result.device.type || 'desktop',
+            `${result.os.name || ''} ${result.os.version || ''}`.trim(),
+            `${result.browser.name || ''} ${result.browser.version || ''}`.trim()
+        ]);
+    } catch (err) {
+        console.error('[LOG] Error saving action log:', err);
+    }
+};
 
 // Middleware: Auth
 const authenticateToken = (req, res, next) => {
@@ -79,6 +114,15 @@ const authenticateToken = (req, res, next) => {
         };
 
         console.log(`[AUTH] Usuário: ${req.user.username} | Role: ${req.user.role} | ID: ${req.user.personId}`);
+        
+        // Log network protocol info for every authenticated request
+        logAction(req, 'NETWORK_HTTP_REQUEST', { 
+            method: req.method, 
+            path: req.path, 
+            protocol: req.protocol,
+            httpVersion: req.httpVersion
+        });
+        
         next();
     } catch (err) {
         console.error('Auth DB error:', err);
@@ -170,6 +214,9 @@ app.post('/api/login', async (req, res) => {
     }, JWT_SECRET, { expiresIn: '12h' });
 
     console.log(`Login Successful: ${dbUsername} as ${finalRole} (SID: ${sessionId}) ${force ? '[FORCED]' : ''}`);
+    
+    // Log success
+    logAction(req, 'LOGIN_SUCCESS', { username: dbUsername, userId, force: !!force });
 
     res.json({ 
       token, 
@@ -181,6 +228,7 @@ app.post('/api/login', async (req, res) => {
     });
   } catch (err) {
     console.error('Login error:', err);
+    logAction(req, 'LOGIN_FAILED', { username, error: err.message });
     res.status(500).json({ error: 'Erro no servidor durante login' });
   }
 });
@@ -383,6 +431,7 @@ app.post('/api/people', authenticateToken, async (req, res) => {
       }
 
       await client.query('COMMIT');
+      logAction(req, 'CREATE_PERSON', { id: personId, name, unit });
       res.json({ id: personId, name, username: finalUsernameUsed });
   } catch (err) {
       await client.query('ROLLBACK');
@@ -538,6 +587,7 @@ app.post('/api/payments', authenticateToken, upload.single('receipt'), async (re
             }
         }
         res.json({ id: newId, updated: false, status });
+        logAction(req, 'CREATE_PAYMENT', { person_id, month, year, amount, status });
     }
   } catch (err) {
       console.error(err);
@@ -564,6 +614,7 @@ app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
         }
 
         res.json({ success: true });
+        logAction(req, 'APPROVE_PAYMENT', { id: req.params.id, person_id: payment.person_id, month: payment.month });
     } catch (err) {
         res.status(500).json({ error: 'Erro ao aprovar pagamento' });
     }
@@ -649,6 +700,7 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
     }
 
     res.json({ success: true });
+    logAction(req, 'UPDATE_PERSON', { id, name, unit });
   } catch (error) {
     console.error('Update Error:', error);
     res.status(500).json({ error: 'Erro interno no servidor' });
@@ -671,6 +723,7 @@ app.delete('/api/people/:id', authenticateToken, async (req, res) => {
 
     await db.query('DELETE FROM people WHERE id = $1', [req.params.id]);
     res.json({ success: true });
+    logAction(req, 'DELETE_PERSON', { id: req.params.id });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao deletar membro' });
   }
@@ -1008,6 +1061,28 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
     }
 });
 
+// --- SYSTEM LOGS API ---
+app.get('/api/admin/logs', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.sendStatus(403);
+    try {
+        const result = await db.query('SELECT * FROM system_logs ORDER BY created_at DESC LIMIT 200');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao buscar logs' });
+    }
+});
+
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`Server running at http://localhost:${PORT}`);
+    
+    // Log system startup
+    const mockReq = { 
+        headers: { 'user-agent': 'Server System Process' },
+        socket: { remoteAddress: '127.0.0.1' }
+    };
+    logAction(mockReq, 'SYSTEM_STARTUP', { 
+        event: 'Server initialized', 
+        port: PORT,
+        protocols: ['TCP', 'HTTP', 'JWT']
+    });
 });
