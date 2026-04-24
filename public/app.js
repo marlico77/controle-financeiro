@@ -235,16 +235,29 @@ const checkAuth = async () => {
             loginSection.style.display = 'none';
             mainSection.style.display = 'flex';
             
-            const membersNav = document.querySelector('[data-target="people"]');
-            const dashboardStats = document.querySelector('.stats-grid');
-            const chartsGrid = document.querySelector('.charts-grid');
+            // --- Tab Visibility Logic Based on Role ---
             const isAdmin = state.role === 'admin';
+            const isSecretary = state.role === 'secretário';
+            const isMaster = isAdmin && (state.username || '').toUpperCase() === 'ADMINISTRADOR';
 
-            if (!isAdmin) {
-                if (membersNav) membersNav.style.display = 'none';
-                if (dashboardStats) dashboardStats.style.display = 'grid';
-                if (chartsGrid) chartsGrid.style.display = 'grid';
+            // Sidebar Elements
+            const navItems = {
+                dashboard: document.querySelector('[data-target="dashboard"]'),
+                people: document.querySelector('[data-target="people"]'),
+                events: document.querySelector('[data-target="events"]'),
+                reports: document.querySelector('[data-target="reports"]'),
+                authorizations: document.getElementById('nav-authorizations'),
+                logs: document.getElementById('nav-logs')
+            };
+
+            // Common User Access: Only Dashboard and Events
+            if (!isAdmin && !isSecretary) {
+                if (navItems.people) navItems.people.style.display = 'none';
+                if (navItems.reports) navItems.reports.style.display = 'none';
+                if (navItems.authorizations) navItems.authorizations.style.display = 'none';
+                if (navItems.logs) navItems.logs.style.display = 'none';
                 
+                // Adjust Dashboard for common user
                 const cards = document.querySelectorAll('.stat-card');
                 if (cards[1]) cards[1].style.display = 'none';
                 if (cards[2]) cards[2].style.display = 'none';
@@ -252,31 +265,17 @@ const checkAuth = async () => {
                 const statLabels = document.querySelectorAll('.stat-label');
                 if (statLabels[0]) statLabels[0].textContent = 'Total Pago (Ano)';
                 
-                const chartTitles = document.querySelectorAll('.chart-container h4');
-                if (chartTitles[0]) chartTitles[0].textContent = 'Status de Pagamento';
-
                 document.getElementById('page-title').textContent = 'Meu Status de Mensalidade';
-            } else if (state.role === 'admin' || state.role === 'secretário') {
-                if (membersNav) membersNav.style.display = state.role === 'admin' ? 'block' : 'none';
-                if (dashboardStats) dashboardStats.style.display = 'grid';
-                if (chartsGrid) chartsGrid.style.display = 'grid';
+            } else {
+                // Admin/Secretary Access
+                if (navItems.people) navItems.people.style.display = isAdmin ? 'block' : 'none';
+                if (navItems.reports) navItems.reports.style.display = 'block';
+                if (navItems.authorizations) navItems.authorizations.style.display = 'block';
                 
-                const cards = document.querySelectorAll('.stat-card');
-                if (cards[1]) cards[1].style.display = 'block';
-                if (cards[2]) cards[2].style.display = 'block';
-                
-                const chartTitles = document.querySelectorAll('.chart-container h4');
-                if (chartTitles[0]) chartTitles[0].textContent = 'Distribuição por Unidade';
+                // Logs ONLY for master
+                if (navItems.logs) navItems.logs.style.display = isMaster ? 'block' : 'none';
 
-                // Show authorizations for admins/secretaries, but logs ONLY for master ADMINISTRADOR
-                const authNav = document.getElementById('nav-authorizations');
-                if (authNav) authNav.style.display = 'block';
-                
-                const logsNav = document.getElementById('nav-logs');
-                if (logsNav) {
-                    const isMaster = state.role === 'admin' && (state.username || '').toUpperCase() === 'ADMINISTRADOR';
-                    logsNav.style.display = isMaster ? 'block' : 'none';
-                }
+                document.getElementById('page-title').textContent = isAdmin ? 'Dashboard de Mensalidades' : 'Painel Administrativo';
             }
 
             initializeSidebar();

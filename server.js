@@ -370,38 +370,28 @@ app.patch('/api/notifications/read-all', authenticateToken, async (req, res) => 
 // --- PEOPLE API ---
 app.get('/api/people', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role === 'admin') {
+    if (req.user.role === 'admin' || req.user.role === 'secretário') {
       const result = await db.query(`
         SELECT p.*, u.username 
         FROM people p 
         LEFT JOIN users u ON p.id = u.person_id 
         ORDER BY p.name ASC
       `);
-      
-      console.log(`[DEBUG] Sending ${result.rows.length} people.`);
       return res.json(result.rows);
     }
     
-    // STRICT MEMBER ACCESS
-    if (!req.user.personId) {
-        return res.json([]);
-    }
-    
-    const result = await db.query(`
-        SELECT p.*, u.username 
-        FROM people p 
-        LEFT JOIN users u ON p.id = u.person_id 
-        WHERE p.id = $1
-    `, [req.user.personId]);
-    
+    // Member access: Only their own data
+    if (!req.user.personId) return res.json([]);
+    const result = await db.query('SELECT * FROM people WHERE id = $1', [req.user.personId]);
     res.json(result.rows);
   } catch (err) {
-    console.error('API Error /api/people:', err);
     res.status(500).json({ error: 'Erro ao buscar dados' });
   }
 });
 
 app.post('/api/people', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+  
   let { name, responsible, birth_date, cpf, unit, username, password } = req.body || {};
   if (!name || name.trim().split(/\s+/).length < 2) {
       return res.status(400).json({ error: 'O nome deve conter pelo menos Nome e Sobrenome.' });
@@ -1078,7 +1068,11 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
 
 // --- SYSTEM LOGS API ---
 app.get('/api/admin/logs', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') return res.sendStatus(403);
+    // Only master admin can see logs
+    if (req.user.role !== 'admin' || req.user.username.toUpperCase() !== 'ADMINISTRADOR') {
+        console.warn(`[SECURITY] Tentativa de acesso não autorizado aos logs por ${req.user.username}`);
+        return res.sendStatus(403);
+    }
     try {
         const result = await db.query('SELECT * FROM system_logs ORDER BY created_at DESC LIMIT 200');
         res.json(result.rows);
