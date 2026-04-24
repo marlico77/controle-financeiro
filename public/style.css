@@ -304,8 +304,8 @@ body {
     color: #888;
     transition: all 0.2s;
     margin-bottom: 0.5rem;
-    display: flex;
-    flex-direction: row;
+    display: flex !important; /* Force flex */
+    flex-direction: row !important; /* Force horizontal alignment on desktop */
     align-items: center;
     justify-content: flex-start; /* Explicitly align contents to left */
     gap: 12px;
@@ -662,8 +662,8 @@ tfoot td {
         flex-shrink: 0;
         text-align: center;
         font-size: 0.65rem; /* Fonte um pouco menor para economizar espaço */
-        display: flex;
-        flex-direction: column; /* Ícone em cima do texto */
+        display: flex !important;
+        flex-direction: column !important; /* Ícone em cima do texto no mobile */
         align-items: center;
         justify-content: center;
         gap: 3px; /* Espaço pequeno entre ícone e texto */
