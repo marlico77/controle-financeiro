@@ -251,17 +251,17 @@ const closeButtons = document.querySelectorAll('.close-modal');
 
 // Global Modal Closing Logic
 closeButtons.forEach(btn => {
-    btn.onclick = () => {
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(m => m.style.display = 'none');
-    };
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+    });
 });
 
-window.onclick = (event) => {
-    if (event.target.classList.contains('modal')) {
+// Fecha modal ao clicar no overlay (fora do conteudo) - usando addEventListener para nao sobrescrever outros handlers
+window.addEventListener('click', (event) => {
+    if (event.target.classList && event.target.classList.contains('modal')) {
         event.target.style.display = 'none';
     }
-};
+});
 
 // --- Sidebar Toggle ---
 const sidebar = document.querySelector('.sidebar');
@@ -2512,16 +2512,16 @@ if (state.token) startHeartbeat();
 // --- Authorization Generation ---
 async function generateAuthDocument(type) {
     try {
-        console.log(`[AUTH] Iniciar geração: ${type}`);
-        const eventName = document.getElementById('auth-event-name').value;
-        const eventDate = document.getElementById('auth-event-date').value;
-        const eventLocation = document.getElementById('auth-event-location').value;
-        const departureLocation = document.getElementById('auth-departure-location').value;
-        const departureTime = document.getElementById('auth-departure-time').value;
-        const returnTime = document.getElementById('auth-return-time').value;
+        console.log(`[AUTH] Iniciando geracao: ${type}`);
+        const eventName = (document.getElementById('auth-event-name') || {}).value || '';
+        const eventDate = (document.getElementById('auth-event-date') || {}).value || '';
+        const eventLocation = (document.getElementById('auth-event-location') || {}).value || '';
+        const departureLocation = (document.getElementById('auth-departure-location') || {}).value || '';
+        const departureTime = (document.getElementById('auth-departure-time') || {}).value || '';
+        const returnTime = (document.getElementById('auth-return-time') || {}).value || '';
 
         if (!eventName || !eventDate || !eventLocation || !departureLocation || !departureTime || !returnTime) {
-            return showStatus('Por favor, preencha todos os campos do formulário.', 'error');
+            return showStatus('Por favor, preencha todos os campos do formulario.', 'error');
         }
 
         const formattedDate = formatDate(eventDate);
@@ -2540,26 +2540,24 @@ async function generateAuthDocument(type) {
         };
 
         const logoSrc = type === 'doc' ? await getLogoBase64() : 'logo.png';
-        const headerHtml = type === 'doc' ? `
-            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
-                <tr><td width="80" valign="top"><img src="${logoSrc}" width="75" height="75"></td>
-                <td align="center"><h2>CLUBE DE DESBRAVADORES TRIBO DE DAVI-AP</h2><h3>Autorização de saída</h3></td><td width="80"></td></tr>
-            </table>
-        ` : `
-            <div style="display: flex; align-items: center; margin-bottom: 30px; position: relative;">
-                <img src="${logoSrc}" style="height: 75px; width: 75px; position: absolute; left: 0;">
-                <div style="width: 100%; text-align: center;"><h2>CLUBE DE DESBRAVADORES TRIBO DE DAVI-AP</h2><h3>Autorização de saída</h3></div>
-            </div>
-        `;
 
         const htmlContent = `
-            <div style="font-family: Arial; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px;">
-                ${headerHtml}
-                <p style="margin-top: 40px; text-align: justify;">Eu ________________________________ responsável pelo(a) desbravador(a) ________________________________ autorizo-o(a) a participar do evento <strong>${eventName}</strong> no dia <strong>${formattedDate}</strong>, em <strong>${eventLocation}</strong>. Saída às <strong>${departureTime}</strong>h em <strong>${departureLocation}</strong>. Retorno às <strong>${returnTime}</strong>h.</p>
-                <p style="text-align: center; font-weight: bold;">Estou ciente de que estará acompanhado(a) pela direção do Clube TRIBO DE DAVI.</p>
-                <div style="margin-top: 50px; text-align: right;">_________/_________/ ${currentYear}</div>
-                <div style="margin-top: 40px;"><p>Responsável: ________________________________</p><p>CPF: ________________________________</p></div>
-                <div style="margin-top: 60px; text-align: center;"><div style="border-top: 1px solid black; width: 400px; margin: 0 auto;">Assinatura do responsável</div></div>
+            <div style="font-family: Arial; line-height: 1.8; max-width: 800px; margin: 0 auto; padding: 30px; color: black;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 style="margin: 0; font-size: 1.3rem; text-transform: uppercase;">CLUBE DE DESBRAVADORES TRIBO DE DAVI-AP</h2>
+                    <h3 style="margin: 5px 0 0 0; font-size: 1.1rem; text-decoration: underline;">Autorizacao de Saida</h3>
+                </div>
+                <p style="margin-top: 40px; text-align: justify; line-height: 2;">Eu ________________________________________________________________ responsavel pelo(a) desbravador(a) ________________________________________________________________ autorizo-o(a) a participar do evento <strong>${eventName}</strong>, que sera realizado no dia <strong>${formattedDate}</strong>, no local <strong>${eventLocation}</strong>. Os desbravadores deverao chegar as <strong>${departureTime}</strong>h em <strong>${departureLocation}</strong>. O evento se encerrara as <strong>${returnTime}</strong>h.</p>
+                <p style="margin-top: 20px; text-align: center; font-weight: bold;">Estou ciente de que estara acompanhado(a) pela direcao do Clube TRIBO DE DAVI, estando sob sua responsabilidade durante todo esse periodo.</p>
+                <div style="margin-top: 50px; text-align: right;">_________ / _________ / ${currentYear}</div>
+                <div style="margin-top: 40px;">
+                    <p style="margin: 10px 0;">Nome do responsavel: ________________________________________________________________</p>
+                    <p style="margin: 10px 0;">CPF: ________________________________________________________________</p>
+                    <p style="margin: 10px 0;">Telefone: (____) ________________________________________________________________</p>
+                </div>
+                <div style="margin-top: 80px; text-align: center;">
+                    <div style="border-top: 1px solid black; width: 400px; margin: 0 auto; padding-top: 5px;">Assinatura do responsavel</div>
+                </div>
             </div>
         `;
 
@@ -2568,21 +2566,24 @@ async function generateAuthDocument(type) {
             if (printable) {
                 printable.innerHTML = htmlContent;
                 document.getElementById('report-modal').style.display = 'flex';
+            } else {
+                showStatus('Elemento de impressao nao encontrado.', 'error');
             }
         } else {
-            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' "+
-                "xmlns:w='urn:schemas-microsoft-com:office:word' "+
-                "xmlns='http://www.w3.org/TR/REC-html40'>"+
-                "<head><meta charset='utf-8'></head><body>";
-            const footer = "</body></html>";
-            const sourceHTML = header + htmlContent + footer;
+            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'></head><body>";
+            const sourceHTML = header + htmlContent + "</body></html>";
             const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
-            const link = document.createElement("a");
+            const link = document.createElement('a');
             link.href = source;
-            link.download = `Autorizacao_${eventName.replace(/\s+/g, '_')}.doc`;
+            link.download = 'Autorizacao_' + eventName.replace(/\s+/g, '_') + '.doc';
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
         }
-    } catch (err) { showStatus('Erro ao gerar documento', 'error'); }
+    } catch (err) {
+        console.error('[AUTH] Erro:', err);
+        showStatus('Erro ao gerar documento: ' + err.message, 'error');
+    }
 }
 
 // Chamar inicialização de segurança no final também
