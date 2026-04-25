@@ -171,13 +171,13 @@ const syncMemberUsers = async () => {
             if (existing.rows.length === 0) {
                 try {
                     await db.query(
-                        'INSERT INTO users (username, password_hash, role, person_id) VALUES ($1, $2, $3, $4) ON CONFLICT (username) DO NOTHING',
+                        'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT (username) DO NOTHING',
                         [username, defaultHash, 'member', p.id]
                     );
                 } catch (err) {
                     const fallbackName = `${username}${p.id}`;
                     await db.query(
-                        'INSERT INTO users (username, password_hash, role, person_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
+                        'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT DO NOTHING',
                         [fallbackName, defaultHash, 'member', p.id]
                     );
                 }
@@ -452,7 +452,7 @@ app.post('/api/people', authenticateToken, async (req, res) => {
           const hash = await bcrypt.hash(finalPassword, 10);
 
           await client.query(
-              'INSERT INTO users (username, password_hash, role, person_id) VALUES ($1, $2, $3, $4)',
+              'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE)',
               [finalUsername, hash, 'member', personId]
           );
       }
@@ -717,7 +717,7 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
                 if (password) {
                     const salt = bcrypt.genSaltSync(10);
                     const hash = bcrypt.hashSync(password, salt);
-                    await db.query('UPDATE users SET username = $1, password_hash = $2 WHERE id = $3', 
+                    await db.query('UPDATE users SET username = $1, password_hash = $2, must_change_password = TRUE WHERE id = $3', 
                       [username, hash, existingUser.id]);
                 } else {
                     await db.query('UPDATE users SET username = $1 WHERE id = $2', [username, existingUser.id]);
