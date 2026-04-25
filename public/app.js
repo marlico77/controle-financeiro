@@ -245,7 +245,23 @@ const paymentModal = document.getElementById('payment-modal');
 const personModal = document.getElementById('person-modal');
 const eventCreateModal = document.getElementById('event-create-modal');
 const eventPaymentModal = document.getElementById('event-payment-modal');
+const reportSelectorModal = document.getElementById('report-selector-modal');
+const reportModal = document.getElementById('report-modal');
 const closeButtons = document.querySelectorAll('.close-modal');
+
+// Global Modal Closing Logic
+closeButtons.forEach(btn => {
+    btn.onclick = () => {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(m => m.style.display = 'none');
+    };
+});
+
+window.onclick = (event) => {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+    }
+};
 
 // --- Sidebar Toggle ---
 const sidebar = document.querySelector('.sidebar');
@@ -2444,15 +2460,24 @@ const confirmGenerateReport = () => {
 };
 
 document.getElementById('report-type-select').onchange = toggleReportFields;
+
 const openSelectorBtn = document.getElementById('open-report-selector-btn');
 if (openSelectorBtn) {
     openSelectorBtn.onclick = () => {
-        document.getElementById('report-selector-modal').style.display = 'flex';
-        toggleReportFields();
+        const modal = document.getElementById('report-selector-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            toggleReportFields();
+        }
     };
 }
+
 const confirmGenBtn = document.getElementById('confirm-generate-report-btn');
-if (confirmGenBtn) confirmGenBtn.onclick = confirmGenerateReport;
+if (confirmGenBtn) {
+    confirmGenBtn.onclick = () => {
+        confirmGenerateReport();
+    };
+}
 
 
 // --- Heartbeat Check (Instant Kick) ---
@@ -2488,98 +2513,93 @@ window.generateAuthDocument = async (type) => {
             return;
         }
 
-    const formattedDate = formatDate(eventDate);
-    const currentYear = new Date().getFullYear();
+        const formattedDate = formatDate(eventDate);
+        const currentYear = new Date().getFullYear();
 
-    // Helper to get base64 logo for .doc export
-    const getLogoBase64 = async () => {
-        try {
-            const response = await fetch('logo.png');
-            const blob = await response.blob();
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.readAsDataURL(blob);
-            });
-        } catch (e) {
-            console.error('Error loading logo for doc:', e);
-            return 'logo.png'; // Fallback to relative path if fetch fails
-        }
-    };
+        // Helper to get base64 logo for .doc export
+        const getLogoBase64 = async () => {
+            try {
+                const response = await fetch('logo.png');
+                const blob = await response.blob();
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            } catch (e) {
+                console.error('Error loading logo for doc:', e);
+                return 'logo.png'; 
+            }
+        };
 
-    const logoSrc = type === 'doc' ? await getLogoBase64() : 'logo.png';
+        const logoSrc = type === 'doc' ? await getLogoBase64() : 'logo.png';
 
-    const headerHtml = type === 'doc' ? `
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
-            <tr>
-                <td width="80" valign="top">
-                    <img src="${logoSrc}" width="75" height="75" style="display: block;">
-                </td>
-                <td align="center" valign="middle">
-                    <h2 style="margin: 0; font-size: 1.3rem; text-transform: uppercase; font-family: Arial;">CLUBE DE DESBRAVADORES TRIBO DE DAVI-AP</h2>
-                    <h3 style="margin: 10px 0 0 0; font-size: 1.1rem; text-decoration: underline; font-family: Arial;">Autorização de saída</h3>
-                </td>
-                <td width="80"></td>
-            </tr>
-        </table>
-    ` : `
-        <div style="display: flex; align-items: center; margin-bottom: 30px; position: relative; min-height: 80px;">
-            <img src="${logoSrc}" style="height: 75px; width: 75px; position: absolute; left: 0; top: -10px; object-fit: contain;">
-            <div style="width: 100%; text-align: center;">
-                <h2 style="margin: 0; font-size: 1.3rem; text-transform: uppercase; padding: 0 80px;">CLUBE DE DESBRAVADORES TRIBO DE DAVI-AP</h2>
-                <h3 style="margin: 5px 0 0 0; font-size: 1.1rem; text-decoration: underline;">Autorização de saída</h3>
-            </div>
-        </div>
-    `;
-
-    const htmlContent = `
-        <div style="font-family: 'Arial', sans-serif; color: black; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; background: white;">
-            ${headerHtml}
-
-            <p style="margin-top: 40px; text-align: justify;">
-                Eu ____________________________________________________________________ responsável pelo(a) desbravador(a) 
-                ______________________________________________________________________, inscrito(a) no CPF 
-                ______________________________________________________________________, autorizo-o(a) a participar do evento 
-                <strong>${eventName}</strong> que será realizado no dia <strong>${formattedDate}</strong>, no local <strong>${eventLocation}</strong>. 
-                Os desbravadores deverão chegar às <strong>${departureTime}</strong> horas em <strong>${departureLocation}</strong>, 
-                onde se reunirão para a saída. O evento se encerrará às <strong>${returnTime}</strong>h. 
-                Após esse horário os responsáveis deverão buscar os desbravadores no mesmo local de partida.
-            </p>
-
-            <p style="margin-top: 30px; text-align: center; font-weight: bold;">
-                Estou ciente de que estará acompanhado(a) pela direção do Clube de Desbravadores TRIBO DE DAVI, 
-                estando sob sua responsabilidade durante todo esse período.
-            </p>
-
-            <div style="margin-top: 50px; text-align: right; padding-right: 50px;">
-                _________/_________/ ${currentYear}
-            </div>
-
-            <div style="margin-top: 60px;">
-                <p style="margin: 5px 0;">Nome do responsável: ____________________________________________________________________</p>
-                <p style="margin: 5px 0;">Nº do CPF do responsável: ________________________________________________________________</p>
-                <p style="margin: 5px 0;">Telefone de contato: (____) ________________________________________________________________</p>
-            </div>
-
-            <div style="margin-top: 80px; text-align: center;">
-                <div style="border-top: 1px solid black; width: 400px; margin: 0 auto; padding-top: 5px;">
-                    Assinatura do responsável
+        const headerHtml = type === 'doc' ? `
+            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
+                <tr>
+                    <td width="80" valign="top">
+                        <img src="${logoSrc}" width="75" height="75" style="display: block;">
+                    </td>
+                    <td align="center" valign="middle">
+                        <h2 style="margin: 0; font-size: 1.3rem; text-transform: uppercase; font-family: Arial;">CLUBE DE DESBRAVADORES TRIBO DE DAVI-AP</h2>
+                        <h3 style="margin: 10px 0 0 0; font-size: 1.1rem; text-decoration: underline; font-family: Arial;">Autorização de saída</h3>
+                    </td>
+                    <td width="80"></td>
+                </tr>
+            </table>
+        ` : `
+            <div style="display: flex; align-items: center; margin-bottom: 30px; position: relative; min-height: 80px;">
+                <img src="${logoSrc}" style="height: 75px; width: 75px; position: absolute; left: 0; top: -10px; object-fit: contain;">
+                <div style="width: 100%; text-align: center;">
+                    <h2 style="margin: 0; font-size: 1.3rem; text-transform: uppercase; padding: 0 80px;">CLUBE DE DESBRAVADORES TRIBO DE DAVI-AP</h2>
+                    <h3 style="margin: 5px 0 0 0; font-size: 1.1rem; text-decoration: underline;">Autorização de saída</h3>
                 </div>
             </div>
-        </div>
-    `;
+        `;
+
+        const htmlContent = `
+            <div style="font-family: 'Arial', sans-serif; color: black; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; background: white;">
+                ${headerHtml}
+                <p style="margin-top: 40px; text-align: justify;">
+                    Eu ____________________________________________________________________ responsável pelo(a) desbravador(a) 
+                    ______________________________________________________________________, inscrito(a) no CPF 
+                    ______________________________________________________________________, autorizo-o(a) a participar do evento 
+                    <strong>${eventName}</strong> que será realizado no dia <strong>${formattedDate}</strong>, no local <strong>${eventLocation}</strong>. 
+                    Os desbravadores deverão chegar às <strong>${departureTime}</strong> horas em <strong>${departureLocation}</strong>, 
+                    onde se reunirão para a saída. O evento se encerrará às <strong>${returnTime}</strong>h. 
+                    Após esse horário os responsáveis deverão buscar os desbravadores no mesmo local de partida.
+                </p>
+                <p style="margin-top: 30px; text-align: center; font-weight: bold;">
+                    Estou ciente de que estará acompanhado(a) pela direção do Clube de Desbravadores TRIBO DE DAVI, 
+                    estando sob sua responsabilidade durante todo esse período.
+                </p>
+                <div style="margin-top: 50px; text-align: right; padding-right: 50px;">
+                    _________/_________/ ${currentYear}
+                </div>
+                <div style="margin-top: 60px;">
+                    <p style="margin: 5px 0;">Nome do responsável: ____________________________________________________________________</p>
+                    <p style="margin: 5px 0;">Nº do CPF do responsável: ________________________________________________________________</p>
+                    <p style="margin: 5px 0;">Telefone de contato: (____) ________________________________________________________________</p>
+                </div>
+                <div style="margin-top: 80px; text-align: center;">
+                    <div style="border-top: 1px solid black; width: 400px; margin: 0 auto; padding-top: 5px;">
+                        Assinatura do responsável
+                    </div>
+                </div>
+            </div>
+        `;
 
         if (type === 'pdf') {
-            console.log('[AUTH] Renderizando PDF');
             const reportPrintable = document.getElementById('report-printable');
-            reportPrintable.innerHTML = htmlContent;
-            document.getElementById('report-modal').style.display = 'flex';
+            if (reportPrintable) {
+                reportPrintable.innerHTML = htmlContent;
+                document.getElementById('report-modal').style.display = 'flex';
+            }
         } else if (type === 'doc') {
-            console.log('[AUTH] Iniciando download DOC');
             const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' "+
                 "xmlns:w='urn:schemas-microsoft-com:office:word' "+
                 "xmlns='http://www.w3.org/TR/REC-html40'>"+
-                "<head><meta charset='utf-8'><title>Autorização de Saída</title></head><body>";
+                "<head><meta charset='utf-8'></head><body>";
             const footer = "</body></html>";
             const sourceHTML = header + htmlContent + footer;
             
@@ -2592,21 +2612,17 @@ window.generateAuthDocument = async (type) => {
             document.body.removeChild(fileDownload);
         }
     } catch (err) {
-        console.error('[AUTH] Erro crítico na geração:', err);
-        showStatus('Erro ao gerar documento: ' + err.message, 'error');
+        console.error('[AUTH] Erro:', err);
+        showStatus('Erro ao gerar documento', 'error');
     }
 };
 
-// Robust Event Delegation for Authorizations
-document.addEventListener('click', (e) => {
-    if (e.target.id === 'generate-auth-pdf') {
-        window.generateAuthDocument('pdf');
-    } else if (e.target.id === 'generate-auth-doc') {
-        window.generateAuthDocument('doc');
-    }
-});
+const authPdfBtn = document.getElementById('generate-auth-pdf');
+if (authPdfBtn) authPdfBtn.onclick = () => window.generateAuthDocument('pdf');
 
-checkAuth();
+const authDocBtn = document.getElementById('generate-auth-doc');
+if (authDocBtn) authDocBtn.onclick = () => window.generateAuthDocument('doc');
+
 // --- Sticky Horizontal Scrollbar Logic ---
 const initStickyScrollbars = () => {
     // Incluindo .list-container para a aba de Membros
