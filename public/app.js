@@ -384,19 +384,22 @@ async function generateAuthDocument(type) {
             <div style="font-family: Arial; line-height: 1.8; max-width: 800px; margin: 0 auto; padding: 30px; color: black;">
                 <div class="report-header">
                     <img src="${logoSrc}">
-                    <h2 style="margin: 0; font-size: 1.2rem; text-transform: uppercase;">CLUBE DE DESBRAVADORES TRIBO DE DAVI-AP</h2>
-                    <h3 style="margin: 5px 0 0 0; font-size: 1rem; text-decoration: underline;">Autorização de Saída</h3>
+                    <div>
+                        <h2 style="margin: 0; font-size: 1.2rem; text-transform: uppercase;">CLUBE DE DESBRAVADORES TRIBO DE DAVI-AP</h2>
+                        <h3 style="margin: 5px 0 0 0; font-size: 1rem; text-decoration: underline;">Autorização de Saída</h3>
+                    </div>
                 </div>
-                <p style="margin-top: 40px; text-align: justify; line-height: 2;">Eu ________________________________________________________________ responsavel pelo(a) desbravador(a) ________________________________________________________________ autorizo-o(a) a participar do evento <strong>${eventName}</strong>, que sera realizado no dia <strong>${formattedDate}</strong>, no local <strong>${eventLocation}</strong>. Os desbravadores deverao chegar as <strong>${departureTime}</strong>h em <strong>${departureLocation}</strong>. O evento se encerrara as <strong>${returnTime}</strong>h.</p>
-                <p style="margin-top: 20px; text-align: center; font-weight: bold;">Estou ciente de que estara acompanhado(a) pela direcao do Clube TRIBO DE DAVI, estando sob sua responsabilidade durante todo esse periodo.</p>
+                <p style="margin-top: 40px; text-align: justify; line-height: 2;">Eu, ________________________________________________________________, responsável pelo(a) desbravador(a) ________________________________________________________________, autorizo-o(a) a participar do evento <strong>${eventName}</strong>, que será realizado no dia <strong>${formattedDate}</strong>, no local <strong>${eventLocation}</strong>. Os desbravadores deverão se apresentar às <strong>${departureTime}</strong>h em <strong>${departureLocation}</strong> para a partida.</p>
+                <p style="text-align: justify; line-height: 2;">O evento tem término previsto para as <strong>${returnTime}</strong>h, momento em que o responsável deverá buscar a criança no mesmo local de partida indicado acima.</p>
+                <p style="margin-top: 20px; text-align: center; font-weight: bold;">Estou ciente de que estará acompanhado(a) pela direção do Clube TRIBO DE DAVI, permanecendo sob sua responsabilidade durante todo esse período.</p>
                 <div style="margin-top: 50px; text-align: right;">_________ / _________ / ${currentYear}</div>
                 <div style="margin-top: 40px;">
-                    <p style="margin: 10px 0;">Nome do responsavel: ________________________________________________________________</p>
+                    <p style="margin: 10px 0;">Nome do responsável: ________________________________________________________________</p>
                     <p style="margin: 10px 0;">CPF: ________________________________________________________________</p>
                     <p style="margin: 10px 0;">Telefone: (____) ________________________________________________________________</p>
                 </div>
                 <div style="margin-top: 80px; text-align: center;">
-                    <div style="border-top: 1px solid black; width: 400px; margin: 0 auto; padding-top: 5px;">Assinatura do responsavel</div>
+                    <div style="border-top: 1px solid black; width: 400px; margin: 0 auto; padding-top: 5px;">Assinatura do responsável</div>
                 </div>
             </div>
         `;
