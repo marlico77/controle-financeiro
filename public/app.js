@@ -122,7 +122,7 @@ const showConfirm = (message, title = 'Confirmar Ação') => {
     });
 };
 
-const showAlert = (message, title = 'Aviso', icon = '⚠️') => {
+async function showAlert(message, title = 'Aviso', icon = '⚠️') {
     return new Promise((resolve) => {
         const modal = document.getElementById('alert-modal');
         const titleEl = document.getElementById('alert-title');
@@ -140,7 +140,7 @@ const showAlert = (message, title = 'Aviso', icon = '⚠️') => {
             resolve();
         };
     });
-};
+}
 
 const initializePasswordToggles = () => {
     document.querySelectorAll('.toggle-password').forEach(button => {
@@ -167,13 +167,48 @@ const initializePasswordToggles = () => {
 // Initialize toggles
 initializePasswordToggles();
 
+// --- Data Fetching ---
+async function apiFetch(url, options = {}) {
+    const headers = {
+        'Authorization': `Bearer ${state.token || localStorage.getItem('token')}`,
+        ...options.headers
+    };
+
+    if (options.body && !(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    const res = await fetch(url, {
+        ...options,
+        headers
+    });
+    
+    const data = await res.json();
+    if (!res.ok) {
+        if (res.status === 401) {
+            const prohibitedSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" style="width: 60px; height: 60px; fill: var(--accent-color);"><path d="M431.2 476.5L163.5 208.8C141.1 240.2 128 278.6 128 320C128 426 214 512 320 512C361.5 512 399.9 498.9 431.2 476.5zM476.5 431.2C498.9 399.8 512 361.4 512 320C512 214 426 128 320 128C278.5 128 240.1 141.1 208.8 163.5L476.5 431.2zM64 320C64 178.6 178.6 64 320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576C178.6 576 64 461.4 64 320z"/></svg>`;
+            await showAlert('Sessão Encerrada: Sua conta foi acessada em outro dispositivo ou a sessão expirou.', 'Sessão Encerrada', prohibitedSvg);
+            logout();
+            throw new Error('Sessão expirada');
+        }
+        if (res.status === 403 && data.mustChangePassword) {
+            // Trigger forced modal if API blocks us
+            document.getElementById('force-change-modal').style.display = 'flex';
+            mainSection.style.display = 'none';
+            throw new Error('Alteração de senha obrigatória');
+        }
+        throw new Error(data.error || 'Erro na requisição');
+    }
+    return data;
+}
+
 // --- Inactivity Timer Configuration ---
 const INACTIVITY_LIMIT = 20 * 60 * 1000; // 20 minutes
 const WARNING_TIME = 18 * 60 * 1000;    // 18 minutes (2 min warning)
 let inactivityTimeout;
 let warningTimeout;
 
-const resetInactivityTimer = () => {
+function resetInactivityTimer() {
     if (inactivityTimeout) clearTimeout(inactivityTimeout);
     if (warningTimeout) clearTimeout(warningTimeout);
 
@@ -186,7 +221,7 @@ const resetInactivityTimer = () => {
             logout();
         }, INACTIVITY_LIMIT);
     }
-};
+}
 
 // Listen for user activity to reset the timer
 ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'].forEach(event => {
@@ -212,8 +247,77 @@ const eventCreateModal = document.getElementById('event-create-modal');
 const eventPaymentModal = document.getElementById('event-payment-modal');
 const closeButtons = document.querySelectorAll('.close-modal');
 
+// --- Sidebar Toggle ---
+const sidebar = document.querySelector('.sidebar');
+const sidebarToggle = document.getElementById('sidebar-toggle');
+
+const initializeSidebar = () => {
+    // Only apply collapsed state if on desktop
+    if (window.innerWidth > 768) {
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (isCollapsed && sidebar) {
+            sidebar.classList.add('collapsed');
+        }
+    }
+};
+
+if (sidebarToggle) {
+    sidebarToggle.onclick = () => {
+        sidebar.classList.toggle('collapsed');
+        localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+    };
+}
+
+// --- Notifications Logic ---
+const initializeNotifications = () => {
+    const trigger = document.getElementById('notification-trigger');
+    const dropdown = document.getElementById('notification-dropdown');
+    const markReadBtn = document.getElementById('mark-all-read');
+
+    if (trigger) {
+        trigger.onclick = (e) => {
+            e.stopPropagation();
+            const isVisible = dropdown.style.display === 'block';
+            dropdown.style.display = isVisible ? 'none' : 'block';
+        };
+    }
+
+    if (markReadBtn) {
+        markReadBtn.onclick = async (e) => {
+            e.stopPropagation();
+            try {
+                await apiFetch('/api/notifications/read-all', { method: 'PATCH' });
+                fetchNotifications();
+            } catch (err) {
+                console.error('Error marking all as read:', err);
+            }
+        };
+    }
+
+    document.addEventListener('click', () => {
+        if (dropdown) dropdown.style.display = 'none';
+    });
+
+    const list = document.getElementById('notification-list');
+    if (list) {
+        list.onclick = (e) => {
+            const item = e.target.closest('.notification-item.clickable');
+            if (item) {
+                e.stopPropagation();
+                const id = item.dataset.relatedId;
+                const type = item.dataset.relatedType;
+                if (id && type) handleNotificationClick(id, type);
+            }
+        };
+    }
+
+    // Start polling
+    fetchNotifications();
+    setInterval(fetchNotifications, 30000); // 30s
+}
+
 // --- Auth Functions ---
-const checkAuth = async () => {
+async function checkAuth() {
     const token = state.token || localStorage.getItem('token');
     if (token) {
         state.token = token;
@@ -301,8 +405,7 @@ const checkAuth = async () => {
             }
             switchTab(state.activeTab);
             resetInactivityTimer(); // Start timer after auth verification
-
-            setTimeout(() => loadInitialData(), 50); 
+            loadInitialData();
         } catch (err) {
             console.error('Auth verification failed:', err);
         }
@@ -310,14 +413,56 @@ const checkAuth = async () => {
         loginSection.style.display = 'flex';
         mainSection.style.display = 'none';
     }
-};
-
-// Start initialization
-if (localStorage.getItem('token')) {
-    checkAuth();
-} else {
-    loginSection.style.display = 'flex';
 }
+
+// --- Data Fetching ---
+async function loadInitialData() {
+    try {
+        state.people = await apiFetch('/api/people');
+        
+        // Priority: Update user name for non-admin accounts immediately
+        if (state.role !== 'admin' && state.people.length > 0) {
+            const person = state.people[0];
+            if (person) {
+                document.getElementById('user-name-display').textContent = person.name;
+            }
+        }
+
+        state.payments = await apiFetch(`/api/payments?year=${state.currentYear}`);
+        
+        // Buscar pagamentos de eventos e saídas também para compor o total do caixa
+        if (state.role === 'admin' || state.role === 'secretário') {
+            state.eventPayments = await apiFetch('/api/event-payments');
+            state.outflows = await apiFetch('/api/outflows');
+        } else {
+            state.eventPayments = await apiFetch(`/api/event-payments?person_id=${state.personId}`);
+            state.outflows = [];
+        }
+
+        renderDashboard();
+        
+        if (state.role === 'admin') {
+            renderPeople();
+            
+            // Check for pending approvals
+            const pendingPayments = state.payments.filter(p => p.status === 'pending');
+            if (pendingPayments.length > 0) {
+                setTimeout(() => {
+                    if (state.role === 'admin') { 
+                        showStatus(`⚠️ ATENÇÃO: Existem ${pendingPayments.length} comprovante(s) aguardando aprovação.`, 'info');
+                    }
+                }, 1500);
+            }
+        }
+        
+        updateDashboardStats();
+        if (state.activeTab === 'events') fetchEventsData();
+        if (state.activeTab === 'logs') fetchLogs();
+    } catch (err) {
+        console.error('Error loading data:', err);
+    }
+}
+
 
 loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -382,14 +527,14 @@ loginForm.addEventListener('submit', async (e) => {
     }
 });
 
-const logout = () => {
+function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     localStorage.removeItem('username');
     localStorage.removeItem('name');
     localStorage.removeItem('personId');
     window.location.reload();
-};
+}
 
 if (logoutBtn) logoutBtn.onclick = logout;
 const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
@@ -408,7 +553,7 @@ if (confirmForceLoginBtn) {
 }
 
 // --- Navigation ---
-let switchTab = (target) => {
+function switchTab(target) {
     state.activeTab = target;
     localStorage.setItem('activeTab', target);
     
@@ -455,7 +600,7 @@ let switchTab = (target) => {
     if (window.innerWidth <= 768 && sidebar.classList.contains('active')) {
         sidebar.classList.remove('active');
     }
-};
+}
 
 navLinks.forEach(link => {
     link.addEventListener('click', () => switchTab(link.dataset.target));
@@ -488,88 +633,7 @@ document.getElementById('back-to-events').onclick = () => {
     }
 };
 
-// --- Data Fetching ---
-const apiFetch = async (url, options = {}) => {
-    const headers = {
-        'Authorization': `Bearer ${state.token}`,
-        ...options.headers
-    };
 
-    if (options.body && !(options.body instanceof FormData)) {
-        headers['Content-Type'] = 'application/json';
-    }
-
-    const res = await fetch(url, {
-        ...options,
-        headers
-    });
-    
-    const data = await res.json();
-    if (!res.ok) {
-        if (res.status === 401) {
-            const prohibitedSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" style="width: 60px; height: 60px; fill: var(--accent-color);"><path d="M431.2 476.5L163.5 208.8C141.1 240.2 128 278.6 128 320C128 426 214 512 320 512C361.5 512 399.9 498.9 431.2 476.5zM476.5 431.2C498.9 399.8 512 361.4 512 320C512 214 426 128 320 128C278.5 128 240.1 141.1 208.8 163.5L476.5 431.2zM64 320C64 178.6 178.6 64 320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576C178.6 576 64 461.4 64 320z"/></svg>`;
-            await showAlert('Sessão Encerrada: Sua conta foi acessada em outro dispositivo ou a sessão expirou.', 'Sessão Encerrada', prohibitedSvg);
-            logout();
-            throw new Error('Sessão expirada');
-        }
-        if (res.status === 403 && data.mustChangePassword) {
-            // Trigger forced modal if API blocks us
-            document.getElementById('force-change-modal').style.display = 'flex';
-            mainSection.style.display = 'none';
-            throw new Error('Alteração de senha obrigatória');
-        }
-        throw new Error(data.error || 'Erro na requisição');
-    }
-    return data;
-};
-
-// --- Notifications Logic ---
-const initializeNotifications = () => {
-    const trigger = document.getElementById('notification-trigger');
-    const dropdown = document.getElementById('notification-dropdown');
-    const markReadBtn = document.getElementById('mark-all-read');
-
-    if (trigger) {
-        trigger.onclick = (e) => {
-            e.stopPropagation();
-            const isVisible = dropdown.style.display === 'block';
-            dropdown.style.display = isVisible ? 'none' : 'block';
-        };
-    }
-
-    if (markReadBtn) {
-        markReadBtn.onclick = async (e) => {
-            e.stopPropagation();
-            try {
-                await apiFetch('/api/notifications/read-all', { method: 'PATCH' });
-                fetchNotifications();
-            } catch (err) {
-                console.error('Error marking all as read:', err);
-            }
-        };
-    }
-
-    document.addEventListener('click', () => {
-        if (dropdown) dropdown.style.display = 'none';
-    });
-
-    const list = document.getElementById('notification-list');
-    if (list) {
-        list.onclick = (e) => {
-            const item = e.target.closest('.notification-item.clickable');
-            if (item) {
-                e.stopPropagation();
-                const id = item.dataset.relatedId;
-                const type = item.dataset.relatedType;
-                if (id && type) handleNotificationClick(id, type);
-            }
-        };
-    }
-
-    // Start polling
-    fetchNotifications();
-    setInterval(fetchNotifications, 30000); // 30s
-}
 
 const fetchNotifications = async () => {
     try {
@@ -630,55 +694,6 @@ const handleNotificationClick = async (id, type) => {
     }
 };
 
-const loadInitialData = async () => {
-    try {
-        state.people = await apiFetch('/api/people');
-        
-        // Priority: Update user name for non-admin accounts immediately
-        if (state.role !== 'admin' && state.people.length > 0) {
-            const person = state.people[0];
-            if (person) {
-                document.getElementById('user-name-display').textContent = person.name;
-            }
-        }
-
-        state.payments = await apiFetch(`/api/payments?year=${state.currentYear}`);
-        
-        // Buscar pagamentos de eventos e saídas também para compor o total do caixa
-        if (state.role === 'admin' || state.role === 'secretário') {
-            state.eventPayments = await apiFetch('/api/event-payments');
-            state.outflows = await apiFetch('/api/outflows');
-        } else {
-            state.eventPayments = await apiFetch(`/api/event-payments?person_id=${state.personId}`);
-            state.outflows = [];
-        }
-
-        renderDashboard();
-        
-        if (state.role === 'admin') {
-            renderPeople();
-            
-            // Check for pending approvals
-            const pendingPayments = state.payments.filter(p => p.status === 'pending');
-            console.log('Pending payments found:', pendingPayments.length);
-            
-            if (pendingPayments.length > 0) {
-                // Use a slightly longer delay to ensure the dashboard is rendered and seen
-                setTimeout(() => {
-                    if (state.role === 'admin') { // Double check
-                        showStatus(`⚠️ ATENÇÃO: Existem ${pendingPayments.length} comprovante(s) aguardando aprovação.`, 'info');
-                    }
-                }, 1500);
-            }
-        }
-        
-        updateDashboardStats();
-        if (state.activeTab === 'events') fetchEventsData();
-        if (state.activeTab === 'logs') fetchLogs();
-    } catch (err) {
-        console.error('Error loading data:', err);
-    }
-};
 
 // --- Logs Logic ---
 const fetchLogs = async () => {
@@ -2122,26 +2137,6 @@ yearSelect.addEventListener('change', (e) => {
     loadInitialData();
 });
 
-// --- Sidebar Toggle ---
-const sidebar = document.querySelector('.sidebar');
-const sidebarToggle = document.getElementById('sidebar-toggle');
-
-const initializeSidebar = () => {
-    // Only apply collapsed state if on desktop
-    if (window.innerWidth > 768) {
-        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-        if (isCollapsed) {
-            sidebar.classList.add('collapsed');
-        }
-    }
-};
-
-if (sidebarToggle) {
-    sidebarToggle.onclick = () => {
-        sidebar.classList.toggle('collapsed');
-        localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-    };
-}
 
     // Event Details Toggle
     const toggleBtn = document.getElementById('toggle-event-details');
@@ -2477,17 +2472,21 @@ const startHeartbeat = () => {
 if (state.token) startHeartbeat();
 // --- Authorization Generation ---
 window.generateAuthDocument = async (type) => {
-    const eventName = document.getElementById('auth-event-name').value;
-    const eventDate = document.getElementById('auth-event-date').value;
-    const eventLocation = document.getElementById('auth-event-location').value;
-    const departureLocation = document.getElementById('auth-departure-location').value;
-    const departureTime = document.getElementById('auth-departure-time').value;
-    const returnTime = document.getElementById('auth-return-time').value;
+    console.log(`[AUTH] Iniciar geração: ${type}`);
+    
+    try {
+        const eventName = document.getElementById('auth-event-name').value;
+        const eventDate = document.getElementById('auth-event-date').value;
+        const eventLocation = document.getElementById('auth-event-location').value;
+        const departureLocation = document.getElementById('auth-departure-location').value;
+        const departureTime = document.getElementById('auth-departure-time').value;
+        const returnTime = document.getElementById('auth-return-time').value;
 
-    if (!eventName || !eventDate || !eventLocation || !departureLocation || !departureTime || !returnTime) {
-        showStatus('Por favor, preencha todos os campos do formulário.', 'error');
-        return;
-    }
+        if (!eventName || !eventDate || !eventLocation || !departureLocation || !departureTime || !returnTime) {
+            console.warn('[AUTH] Campos incompletos');
+            showStatus('Por favor, preencha todos os campos do formulário.', 'error');
+            return;
+        }
 
     const formattedDate = formatDate(eventDate);
     const currentYear = new Date().getFullYear();
@@ -2570,33 +2569,42 @@ window.generateAuthDocument = async (type) => {
         </div>
     `;
 
-    if (type === 'pdf') {
-        const reportPrintable = document.getElementById('report-printable');
-        reportPrintable.innerHTML = htmlContent;
-        document.getElementById('report-modal').style.display = 'flex';
-    } else if (type === 'doc') {
-        const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' "+
-            "xmlns:w='urn:schemas-microsoft-com:office:word' "+
-            "xmlns='http://www.w3.org/TR/REC-html40'>"+
-            "<head><meta charset='utf-8'><title>Autorização de Saída</title></head><body>";
-        const footer = "</body></html>";
-        const sourceHTML = header + htmlContent + footer;
-        
-        const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
-        const fileDownload = document.createElement("a");
-        document.body.appendChild(fileDownload);
-        fileDownload.href = source;
-        fileDownload.download = `Autorizacao_${eventName.replace(/\s+/g, '_')}.doc`;
-        fileDownload.click();
-        document.body.removeChild(fileDownload);
+        if (type === 'pdf') {
+            console.log('[AUTH] Renderizando PDF');
+            const reportPrintable = document.getElementById('report-printable');
+            reportPrintable.innerHTML = htmlContent;
+            document.getElementById('report-modal').style.display = 'flex';
+        } else if (type === 'doc') {
+            console.log('[AUTH] Iniciando download DOC');
+            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' "+
+                "xmlns:w='urn:schemas-microsoft-com:office:word' "+
+                "xmlns='http://www.w3.org/TR/REC-html40'>"+
+                "<head><meta charset='utf-8'><title>Autorização de Saída</title></head><body>";
+            const footer = "</body></html>";
+            const sourceHTML = header + htmlContent + footer;
+            
+            const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+            const fileDownload = document.createElement("a");
+            document.body.appendChild(fileDownload);
+            fileDownload.href = source;
+            fileDownload.download = `Autorizacao_${eventName.replace(/\s+/g, '_')}.doc`;
+            fileDownload.click();
+            document.body.removeChild(fileDownload);
+        }
+    } catch (err) {
+        console.error('[AUTH] Erro crítico na geração:', err);
+        showStatus('Erro ao gerar documento: ' + err.message, 'error');
     }
 };
 
-const genAuthPdfBtn = document.getElementById('generate-auth-pdf');
-if (genAuthPdfBtn) genAuthPdfBtn.onclick = () => window.generateAuthDocument('pdf');
-
-const genAuthDocBtn = document.getElementById('generate-auth-doc');
-if (genAuthDocBtn) genAuthDocBtn.onclick = () => window.generateAuthDocument('doc');
+// Robust Event Delegation for Authorizations
+document.addEventListener('click', (e) => {
+    if (e.target.id === 'generate-auth-pdf') {
+        window.generateAuthDocument('pdf');
+    } else if (e.target.id === 'generate-auth-doc') {
+        window.generateAuthDocument('doc');
+    }
+});
 
 checkAuth();
 // --- Sticky Horizontal Scrollbar Logic ---
@@ -2720,3 +2728,12 @@ switchTab = (target) => {
     originalSwitchTab(target);
     setTimeout(initStickyScrollbars, 200);
 };
+
+// Start initialization on window load for total safety
+window.addEventListener('load', () => {
+    if (localStorage.getItem('token')) {
+        checkAuth();
+    } else {
+        loginSection.style.display = 'flex';
+    }
+});
