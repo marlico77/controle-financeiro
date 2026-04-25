@@ -385,7 +385,7 @@
                             <h3 style="color: var(--accent-color); margin-bottom: 0.5rem; font-size: 1.8rem;">Central de Relatórios</h3>
                             <p style="color: var(--text-dim);">Gere extratos detalhados de mensalidades, membros ou eventos.</p>
                         </div>
-                        <button id="open-report-selector-btn" class="btn-primary" style="max-width: 300px; background: black; color: white; padding: 1.2rem 2rem; font-weight: 700;">Gerar Novo Relatório</button>
+                        <button id="open-report-selector-btn" onclick="const m = document.getElementById('report-selector-modal'); if(m) m.style.display='flex'; window.toggleReportFields();" class="btn-primary" style="max-width: 300px; background: black; color: white; padding: 1.2rem 2rem; font-weight: 700;">Gerar Novo Relatório</button>
                     </div>
                 </div>
 
@@ -426,8 +426,8 @@
                                 </div>
                             </div>
                             <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                                <button type="button" id="generate-auth-pdf" class="btn-primary" style="flex: 1; background: #e50914;">Gerar PDF</button>
-                                <button type="button" id="generate-auth-doc" class="btn-primary" style="flex: 1; background: black;">Gerar .DOC</button>
+                                <button type="button" id="generate-auth-pdf" onclick="window.generateAuthDocument('pdf')" class="btn-primary" style="flex: 1; background: #e50914;">Gerar PDF</button>
+                                <button type="button" id="generate-auth-doc" onclick="window.generateAuthDocument('doc')" class="btn-primary" style="flex: 1; background: black;">Gerar .DOC</button>
                             </div>
                         </form>
                     </div>
@@ -801,11 +801,11 @@
                 </div>
             </div>
 
-            <button id="confirm-generate-report-btn" class="btn-primary" style="width: 100%; margin-top: 1.5rem; background: black; color: white; padding: 1rem; font-weight: 700;">Gerar Agora</button>
+            <button id="confirm-generate-report-btn" onclick="window.confirmGenerateReport()" class="btn-primary" style="width: 100%; background: var(--accent-color); color: white; padding: 1rem; font-weight: 700; margin-top: 1rem;">Gerar Agora</button>
         </div>
     </div>
 
-    <div id="report-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div id="report-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 20000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
         <div class="modal-content glass-card" style="max-width: 1000px; width: 90%; max-height: 95vh; overflow-y: auto; background: var(--bg-color); padding: 2rem;">
             <span class="close-modal" style="top: 1rem; right: 1.5rem;">&times;</span>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 2rem; border-bottom: 1px solid var(--border-color); padding: 0 0.5rem 1.5rem 0.5rem;">
@@ -941,6 +941,6 @@
         </div>
     </div>
     
-    <script src="app.js?v=2"></script>
+    <script src="app.js?v=3"></script>
 </body>
 </html>
