@@ -604,12 +604,7 @@ closeButtons.forEach(btn => {
     });
 });
 
-// Fecha modal ao clicar no overlay (fora do conteudo) - usando addEventListener para nao sobrescrever outros handlers
-window.addEventListener('click', (event) => {
-    if (event.target.classList && event.target.classList.contains('modal')) {
-        event.target.style.display = 'none';
-    }
-});
+// Fecha modal apenas no X (removido fechamento ao clicar fora conforme solicitado)
 
 // --- Sidebar Toggle ---
 const sidebar = document.querySelector('.sidebar');
