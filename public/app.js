@@ -2592,8 +2592,11 @@ window.generateAuthDocument = async (type) => {
     }
 };
 
-document.getElementById('generate-auth-pdf').onclick = () => window.generateAuthDocument('pdf');
-document.getElementById('generate-auth-doc').onclick = () => window.generateAuthDocument('doc');
+const genAuthPdfBtn = document.getElementById('generate-auth-pdf');
+if (genAuthPdfBtn) genAuthPdfBtn.onclick = () => window.generateAuthDocument('pdf');
+
+const genAuthDocBtn = document.getElementById('generate-auth-doc');
+if (genAuthDocBtn) genAuthDocBtn.onclick = () => window.generateAuthDocument('doc');
 
 checkAuth();
 // --- Sticky Horizontal Scrollbar Logic ---
