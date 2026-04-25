@@ -2448,25 +2448,49 @@ function confirmGenerateReport() {
     else if (type === 'event') generateEventReport();
 }
 
-document.getElementById('report-type-select').onchange = toggleReportFields;
-
-const openSelectorBtn = document.getElementById('open-report-selector-btn');
-if (openSelectorBtn) {
-    openSelectorBtn.onclick = () => {
-        const modal = document.getElementById('report-selector-modal');
-        if (modal) {
-            modal.style.display = 'flex';
-            toggleReportFields();
+// --- Initialization of Generators and Reports ---
+const initGeneratorListeners = () => {
+    console.log('[INIT] Inicializando listeners de relatórios e autorizações');
+    
+    try {
+        const typeSelect = document.getElementById('report-type-select');
+        if (typeSelect) {
+            typeSelect.onchange = toggleReportFields;
         }
-    };
-}
 
-const confirmGenBtn = document.getElementById('confirm-generate-report-btn');
-if (confirmGenBtn) {
-    confirmGenBtn.onclick = () => {
-        confirmGenerateReport();
-    };
-}
+        const openSelectorBtn = document.getElementById('open-report-selector-btn');
+        if (openSelectorBtn) {
+            openSelectorBtn.onclick = () => {
+                const modal = document.getElementById('report-selector-modal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    toggleReportFields();
+                }
+            };
+        }
+
+        const confirmGenBtn = document.getElementById('confirm-generate-report-btn');
+        if (confirmGenBtn) {
+            confirmGenBtn.onclick = confirmGenerateReport;
+        }
+
+        // Authorization Buttons
+        const authPdfBtn = document.getElementById('generate-auth-pdf');
+        if (authPdfBtn) {
+            authPdfBtn.onclick = () => generateAuthDocument('pdf');
+        }
+
+        const authDocBtn = document.getElementById('generate-auth-doc');
+        if (authDocBtn) {
+            authDocBtn.onclick = () => generateAuthDocument('doc');
+        }
+    } catch (err) {
+        console.error('[INIT] Erro ao inicializar geradores:', err);
+    }
+};
+
+// Chamar inicialização
+initGeneratorListeners();
 
 
 // --- Heartbeat Check (Instant Kick) ---
@@ -2561,11 +2585,8 @@ async function generateAuthDocument(type) {
     } catch (err) { showStatus('Erro ao gerar documento', 'error'); }
 }
 
-const authPdfBtn = document.getElementById('generate-auth-pdf');
-if (authPdfBtn) authPdfBtn.onclick = () => generateAuthDocument('pdf');
-
-const authDocBtn = document.getElementById('generate-auth-doc');
-if (authDocBtn) authDocBtn.onclick = () => generateAuthDocument('doc');
+// Chamar inicialização de segurança no final também
+setTimeout(initGeneratorListeners, 1000);
 
 // --- Sticky Horizontal Scrollbar Logic ---
 const initStickyScrollbars = () => {
