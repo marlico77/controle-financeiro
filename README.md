@@ -1,42 +1,42 @@
-# Sistema de Gestão Financeira e Auditoria
+# Sistema de Gestão Financeira e Auditoria - Tribo de Davi
 
-Uma solução robusta e moderna para controle financeiro, gestão de membros e monitoramento de atividades (auditoria) em tempo real. O sistema foi desenvolvido com foco em performance, segurança e usabilidade, oferecendo uma interface responsiva adaptada para desktop e dispositivos móveis.
+Uma solução robusta, moderna e multiplataforma para controle financeiro, gestão de membros e monitoramento de atividades (auditoria) em tempo real. O sistema foi desenvolvido com foco em performance, segurança e usabilidade, oferecendo uma experiência premium tanto em desktop quanto em dispositivos móveis através da tecnologia PWA.
 
 ## 🚀 Funcionalidades Principais
 
+### 📱 Experiência PWA (Progressive Web App)
+- **Instalação Direta**: Pode ser instalado como um aplicativo nativo no Android, iOS e Desktop.
+- **Offline Ready**: Cache inteligente via Service Workers para carregamento instantâneo.
+- **Interface App-like**: Navegação fluida, sem barras de navegador e otimizada para gestos.
+- **Banner de Instalação**: Convite inteligente integrado para adicionar à tela de início.
+
+### 📅 Gestão Avançada de Eventos
+- **Tipos de Pagamento**: Suporte a eventos com **Pagamento Único** ou **Parcelamento Mensal**.
+- **Controle de Participantes**: Dashboard dedicado por evento com estatísticas de inscritos totais e por unidade.
+- **Gestão de Comprovantes**: Sistema de upload e aprovação/rejeição de pagamentos com feedback em tempo real.
+- **Inscrição Flexível**: Adição dinâmica de novos membros a eventos já criados.
+
 ### 📊 Painel de Controle (Dashboard)
-- Visualização de indicadores financeiros em tempo real.
-- Gráficos comparativos de receitas e despesas.
-- Resumo de status de pagamentos e inadimplência.
+- **Indicadores em Tempo Real**: Visualização de saldo de caixa, mensalidades pendentes e despesas.
+- **Gráficos Interativos**: Análise visual via Chart.js para receitas, despesas e status de eventos.
+- **Sticky Scrollbars**: Interface de tabelas longas otimizada para facilitar a visualização de grandes listas de membros.
 
-### 📋 Gestão Financeira
-- Controle completo de fluxos de caixa.
-- Histórico detalhado de transações.
-- Filtros avançados por ano, mês e categoria.
-
-### 👥 Gestão de Membros
-- Cadastro e administração de usuários com diferentes níveis de acesso (Admin, Secretário, etc.).
-- Monitoramento de status de membros.
-
-### 🛡️ Auditoria e Logs do Sistema
-- Registro automático de ações críticas (logins, alterações de dados, eventos de sistema).
-- Captura de metadados de segurança: IP, Navegador, Sistema Operacional e Geolocalização básica.
-- **Retenção de Dados**: Política automática de limpeza que mantém apenas os logs das últimas 24 horas, otimizando o banco de dados.
-
-### 📱 Experiência do Usuário (UX/UI)
-- Interface com suporte a **Modo Escuro** e design baseado em **Glassmorphism**.
-- Navegação otimizada para mobile com barra inferior dinâmica.
-- Gerenciamento de sessão ativa com logout automático por inatividade (20 min).
+### 🛡️ Segurança e Auditoria
+- **Troca de Senha Obrigatória**: Segurança reforçada no primeiro acesso do usuário.
+- **Sessão Única**: Detecção de conflitos de sessão para impedir múltiplos acessos simultâneos.
+- **Logs de Auditoria**: Registro completo de ações, incluindo IP, dispositivo e navegador, com política de limpeza automática (24h).
+- **Controle de Acesso (RBAC)**: Níveis diferenciados para Administradores, Secretários e Membros.
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
 - **Backend**: Node.js com Express.
-- **Banco de Dados**: PostgreSQL (via Supabase) para persistência escalável.
+- **Banco de Dados**: PostgreSQL para persistência robusta e consultas complexas.
 - **Frontend**: HTML5, Vanilla CSS3 (Custom Properties), JavaScript (ES6+).
-- **Segurança**: JWT (JSON Web Tokens) para autenticação e middlewares de proteção de rota.
-- **Parsing**: `ua-parser-js` para análise detalhada de dispositivos nos logs.
+- **PWA**: Service Workers e Web App Manifest.
+- **Gráficos**: Chart.js.
+- **Segurança**: JWT (JSON Web Tokens) e BcryptJS para criptografia de senhas.
 
 ---
 
@@ -59,27 +59,18 @@ Uma solução robusta e moderna para controle financeiro, gestão de membros e m
     ```
 
 3.  **Configuração de Ambiente:**
-    Crie um arquivo `.env` na raiz do projeto e adicione as variáveis necessárias (exemplo abaixo):
+    Crie um arquivo `.env` na raiz do projeto:
     ```env
     PORT=3000
     DATABASE_URL=sua_url_de_conexao_aqui
     JWT_SECRET=sua_chave_secreta_aqui
     ```
-    > **Aviso**: Nunca compartilhe o arquivo `.env` publicamente.
 
 4.  **Inicie o servidor:**
     ```bash
     npm start
     ```
     O sistema estará disponível em `http://localhost:3000`.
-
----
-
-## 🔒 Segurança
-
-- Todas as senhas são criptografadas antes de serem armazenadas.
-- Middleware de auditoria registra todas as tentativas de acesso e modificações sensíveis.
-- Política de sessão única: impede que o mesmo usuário mantenha múltiplas sessões ativas simultaneamente em dispositivos diferentes.
 
 ---
 
