@@ -718,7 +718,10 @@ async function checkAuth() {
 
             loginSection.style.display = 'none';
             mainSection.style.display = 'flex';
-            if (splash) splash.classList.add('fade-out');
+            if (splash) {
+                splash.classList.add('fade-out');
+                setTimeout(() => splash.style.display = 'none', 500);
+            }
             
             // --- Tab Visibility Logic Based on Role ---
             const isAdmin = state.role === 'admin';
@@ -781,12 +784,18 @@ async function checkAuth() {
             loadInitialData();
         } catch (err) {
             console.error('Auth verification failed:', err);
-            if (splash) splash.classList.add('fade-out');
+            if (splash) {
+                splash.classList.add('fade-out');
+                setTimeout(() => splash.style.display = 'none', 500);
+            }
             loginSection.style.display = 'flex';
             mainSection.style.display = 'none';
         }
     } else {
-        if (splash) splash.classList.add('fade-out');
+        if (splash) {
+            splash.style.display = 'none';
+            splash.classList.add('fade-out');
+        }
         loginSection.style.display = 'flex';
         mainSection.style.display = 'none';
     }
@@ -2831,6 +2840,15 @@ const initApp = () => {
     const splash = document.getElementById('splash-screen');
     const token = localStorage.getItem('token');
     
+    // Failsafe: Always hide splash after 5 seconds no matter what
+    setTimeout(() => {
+        if (splash && splash.style.display !== 'none') {
+            console.warn('Failsafe: Hiding splash screen due to timeout');
+            splash.classList.add('fade-out');
+            setTimeout(() => splash.style.display = 'none', 500);
+        }
+    }, 5000);
+
     if (token) {
         // Keep splash visible while checking auth
         checkAuth();
