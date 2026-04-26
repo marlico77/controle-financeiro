@@ -543,9 +543,10 @@ async function apiFetch(url, options = {}) {
     
     const data = await res.json();
     if (!res.ok) {
-        if (res.status === 401) {
+        if (res.status === 401 || res.status === 403) {
             const prohibitedSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" style="width: 60px; height: 60px; fill: var(--accent-color);"><path d="M431.2 476.5L163.5 208.8C141.1 240.2 128 278.6 128 320C128 426 214 512 320 512C361.5 512 399.9 498.9 431.2 476.5zM476.5 431.2C498.9 399.8 512 361.4 512 320C512 214 426 128 320 128C278.5 128 240.1 141.1 208.8 163.5L476.5 431.2zM64 320C64 178.6 178.6 64 320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576C178.6 576 64 461.4 64 320z"/></svg>`;
-            await showAlert('Sessão Encerrada: Sua conta foi acessada em outro dispositivo ou a sessão expirou.', 'Sessão Encerrada', prohibitedSvg);
+            const errorMsg = res.status === 401 ? 'Sessão Encerrada: Sua conta foi acessada em outro dispositivo ou a sessão expirou.' : 'Sessão Inválida: Por favor, faça login novamente.';
+            await showAlert(errorMsg, 'Sessão Encerrada', prohibitedSvg);
             logout();
             throw new Error('Sessão expirada');
         }
@@ -687,6 +688,7 @@ const initializeNotifications = () => {
 
 // --- Auth Functions ---
 async function checkAuth() {
+    const splash = document.getElementById('splash-screen');
     const token = state.token || localStorage.getItem('token');
     if (token) {
         state.token = token;
@@ -709,12 +711,14 @@ async function checkAuth() {
             if (status.mustChangePassword) {
                 loginSection.style.display = 'none';
                 mainSection.style.display = 'none';
+                if (splash) splash.classList.add('fade-out');
                 document.getElementById('force-change-modal').style.display = 'flex';
                 return;
             }
 
             loginSection.style.display = 'none';
             mainSection.style.display = 'flex';
+            if (splash) splash.classList.add('fade-out');
             
             // --- Tab Visibility Logic Based on Role ---
             const isAdmin = state.role === 'admin';
@@ -777,8 +781,12 @@ async function checkAuth() {
             loadInitialData();
         } catch (err) {
             console.error('Auth verification failed:', err);
+            if (splash) splash.classList.add('fade-out');
+            loginSection.style.display = 'flex';
+            mainSection.style.display = 'none';
         }
     } else {
+        if (splash) splash.classList.add('fade-out');
         loginSection.style.display = 'flex';
         mainSection.style.display = 'none';
     }
@@ -2818,14 +2826,27 @@ switchTab = (target) => {
     setTimeout(initStickyScrollbars, 200);
 };
 
-// Start initialization on window load for total safety
-window.addEventListener('load', () => {
-    if (localStorage.getItem('token')) {
+// Start initialization immediately
+const initApp = () => {
+    const splash = document.getElementById('splash-screen');
+    const token = localStorage.getItem('token');
+    
+    if (token) {
+        // Keep splash visible while checking auth
         checkAuth();
     } else {
+        // No token, go straight to login
+        if (splash) splash.classList.add('fade-out');
         loginSection.style.display = 'flex';
     }
-});
+};
+
+// Run as soon as DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
 
 // --- Service Worker Registration ---
 if ('serviceWorker' in navigator) {
@@ -2908,6 +2929,7 @@ if (closeBtn) {
 // Initial check for standalone mode (if it's already installed, ensure banner is hidden)
 const sidebarInstallBtn = document.getElementById('sidebar-install-btn');
 const loginInstallBtn = document.getElementById('login-install-btn');
+const mobileInstallBtn = document.getElementById('mobile-install-btn');
 
 console.log('PWA Status:', { isStandalone, isIOS });
 
@@ -2916,6 +2938,7 @@ if (isStandalone) {
     if (pwaBanner) pwaBanner.style.display = 'none';
     if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
     if (loginInstallBtn) loginInstallBtn.style.display = 'none';
+    if (mobileInstallBtn) mobileInstallBtn.style.display = 'none';
 } else {
     console.log('App is not standalone, showing install buttons');
     if (sidebarInstallBtn) {
@@ -2923,6 +2946,9 @@ if (isStandalone) {
     }
     if (loginInstallBtn) {
         loginInstallBtn.style.setProperty('display', 'flex', 'important');
+    }
+    if (mobileInstallBtn) {
+        mobileInstallBtn.style.setProperty('display', 'flex', 'important');
     }
 }
 
@@ -2940,6 +2966,7 @@ const handleInstallClick = async () => {
         if (pwaBanner) pwaBanner.style.display = 'none';
         if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
         if (loginInstallBtn) loginInstallBtn.style.display = 'none';
+        if (mobileInstallBtn) mobileInstallBtn.style.display = 'none';
     } else {
         showAlert('Para instalar:<br><br>1. Clique nos <strong>três pontos</strong> do Chrome (Canto superior direito)<br>2. Selecione <strong>Instalar Aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>', 'Como Instalar', '📱');
     }
@@ -2947,3 +2974,4 @@ const handleInstallClick = async () => {
 
 if (sidebarInstallBtn) sidebarInstallBtn.onclick = handleInstallClick;
 if (loginInstallBtn) loginInstallBtn.onclick = handleInstallClick;
+if (mobileInstallBtn) mobileInstallBtn.onclick = handleInstallClick;
