@@ -1,6 +1,6 @@
 {
-  "name": "Gestão Financeira - Tribo de Davi",
-  "short_name": "Gestão Fin",
+  "name": "Financeiro Tribo - Tribo de Davi",
+  "short_name": "Financeiro Tribo",
   "description": "Sistema de controle financeiro e gestão de eventos",
   "start_url": "/",
   "display": "standalone",
