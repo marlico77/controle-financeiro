@@ -2840,24 +2840,21 @@ const initApp = () => {
     const splash = document.getElementById('splash-screen');
     const token = localStorage.getItem('token');
     
-    // Failsafe: Always hide splash after 5 seconds no matter what
-    setTimeout(() => {
-        if (splash && splash.style.display !== 'none') {
-            console.warn('Failsafe: Hiding splash screen due to timeout');
+    const hideSplash = () => {
+        if (splash) {
             splash.classList.add('fade-out');
-            setTimeout(() => splash.style.display = 'none', 500);
+            splash.style.display = 'none';
+            splash.style.pointerEvents = 'none';
         }
-    }, 5000);
+    };
+
+    // Failsafe: Hard hide splash after 3 seconds no matter what
+    setTimeout(hideSplash, 3000);
 
     if (token) {
-        // Keep splash visible while checking auth
         checkAuth();
     } else {
-        // No token, go straight to login and hide splash
-        if (splash) {
-            splash.style.display = 'none';
-            splash.classList.add('fade-out');
-        }
+        hideSplash();
         loginSection.style.display = 'flex';
     }
 };
