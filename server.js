@@ -648,8 +648,8 @@ app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/payments/:id/reject', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') return res.sendStatus(403);
-    const { reason } = req.body;
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { reason } = req.body || {};
     
     try {
         const paymentResult = await db.query('SELECT person_id, month FROM payments WHERE id = $1', [req.params.id]);
@@ -759,31 +759,60 @@ app.delete('/api/people/:id', authenticateToken, async (req, res) => {
 // --- EVENTS API ---
 app.get('/api/events', authenticateToken, async (req, res) => {
     try {
+        let queryText = '';
+        let params = [];
+
         if (req.user.role === 'admin' || req.user.role === 'secretário') {
-            const result = await db.query('SELECT * FROM events ORDER BY date ASC');
-            return res.json(result.rows);
+            queryText = `
+                SELECT e.*, 
+                       (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id) as total_participants,
+                       (SELECT jsonb_object_agg(COALESCE(unit, 'S/U'), count) 
+                        FROM (
+                            SELECT p.unit, COUNT(*) as count 
+                            FROM event_participants ep 
+                            JOIN people p ON ep.person_id = p.id 
+                            WHERE ep.event_id = e.id 
+                            GROUP BY p.unit
+                        ) unit_counts) as unit_counts
+                FROM events e
+                ORDER BY e.date ASC
+            `;
+        } else {
+            queryText = `
+                SELECT e.*,
+                       (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id) as total_participants,
+                       (SELECT jsonb_object_agg(COALESCE(unit, 'S/U'), count) 
+                        FROM (
+                            SELECT p.unit, COUNT(*) as count 
+                            FROM event_participants ep 
+                            JOIN people p ON ep.person_id = p.id 
+                            WHERE ep.event_id = e.id 
+                            GROUP BY p.unit
+                        ) unit_counts) as unit_counts
+                FROM events e
+                JOIN event_participants ep ON e.id = ep.event_id
+                WHERE ep.person_id = $1
+                ORDER BY e.date ASC
+            `;
+            params = [req.user.personId];
         }
 
-        const result = await db.query(`
-            SELECT e.* FROM events e
-            JOIN event_participants ep ON e.id = ep.event_id
-            WHERE ep.person_id = $1
-            ORDER BY e.date ASC
-        `, [req.user.personId]);
+        const result = await db.query(queryText, params);
         res.json(result.rows);
     } catch (err) {
+        console.error('Error fetching events:', err);
         res.status(500).json({ error: 'Erro ao buscar eventos' });
     }
 });
 
 app.post('/api/events', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
-    const { name, description, date, participant_ids } = req.body || {};
+    const { name, description, date, payment_type, participant_ids } = req.body || {};
     if (!name) return res.status(400).json({ error: 'Nome do evento é obrigatório' });
     
     try {
         await db.query('BEGIN');
-        const eventResult = await db.query('INSERT INTO events (name, description, date) VALUES ($1, $2, $3) RETURNING id', [name, description || null, date || null]);
+        const eventResult = await db.query('INSERT INTO events (name, description, date, payment_type) VALUES ($1, $2, $3, $4) RETURNING id', [name, description || null, date || null, payment_type || 'parcelado']);
         const eventId = eventResult.rows[0].id;
 
         if (participant_ids && Array.isArray(participant_ids)) {
@@ -1016,7 +1045,7 @@ app.post('/api/event-payments/:id/approve', authenticateToken, async (req, res) 
 });
 
 app.post('/api/event-payments/:id/reject', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') return res.sendStatus(403);
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { reason } = req.body || {};
     try {
         const paymentResult = await db.query('SELECT ep.*, e.name as event_name FROM event_payments ep JOIN events e ON ep.event_id = e.id WHERE ep.id = $1', [req.params.id]);

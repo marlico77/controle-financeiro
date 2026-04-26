@@ -30,6 +30,13 @@ const state = {
     logFilter: 'all'
 };
 
+const months = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
+
+const monthsShort = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
 // --- Utils ---
 const formatCPF = (v) => {
     v = v.replace(/\D/g, ""); // Remove tudo o que não é dígito
@@ -1153,6 +1160,18 @@ const renderEvents = () => {
                     </button>` : ''}
                 </div>
                 <p class="event-date" style="font-size: 0.8rem; color: var(--text-dim); margin-top: 5px;">${event.date ? formatDate(event.date) : 'Sem data'}</p>
+                
+                <div class="event-stats-mini" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                    <span style="background: rgba(229, 9, 20, 0.1); color: var(--accent-color); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
+                        ${event.total_participants || 0} Inscritos
+                    </span>
+                    ${Object.entries(event.unit_counts || {}).map(([unit, count]) => `
+                        <span style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: var(--text-dim); padding: 2px 8px; border-radius: 4px; font-size: 0.7rem;">
+                            ${unit}: ${count}
+                        </span>
+                    `).join('')}
+                </div>
+
                 <p class="event-desc" style="font-size: 0.9rem; margin-top: 10px;">${event.description || 'Sem descrição'}</p>
                 <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--accent-color); font-weight: 500;">
                     Clique para ver detalhamento →
@@ -1191,6 +1210,27 @@ const openEventDetail = async (eventId) => {
         const evSearch = document.getElementById('ev-detail-search');
         if (evSearch) evSearch.value = '';
         
+        // Ajustar cabeçalho da tabela conforme o tipo de pagamento
+        const tableHead = document.querySelector('#event-detail-table thead');
+        if (data.event.payment_type === 'unico') {
+            tableHead.innerHTML = `
+                <tr>
+                    <th>Membro</th>
+                    <th style="text-align: center;">Status de Pagamento</th>
+                    <th>Total Pago</th>
+                </tr>
+            `;
+        } else {
+            tableHead.innerHTML = `
+                <tr>
+                    <th>Membro</th>
+                    <th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th><th>Jun</th>
+                    <th>Jul</th><th>Ago</th><th>Set</th><th>Out</th><th>Nov</th><th>Dez</th>
+                    <th>Total</th>
+                </tr>
+            `;
+        }
+
         renderEventDashboard(data.participants, data.payments);
         renderEventDetailGrid(data.participants, data.payments);
     } catch (err) {
@@ -1204,39 +1244,65 @@ let renderEventDetailGrid = (participants, payments) => {
     
     const filteredParticipants = participants.filter(p => p.name.toLowerCase().includes(searchTerm));
 
+    const isUnico = state.currentEvent.payment_type === 'unico';
+
     body.innerHTML = filteredParticipants.map(p => {
         let rows = `<td><strong>${p.name}</strong> <br> <small>${p.unit || '-'}</small></td>`;
-        let yearlyTotal = 0;
+        let totalPaid = 0;
 
-        for (let m = 1; m <= 12; m++) {
-            const payment = payments.find(pay => pay.person_id === p.id && pay.month === m && pay.year === state.eventDetailYear);
+        if (isUnico) {
+            // No modo único, somamos todos os pagamentos aprovados e buscamos o mais relevante (com comprovante ou último)
+            const personPayments = payments.filter(pay => pay.person_id === p.id);
+            const approvedPayments = personPayments.filter(pay => pay.status === 'approved');
+            totalPaid = approvedPayments.reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
             
-            if (payment) {
-                const statusClass = `status-${payment.status}`;
-                const isApproved = payment.status === 'approved';
-                const statusLabel = payment.status === 'approved' ? 'PAGO' : payment.status === 'pending' ? 'PENDENTE' : 'RECUSADO';
-                if (isApproved) yearlyTotal += parseFloat(payment.amount);
-                
+            // Escolhemos o pagamento para exibir no status: prioridade para o que tem recibo, depois o último
+            const displayPayment = personPayments.find(pay => pay.receipt_content || pay.receipt_path) || personPayments[personPayments.length - 1];
+
+            if (displayPayment) {
+                const statusLabel = displayPayment.status === 'approved' ? 'PAGO' : displayPayment.status === 'pending' ? 'PENDENTE' : 'RECUSADO';
                 rows += `
-                    <td class="clickable-cell" onclick="openEventPaymentModalFromGrid(${p.id}, ${m}, ${JSON.stringify(payment).replace(/"/g, '&quot;')})">
-                        <span class="grid-status-label status-${payment.status}">${statusLabel}</span>
+                    <td class="clickable-cell" style="text-align: center;" onclick="openEventPaymentModalFromGrid(${p.id}, null, ${JSON.stringify(displayPayment).replace(/"/g, '&quot;')})">
+                        <span class="grid-status-label status-${displayPayment.status}">${statusLabel}</span>
                     </td>
                 `;
             } else {
                 rows += `
-                    <td class="clickable-cell" onclick="openEventPaymentModalFromGrid(${p.id}, ${m})">
+                    <td class="clickable-cell" style="text-align: center;" onclick="openEventPaymentModalFromGrid(${p.id}, null)">
                         <span class="grid-status-label status-none">PENDENTE</span>
                     </td>
                 `;
             }
+        } else {
+            // Modo parcelado (atual)
+            for (let m = 1; m <= 12; m++) {
+                const payment = payments.find(pay => pay.person_id === p.id && pay.month === m && pay.year === state.eventDetailYear);
+                
+                if (payment) {
+                    const statusLabel = payment.status === 'approved' ? 'PAGO' : payment.status === 'pending' ? 'PENDENTE' : 'RECUSADO';
+                    if (payment.status === 'approved') totalPaid += parseFloat(payment.amount);
+                    
+                    rows += `
+                        <td class="clickable-cell" onclick="openEventPaymentModalFromGrid(${p.id}, ${m}, ${JSON.stringify(payment).replace(/"/g, '&quot;')})">
+                            <span class="grid-status-label status-${payment.status}">${statusLabel}</span>
+                        </td>
+                    `;
+                } else {
+                    rows += `
+                        <td class="clickable-cell" onclick="openEventPaymentModalFromGrid(${p.id}, ${m})">
+                            <span class="grid-status-label status-none">PENDENTE</span>
+                        </td>
+                    `;
+                }
+            }
         }
         
-        rows += `<td class="total-column">R$ ${yearlyTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>`;
+        rows += `<td class="total-column">R$ ${totalPaid.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>`;
         return `<tr>${rows}</tr>`;
     }).join('');
 
     if (participants.length === 0) {
-        body.innerHTML = '<tr><td colspan="14" style="text-align: center; padding: 2rem; color: var(--text-dim);">Nenhum participante vinculado a este evento.</td></tr>';
+        body.innerHTML = `<tr><td colspan="${isUnico ? 3 : 14}" style="text-align: center; padding: 2rem; color: var(--text-dim);">Nenhum participante vinculado a este evento.</td></tr>`;
     }
 };
 
@@ -1246,8 +1312,8 @@ const openEventPaymentModalFromGrid = (personId, month, payment = null) => {
 
     document.getElementById('ep-event-id').value = state.currentEvent.id;
     document.getElementById('ep-event-name').textContent = state.currentEvent.name;
-    document.getElementById('ep-month').value = month;
-    document.getElementById('ep-year').value = state.eventDetailYear;
+    document.getElementById('ep-month').value = month || "";
+    document.getElementById('ep-year').value = month ? state.eventDetailYear : "";
     
     // Hidden fields or state to track person_id for admin
     state.tempPaymentPersonId = personId;
@@ -1359,7 +1425,14 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
     const receiptContainer = document.getElementById('ep-view-receipt-container');
     const rejectionForm = document.getElementById('ep-rejection-form');
 
-    // Reset
+    // Reset e Ajuste por tipo de evento
+    const dateSelection = document.getElementById('ep-date-selection');
+    if (state.currentEvent && state.currentEvent.payment_type === 'unico') {
+        dateSelection.style.display = 'none';
+    } else {
+        dateSelection.style.display = 'flex';
+    }
+
     saveBtn.style.display = 'block';
     saveBtn.textContent = 'Enviar Pagamento';
     deleteBtn.style.display = 'none';
@@ -1701,7 +1774,7 @@ const renderBarChart = (monthlyData, canvasId = 'barChart', stateKey = 'bar') =>
     state.charts[stateKey] = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: months,
+            labels: monthsShort,
             datasets: [{
                 label: 'Receita (R$)',
                 data: monthlyData,
@@ -1828,7 +1901,6 @@ if (outflowForm) {
 }
 
 // --- Rendering ---
-const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 let renderDashboard = () => {
     paymentsBody.innerHTML = '';
@@ -2028,7 +2100,7 @@ const openPaymentModal = (person, month, payment = null) => {
             document.getElementById('view-receipt-btn').href = securePath;
         }
 
-        if (state.role === 'admin') {
+        if (state.role === 'admin' || state.role === 'secretário') {
             deleteBtn.style.display = 'block';
             deleteBtn.onclick = () => deletePayment(payment.id);
             if (payment.status === 'pending') {
@@ -2428,6 +2500,7 @@ document.getElementById('event-form').onsubmit = async (e) => {
         name: document.getElementById('event-name').value,
         date: document.getElementById('event-date').value,
         description: document.getElementById('event-desc').value,
+        payment_type: document.getElementById('event-payment-type').value,
         participant_ids: participantIds
     };
     try {
@@ -2531,6 +2604,7 @@ yearSelect.addEventListener('change', (e) => {
             initStickyScrollbars(); // Refresh scrollbars when table appears
         };
     }
+    const addPartBtn = document.getElementById('add-participants-btn');
     if (addPartBtn) addPartBtn.onclick = openAddParticipantsModal;
     
     const saveNewPartBtn = document.getElementById('save-new-participants-btn');

@@ -658,6 +658,13 @@
                         <label for="event-desc">Descrição (Opcional)</label>
                         <textarea id="event-desc" style="width: 100%; min-height: 80px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;"></textarea>
                     </div>
+                    <div class="input-group">
+                        <label for="event-payment-type">Tipo de Pagamento</label>
+                        <select id="event-payment-type" class="form-control">
+                            <option value="parcelado">Parcelado (Janeiro a Dezembro)</option>
+                            <option value="unico">Pagamento Único (Total)</option>
+                        </select>
+                    </div>
                     <div class="participants-selector" style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
                         <h4 style="margin-bottom: 1rem;">Participantes</h4>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.8rem;">
@@ -689,7 +696,7 @@
                     <div class="info-tag">
                         Evento: <span id="ep-event-name"></span>
                     </div>
-                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div id="ep-date-selection" style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
                         <div class="input-group" style="flex: 1;">
                             <label for="ep-month">Mês</label>
                             <select id="ep-month">
