@@ -2792,6 +2792,15 @@ window.addEventListener('load', () => {
     }
 });
 
+// --- Service Worker Registration ---
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Service Worker registrado!', reg))
+            .catch(err => console.err('Erro ao registrar Service Worker:', err));
+    });
+}
+
 // --- PWA Installation Logic ---
 let deferredPrompt;
 const pwaBanner = document.getElementById('pwa-install-banner');
@@ -2800,6 +2809,11 @@ const closeBtn = document.getElementById('pwa-close-btn');
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+// Show immediately for iOS if not standalone
+if (isIOS && !isStandalone && !sessionStorage.getItem('pwa-dismissed')) {
+    setTimeout(showPWABanner, 2000); // Small delay for better UX
+}
 
 window.addEventListener('beforeinstallprompt', (e) => {
     // Prevents Chrome 67 and earlier from automatically showing the prompt
@@ -2842,6 +2856,9 @@ if (installBtn) {
             console.log(`User response to the install prompt: ${outcome}`);
             deferredPrompt = null;
             pwaBanner.style.display = 'none';
+        } else {
+            // Fallback for when button is clicked but prompt isn't ready
+            showAlert('O navegador ainda está preparando a instalação. Por favor, aguarde alguns segundos e tente novamente, ou use o menu do navegador e selecione "Instalar Aplicativo".', 'Quase pronto');
         }
     };
 }
