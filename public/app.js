@@ -2907,30 +2907,35 @@ if (closeBtn) {
 
 // Initial check for standalone mode (if it's already installed, ensure banner is hidden)
 const sidebarInstallBtn = document.getElementById('sidebar-install-btn');
+const loginInstallBtn = document.getElementById('login-install-btn');
 
 if (isStandalone) {
     if (pwaBanner) pwaBanner.style.display = 'none';
     if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
-} else if (sidebarInstallBtn) {
-    sidebarInstallBtn.style.display = 'flex';
+    if (loginInstallBtn) loginInstallBtn.style.display = 'none';
+} else {
+    if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'flex';
+    if (loginInstallBtn) loginInstallBtn.style.display = 'flex';
 }
 
-if (sidebarInstallBtn) {
-    sidebarInstallBtn.onclick = async () => {
-        if (isIOS) {
-            showAlert('Para instalar no iPhone:<br><br>1. Toque no ícone de <strong>Compartilhar</strong> (quadrado com seta)<br>2. Role para baixo e toque em <strong>Adicionar à Tela de Início</strong>', 'Instalação no iOS', '📱');
-            return;
-        }
+const handleInstallClick = async () => {
+    if (isIOS) {
+        showAlert('Para instalar no iPhone:<br><br>1. Toque no ícone de <strong>Compartilhar</strong> (quadrado com seta)<br>2. Role para baixo e toque em <strong>Adicionar à Tela de Início</strong>', 'Instalação no iOS', '📱');
+        return;
+    }
 
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`User response to the install prompt: ${outcome}`);
-            deferredPrompt = null;
-            if (pwaBanner) pwaBanner.style.display = 'none';
-            sidebarInstallBtn.style.display = 'none';
-        } else {
-            showAlert('Para instalar:<br><br>1. Clique nos <strong>três pontos</strong> do Chrome (Canto superior direito)<br>2. Selecione <strong>Instalar Aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>', 'Como Instalar', '📱');
-        }
-    };
-}
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response to the install prompt: ${outcome}`);
+        deferredPrompt = null;
+        if (pwaBanner) pwaBanner.style.display = 'none';
+        if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
+        if (loginInstallBtn) loginInstallBtn.style.display = 'none';
+    } else {
+        showAlert('Para instalar:<br><br>1. Clique nos <strong>três pontos</strong> do Chrome (Canto superior direito)<br>2. Selecione <strong>Instalar Aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>', 'Como Instalar', '📱');
+    }
+};
+
+if (sidebarInstallBtn) sidebarInstallBtn.onclick = handleInstallClick;
+if (loginInstallBtn) loginInstallBtn.onclick = handleInstallClick;
