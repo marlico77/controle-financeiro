@@ -77,9 +77,6 @@ body {
         grid-template-columns: 1fr;
         gap: 1rem;
     }
-}
-
-@media (max-width: 768px) {
     .glass-card {
         padding: 2rem 1.5rem; /* Better balance on small screens */
         box-shadow: 0 5px 25px rgba(0, 0, 0, 0.06);
@@ -138,15 +135,11 @@ body {
     color: var(--text-color);
     font-size: 1rem;
     transition: all 0.3s ease;
-    -webkit-appearance: none; /* Better look on mobile */
+    -webkit-appearance: none;
+    appearance: none; /* Add standard appearance */
 }
 
-@media (max-width: 768px) {
-    .input-group input, .input-group select, .input-group textarea {
-        padding: 0.9rem 1rem;
-        font-size: 1rem;
-    }
-}
+
 
 .input-group input:focus {
     outline: none;
@@ -675,6 +668,11 @@ tfoot td {
         font-weight: 700;
     }
 
+    .input-group input, .input-group select, .input-group textarea {
+        padding: 0.9rem 1rem;
+        font-size: 1rem;
+    }
+
     .sidebar {
         position: fixed;
         bottom: 0;
@@ -769,6 +767,7 @@ tfoot td {
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 60%;
+        word-break: break-all;
     }
 
     .stats-grid, .charts-grid {
@@ -848,11 +847,6 @@ tfoot td {
         min-width: 800px;
     }
 
-
-    .top-bar h2 {
-        font-size: 1.1rem;
-        word-break: break-all;
-    }
 
     .header-actions {
         width: 100%;
