@@ -747,6 +747,10 @@ tfoot td {
         display: none;
     }
 
+    #menu-install-btn {
+        display: flex !important;
+    }
+
     .nav-links li {
         margin: 0;
         padding: 0.5rem 0.25rem;

@@ -2928,8 +2928,7 @@ if (closeBtn) {
 
 // Initial check for standalone mode (if it's already installed, ensure banner is hidden)
 const sidebarInstallBtn = document.getElementById('sidebar-install-btn');
-const loginInstallBtn = document.getElementById('login-install-btn');
-const mobileInstallBtn = document.getElementById('mobile-install-btn');
+const menuInstallBtn = document.getElementById('menu-install-btn');
 
 console.log('PWA Status:', { isStandalone, isIOS });
 
@@ -2937,20 +2936,13 @@ if (isStandalone) {
     console.log('App is standalone, hiding install buttons');
     if (pwaBanner) pwaBanner.style.display = 'none';
     if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
-    if (loginInstallBtn) loginInstallBtn.style.display = 'none';
-    if (mobileInstallBtn) mobileInstallBtn.style.display = 'none';
 } else {
     console.log('App is not standalone, showing install buttons');
     if (sidebarInstallBtn) {
         sidebarInstallBtn.style.setProperty('display', 'flex', 'important');
     }
-    if (loginInstallBtn) {
-        loginInstallBtn.style.setProperty('display', 'flex', 'important');
-    }
-    if (mobileInstallBtn) {
-        mobileInstallBtn.style.setProperty('display', 'flex', 'important');
-    }
 }
+// menuInstallBtn visibility is handled by CSS (mobile only) and we keep it visible always as requested
 
 const handleInstallClick = async () => {
     if (isIOS) {
@@ -2965,13 +2957,10 @@ const handleInstallClick = async () => {
         deferredPrompt = null;
         if (pwaBanner) pwaBanner.style.display = 'none';
         if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
-        if (loginInstallBtn) loginInstallBtn.style.display = 'none';
-        if (mobileInstallBtn) mobileInstallBtn.style.display = 'none';
     } else {
         showAlert('Para instalar:<br><br>1. Clique nos <strong>três pontos</strong> do Chrome (Canto superior direito)<br>2. Selecione <strong>Instalar Aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>', 'Como Instalar', '📱');
     }
 };
 
 if (sidebarInstallBtn) sidebarInstallBtn.onclick = handleInstallClick;
-if (loginInstallBtn) loginInstallBtn.onclick = handleInstallClick;
-if (mobileInstallBtn) mobileInstallBtn.onclick = handleInstallClick;
+if (menuInstallBtn) menuInstallBtn.onclick = handleInstallClick;
