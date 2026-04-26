@@ -28,6 +28,14 @@ body {
     width: 100%;
     margin: 0;
     padding: 0;
+    overscroll-behavior-y: none; /* Prevent pull-to-refresh flicker in PWA */
+}
+
+/* Prevent selection on UI elements for a native feel */
+.sidebar, .mobile-header, .btn-primary, .btn-secondary, .filter-btn, .nav-links li {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* Animations */

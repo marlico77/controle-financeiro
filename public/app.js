@@ -2654,6 +2654,50 @@ yearSelect.addEventListener('change', (e) => {
         };
     }
 
+    // --- PWA Install Logic ---
+    let deferredPrompt;
+    const installBanner = document.getElementById('pwa-install-banner');
+    const installBtn = document.getElementById('pwa-install-btn');
+    const closeBanner = document.getElementById('pwa-close-banner');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent Chrome 67 and earlier from automatically showing the prompt
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        deferredPrompt = e;
+        // Update UI to notify the user they can add to home screen
+        if (installBanner && !localStorage.getItem('pwa-banner-closed')) {
+            installBanner.style.display = 'flex';
+        }
+    });
+
+    if (installBtn) {
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            // Show the prompt
+            deferredPrompt.prompt();
+            // Wait for the user to respond to the prompt
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            // We've used the prompt, and can't use it again, throw it away
+            deferredPrompt = null;
+            // Hide the banner
+            installBanner.style.display = 'none';
+        });
+    }
+
+    if (closeBanner) {
+        closeBanner.addEventListener('click', () => {
+            installBanner.style.display = 'none';
+            localStorage.setItem('pwa-banner-closed', 'true');
+        });
+    }
+
+    window.addEventListener('appinstalled', () => {
+        console.log('PWA was installed');
+        if (installBanner) installBanner.style.display = 'none';
+    });
+
 // --- Report Generation Functions ---
 
 

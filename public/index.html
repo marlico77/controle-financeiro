@@ -2,18 +2,49 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Gestão Tribo">
     <title>Gestão Financeira</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="logo.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#e50914">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="logo.png">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SW Registered!', reg))
+                    .catch(err => console.log('SW registration failed: ', err));
+            });
+        }
+    </script>
 </head>
 <body class="dark-theme">
     <div id="app">
         <div id="toast-container" class="toast-container"></div>
+        
+        <!-- PWA Install Banner -->
+        <div id="pwa-install-banner" class="glass-card" style="display: none; position: fixed; top: 1rem; left: 1rem; right: 1rem; z-index: 11000; padding: 1rem; flex-direction: row; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid var(--accent-color);">
+            <div style="display: flex; align-items: center; gap: 0.8rem;">
+                <img src="logo.png" style="width: 40px; height: 40px; border-radius: 8px;">
+                <div>
+                    <h5 style="margin: 0; color: var(--text-color);">Instalar Aplicativo</h5>
+                    <p style="margin: 0; font-size: 0.75rem; color: var(--text-dim);">Acesse mais rápido da sua tela inicial</p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button id="pwa-install-btn" class="btn-primary btn-small" style="width: auto; padding: 0.5rem 1rem;">Instalar</button>
+                <button id="pwa-close-banner" class="btn-text" style="color: var(--text-dim); padding: 0.5rem;">✕</button>
+            </div>
+        </div>
         <!-- Login Section -->
         <section id="login-section" class="full-screen-center">
             <div class="glass-card login-card animate-fade-in">
