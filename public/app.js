@@ -2909,13 +2909,21 @@ if (closeBtn) {
 const sidebarInstallBtn = document.getElementById('sidebar-install-btn');
 const loginInstallBtn = document.getElementById('login-install-btn');
 
+console.log('PWA Status:', { isStandalone, isIOS });
+
 if (isStandalone) {
+    console.log('App is standalone, hiding install buttons');
     if (pwaBanner) pwaBanner.style.display = 'none';
     if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
     if (loginInstallBtn) loginInstallBtn.style.display = 'none';
 } else {
-    if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'flex';
-    if (loginInstallBtn) loginInstallBtn.style.display = 'flex';
+    console.log('App is not standalone, showing install buttons');
+    if (sidebarInstallBtn) {
+        sidebarInstallBtn.style.setProperty('display', 'flex', 'important');
+    }
+    if (loginInstallBtn) {
+        loginInstallBtn.style.setProperty('display', 'flex', 'important');
+    }
 }
 
 const handleInstallClick = async () => {
