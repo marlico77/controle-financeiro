@@ -2835,8 +2835,11 @@ const initApp = () => {
         // Keep splash visible while checking auth
         checkAuth();
     } else {
-        // No token, go straight to login
-        if (splash) splash.classList.add('fade-out');
+        // No token, go straight to login and hide splash
+        if (splash) {
+            splash.style.display = 'none';
+            splash.classList.add('fade-out');
+        }
         loginSection.style.display = 'flex';
     }
 };
