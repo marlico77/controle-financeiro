@@ -15,20 +15,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="logo.png">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=102">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="dark-theme">
     <div id="app">
         <div id="toast-container" class="toast-container"></div>
         
-        <!-- Splash / Loading Screen -->
-        <div id="splash-screen" class="full-screen-center" style="background: var(--bg-color); z-index: 9999;">
-            <div class="animate-pulse" style="text-align: center;">
-                <img src="logo.png" alt="Logo" style="width: 120px; height: 120px; margin-bottom: 1.5rem; filter: drop-shadow(0 0 15px rgba(229, 9, 20, 0.4));">
-                <div style="color: var(--accent-color); font-weight: 600; letter-spacing: 2px; text-transform: uppercase; font-size: 0.8rem;">Carregando...</div>
-            </div>
-        </div>
+        <!-- Splash screen disabled for emergency recovery -->
 
         <!-- Login Section -->
         <section id="login-section" class="full-screen-center" style="display: none;">
@@ -990,6 +984,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=102"></script>
 </body>
 </html>
