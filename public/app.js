@@ -2654,49 +2654,7 @@ yearSelect.addEventListener('change', (e) => {
         };
     }
 
-    // --- PWA Install Logic ---
-    let deferredPrompt;
-    const installBanner = document.getElementById('pwa-install-banner');
-    const installBtn = document.getElementById('pwa-install-btn');
-    const closeBanner = document.getElementById('pwa-close-banner');
 
-    window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevent Chrome 67 and earlier from automatically showing the prompt
-        e.preventDefault();
-        // Stash the event so it can be triggered later.
-        deferredPrompt = e;
-        // Update UI to notify the user they can add to home screen
-        if (installBanner && !localStorage.getItem('pwa-banner-closed')) {
-            installBanner.style.display = 'flex';
-        }
-    });
-
-    if (installBtn) {
-        installBtn.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-            // Show the prompt
-            deferredPrompt.prompt();
-            // Wait for the user to respond to the prompt
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`User response to the install prompt: ${outcome}`);
-            // We've used the prompt, and can't use it again, throw it away
-            deferredPrompt = null;
-            // Hide the banner
-            installBanner.style.display = 'none';
-        });
-    }
-
-    if (closeBanner) {
-        closeBanner.addEventListener('click', () => {
-            installBanner.style.display = 'none';
-            localStorage.setItem('pwa-banner-closed', 'true');
-        });
-    }
-
-    window.addEventListener('appinstalled', () => {
-        console.log('PWA was installed');
-        if (installBanner) installBanner.style.display = 'none';
-    });
 
 // --- Report Generation Functions ---
 
@@ -2833,3 +2791,69 @@ window.addEventListener('load', () => {
         loginSection.style.display = 'flex';
     }
 });
+
+// --- PWA Installation Logic ---
+let deferredPrompt;
+const pwaBanner = document.getElementById('pwa-install-banner');
+const installBtn = document.getElementById('pwa-install-btn');
+const closeBtn = document.getElementById('pwa-close-btn');
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevents Chrome 67 and earlier from automatically showing the prompt
+    e.preventDefault();
+    // Stash the event so it can be triggered later.
+    deferredPrompt = e;
+    
+    // Check if user has already dismissed it in this session
+    const isDismissed = sessionStorage.getItem('pwa-dismissed');
+    
+    // Only show if not standalone AND not dismissed
+    if (!isStandalone && !isDismissed) {
+        showPWABanner();
+    }
+});
+
+function showPWABanner() {
+    if (pwaBanner) {
+        pwaBanner.style.display = 'block';
+        
+        // If it's iOS, change button text and behavior
+        if (isIOS) {
+            installBtn.textContent = 'Como Instalar';
+            const pwaTextSpan = pwaBanner.querySelector('.pwa-text span');
+            if (pwaTextSpan) pwaTextSpan.textContent = 'Toque em compartilhar e "Adicionar à Tela de Início".';
+        }
+    }
+}
+
+if (installBtn) {
+    installBtn.onclick = async () => {
+        if (isIOS) {
+            showAlert('Para instalar no iPhone:<br><br>1. Toque no ícone de <strong>Compartilhar</strong> (quadrado com seta)<br>2. Role para baixo e toque em <strong>Adicionar à Tela de Início</strong>', 'Instalação no iOS', '📱');
+            return;
+        }
+
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            deferredPrompt = null;
+            pwaBanner.style.display = 'none';
+        }
+    };
+}
+
+if (closeBtn) {
+    closeBtn.onclick = () => {
+        pwaBanner.style.display = 'none';
+        sessionStorage.setItem('pwa-dismissed', 'true');
+    };
+}
+
+// Initial check for standalone mode (if it's already installed, ensure banner is hidden)
+if (isStandalone && pwaBanner) {
+    pwaBanner.style.display = 'none';
+}

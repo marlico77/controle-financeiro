@@ -1468,3 +1468,73 @@ tfoot td {
         bottom: 70px; /* Acima da barra de navegação mobile */
     }
 }
+
+/* PWA Install Banner */
+.pwa-banner {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 16px;
+    padding: 1rem;
+    z-index: 10005;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    animation: slideUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@media (max-width: 768px) {
+    .pwa-banner {
+        bottom: 85px; /* Acima da barra de navegação mobile */
+        left: 10px;
+        right: 10px;
+        padding: 0.8rem;
+    }
+}
+
+.pwa-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pwa-logo {
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    object-fit: cover;
+}
+
+.pwa-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.pwa-text strong {
+    font-size: 0.95rem;
+    color: var(--text-color);
+}
+
+.pwa-text span {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+
+.pwa-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.btn-sm {
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.8rem !important;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
