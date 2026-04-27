@@ -129,22 +129,18 @@ const authenticateToken = (req, res, next) => {
   jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) {
         console.error(`[AUTH] Verificação falhou: ${err.message}`);
-        return res.status(403).json({ error: 'Sessão inválida', details: err.message });
+        return res.status(401).json({ error: 'Sessão inválida', details: err.message });
     }
     
     try {
-        // Check session and mandatory password change in DB
-        const result = await db.query('SELECT current_session_id, must_change_password, username, role, person_id FROM users WHERE id = $1', [decoded.id]);
+        // Check mandatory password change in DB
+        const result = await db.query('SELECT must_change_password, username, role, person_id FROM users WHERE id = $1', [decoded.id]);
         const dbUser = result.rows[0];
         
-        if (!dbUser) return res.status(401).json({ error: 'Usuário não encontrado' });
-
-        /* Single Session Rule: Disabled to fix persistence issues on refresh
-        if (dbUser.current_session_id && decoded.sid !== dbUser.current_session_id) {
-            console.warn(`[AUTH] Sessão duplicada para ${dbUser.username}. Token SID: ${decoded.sid}, DB SID: ${dbUser.current_session_id}`);
-            return res.status(401).json({ error: 'Sessão expirada. Logado em outro local.' });
+        if (!dbUser) {
+            console.warn(`[AUTH] Usuário ID ${decoded.id} não encontrado no banco.`);
+            return res.status(401).json({ error: 'Usuário não encontrado' });
         }
-        */
 
         // Block access if password change is required (except for auth status and change-password)
         const allowedPaths = ['/api/auth/change-password', '/api/auth/status'];
@@ -156,8 +152,7 @@ const authenticateToken = (req, res, next) => {
             id: decoded.id,
             username: dbUser.username,
             role: dbUser.role || 'member',
-            personId: dbUser.person_id ? parseInt(dbUser.person_id) : null,
-            sid: decoded.sid
+            personId: dbUser.person_id ? parseInt(dbUser.person_id) : null
         };
 
         console.log(`[AUTH] Usuário: ${req.user.username} | Role: ${req.user.role} | ID: ${req.user.personId}`);
@@ -272,30 +267,20 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
-    const { role, username: dbUsername, person_id, current_session_id, must_change_password, id: userId } = user;
+    const { role, username: dbUsername, person_id, must_change_password, id: userId } = user;
     const { force } = req.body || {};
-
-    // Check for active session conflict
-    if (current_session_id && !force) {
-        return res.status(409).json({ error: 'session_active', message: 'Já existe um dispositivo conectado.' });
-    }
 
     const finalRole = role || 'member';
     const personId = person_id || null;
     
-    // Single Session Logic: Generate unique Session ID
-    const sessionId = Date.now().toString() + Math.random().toString(36).substring(2, 10);
-    await db.query('UPDATE users SET current_session_id = $1 WHERE id = $2', [sessionId, userId]);
-
     const token = jwt.sign({ 
       id: userId, 
       username: dbUsername, 
       role: finalRole, 
-      personId: personId,
-      sid: sessionId
+      personId: personId
     }, JWT_SECRET, { expiresIn: '12h' });
 
-    console.log(`Login Successful: ${dbUsername} as ${finalRole} (SID: ${sessionId}) ${force ? '[FORCED]' : ''}`);
+    console.log(`Login Successful: ${dbUsername} as ${finalRole} ${force ? '[FORCED]' : ''}`);
     
     // Log success
     logAction(req, 'LOGIN_SUCCESS', { username: dbUsername, userId, force: !!force });

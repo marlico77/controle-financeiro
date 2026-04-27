@@ -14,26 +14,7 @@
     --glass-blur: 10px;
 }
 
-/* FORÇAR PADRÃO DOS MENUS - REMOVER VERMELHO */
-#menu-install-btn, .nav-links li#menu-install-btn {
-    background: transparent !important;
-    background-color: transparent !important;
-    color: #888 !important;
-    box-shadow: none !important;
-    border: none !important;
-    margin: 0 !important;
-    transform: none !important;
-}
-
-#menu-install-btn.active, .nav-links li#menu-install-btn.active {
-    color: var(--accent-color) !important;
-    background: rgba(229, 9, 20, 0.05) !important;
-}
-
-#menu-install-btn .icon, .nav-links li#menu-install-btn .icon {
-    color: inherit !important;
-    fill: currentColor !important;
-}
+/* Removido bloqueio de cor do menu de instalação */
 
 #menu-install-btn {
     display: none !important; /* Hidden on Desktop */
@@ -907,16 +888,9 @@ tfoot td {
         display: none;
     }
 
+    /* Estilo mobile do menu de instalação ajustado para seguir o padrão */
     #menu-install-btn {
-        display: flex !important; /* Visible on Mobile */
-        background: transparent !important;
-        color: #888 !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-    
-    #menu-install-btn.active {
-        color: var(--accent-color) !important;
+        display: flex !important;
     }
 
     .nav-links li {

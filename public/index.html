@@ -600,12 +600,12 @@ const initApp = () => {
                         </p>
                         
                         <!-- Android/Chrome Install Section -->
-                        <div id="android-install-section" style="display: none; margin-top: 2rem;">
-                            <button id="pwa-main-install-btn" class="btn-primary btn-install-main">
+                        <div id="android-install-section" style="margin-top: 2rem;">
+                            <button id="pwa-main-install-btn" class="btn-primary btn-install-main" style="width: 100%; justify-content: center;">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="24" height="24" fill="white"><path d="M144 128C144 92.7 172.7 64 208 64L432 64C467.3 64 496 92.7 496 128L496 512C496 547.3 467.3 576 432 576L208 576C172.7 576 144 547.3 144 512L144 128zM208 128L208 432L432 432L432 128L208 128zM320 536C337.7 536 352 521.7 352 504C352 486.3 337.7 472 320 472C302.3 472 288 486.3 288 504C288 521.7 302.3 536 320 536z"/></svg>
                                 Baixar Aplicativo Agora
                             </button>
-                            <p class="install-tip">Clique no botão acima para iniciar a instalação automática.</p>
+                            <p class="install-tip">Clique acima para instalar. Se não funcionar, siga o guia abaixo.</p>
                             
                             <div class="manual-install-box">
                                 <h4>Instalação Manual (Alternativa)</h4>
@@ -618,7 +618,7 @@ const initApp = () => {
                         </div>
 
                         <!-- iOS Install Section -->
-                        <div id="ios-install-section" style="display: none;" class="manual-install-box ios-box">
+                        <div id="ios-install-section" class="manual-install-box ios-box">
                             <h4 style="text-align: center;">Como instalar no iPhone (Safari)</h4>
                             <ol class="ios-steps">
                                 <li>Clique no botão de <strong>Compartilhar</strong> <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="16" height="16" style="vertical-align: middle; fill: #007aff;"><path d="M416 32H352C334.3 32 320 46.3 320 64C320 81.7 334.3 96 352 96H384V352H96V96H128C145.7 96 160 81.7 160 64C160 46.3 145.7 32 128 32H64C28.7 32 0 60.7 0 96V416C0 451.3 28.7 480 64 480H416C451.3 480 480 451.3 480 416V96C480 60.7 451.3 32 416 32zM192 160C192 177.7 206.3 192 224 192H288V288C288 305.7 302.3 320 320 320C337.7 320 352 305.7 352 288V192H416C433.7 192 448 177.7 448 160C448 142.3 433.7 128 416 128H352V32C352 14.3 337.7 0 320 0C302.3 0 288 14.3 288 32V128H224C206.3 128 192 142.3 192 160z"/></svg> na barra inferior.</li>

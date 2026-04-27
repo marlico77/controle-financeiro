@@ -713,7 +713,7 @@ const initializeNotifications = () => {
 // --- Auth Functions ---
 async function checkAuth() {
     const splash = document.getElementById('splash-screen');
-    const token = state.token || localStorage.getItem('token');
+    const token = localStorage.getItem('token');
     if (token) {
         state.token = token;
         state.role = state.role || localStorage.getItem('role');
@@ -3081,11 +3081,11 @@ const updatePWAUI = () => {
         // Handle Page Content Visibility
         if (isPageActive) {
             if (isIOS) {
-                if (iosSection) iosSection.style.display = 'block';
+                if (iosSection) iosSection.style.setProperty('display', 'block', 'important');
                 if (androidSection) androidSection.style.display = 'none';
             } else {
                 // For Android/Chrome or others, show the install button section
-                if (androidSection) androidSection.style.display = 'block';
+                if (androidSection) androidSection.style.setProperty('display', 'block', 'important');
                 if (iosSection) iosSection.style.display = 'none';
             }
             if (installedSection) installedSection.style.display = 'none';
