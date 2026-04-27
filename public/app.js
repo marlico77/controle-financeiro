@@ -760,7 +760,7 @@ async function checkAuth() {
                 reports: document.querySelector('[data-target="reports"]'),
                 authorizations: document.getElementById('nav-authorizations'),
                 outflows: document.getElementById('nav-outflows'),
-                sales: document.querySelector('[data-target="sales"]'),
+                sales: document.getElementById('nav-sales'),
                 logs: document.getElementById('nav-logs')
             };
 
@@ -2221,8 +2221,8 @@ const openPaymentModal = (person, month, payment = null) => {
             const navOutflows = document.getElementById('nav-outflows');
             if (navOutflows) navOutflows.style.display = 'flex';
             
-            const navSales = document.querySelector('[data-target="sales"]');
-            if (navSales) navSales.style.display = 'flex';
+            // navSales selection removed as it is now handled globally or via ID if needed elsewhere.
+            if (navItems.sales) navItems.sales.style.display = 'flex';
             
             deleteBtn.style.display = 'block';
             deleteBtn.onclick = () => deletePayment(payment.id);
