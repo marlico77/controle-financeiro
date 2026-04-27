@@ -599,22 +599,19 @@ const initApp = () => {
                             O aplicativo funciona offline, carrega instantaneamente e não ocupa espaço precioso no seu celular.
                         </p>
                         
-                        <!-- Android/Chrome Install Section -->
-                        <div id="android-install-section" style="margin-top: 2rem;">
-                            <button id="pwa-main-install-btn" class="btn-primary btn-install-main" style="width: 100%; justify-content: center;">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="24" height="24" fill="white"><path d="M144 128C144 92.7 172.7 64 208 64L432 64C467.3 64 496 92.7 496 128L496 512C496 547.3 467.3 576 432 576L208 576C172.7 576 144 547.3 144 512L144 128zM208 128L208 432L432 432L432 128L208 128zM320 536C337.7 536 352 521.7 352 504C352 486.3 337.7 472 320 472C302.3 472 288 486.3 288 504C288 521.7 302.3 536 320 536z"/></svg>
-                                Baixar Aplicativo Agora
+                        <!-- Botão de Instalação Fixo e Universal -->
+                        <div id="universal-install-section" style="margin-top: 2.5rem; width: 100%;">
+                            <button id="pwa-fixed-install-btn" class="btn-primary btn-install-main" style="width: 100%; justify-content: center; display: flex !important; background: var(--accent-color) !important;">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="24" height="24" fill="white" style="margin-right: 12px;"><path d="M144 128C144 92.7 172.7 64 208 64L432 64C467.3 64 496 92.7 496 128L496 512C496 547.3 467.3 576 432 576L208 576C172.7 576 144 547.3 144 512L144 128zM208 128L208 432L432 432L432 128L208 128zM320 536C337.7 536 352 521.7 352 504C352 486.3 337.7 472 320 472C302.3 472 288 486.3 288 504C288 521.7 302.3 536 320 536z"/></svg>
+                                Instalar Aplicativo Agora
                             </button>
-                            <p class="install-tip">Clique acima para instalar. Se não funcionar, siga o guia abaixo.</p>
-                            
-                            <div class="manual-install-box">
-                                <h4>Instalação Manual (Alternativa)</h4>
-                                <p>
-                                    Se o botão acima não funcionar: <br>
-                                    1. Toque nos <strong>três pontos</strong> do Chrome (canto superior direito). <br>
-                                    2. Selecione <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>.
-                                </p>
-                            </div>
+                            <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 0.8rem; text-align: center;">Disponível para Android e iPhone</p>
+                        </div>
+
+                        <!-- Detalhes Manuais (Opcionais) -->
+                        <div id="android-manual-guide" class="manual-install-box" style="margin-top: 1.5rem; display: none;">
+                            <h4>Como instalar manualmente:</h4>
+                            <p>Toque nos 3 pontos ⋮ e selecione "Instalar aplicativo".</p>
                         </div>
 
                         <!-- iOS Install Section -->

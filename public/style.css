@@ -1551,21 +1551,7 @@ tfoot td {
     color: #e50914; 
 }
 
-/* PWA Menu Item Button Style */
-#menu-install-btn {
-    background: var(--accent-color) !important;
-    color: white !important;
-    border-radius: 8px;
-    margin: 4px 8px;
-    padding: 8px 12px !important;
-    justify-content: center !important;
-    font-weight: 600;
-    box-shadow: 0 4px 10px var(--accent-glow);
-}
-
-#menu-install-btn .icon svg {
-    fill: white !important;
-}
+/* Removido estilo de destaque do botão PWA para alinhar com os outros menus */
 
 @media (max-width: 768px) {
     #report-printable {

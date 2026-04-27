@@ -2979,7 +2979,7 @@ const installBtn = document.getElementById('pwa-install-btn');
 const closeBtn = document.getElementById('pwa-close-btn');
 const menuInstallBtn = document.getElementById('menu-install-btn');
 const pwaInstallCard = document.getElementById('pwa-install-card');
-const mainInstallBtn = document.getElementById('pwa-main-install-btn');
+const mainInstallBtn = document.getElementById('pwa-fixed-install-btn');
 
 // Show immediately for iOS if not standalone
 if (isIOS && !window.matchMedia('(display-mode: standalone)').matches && !window.navigator.standalone && !sessionStorage.getItem('pwa-dismissed')) {
@@ -3031,7 +3031,9 @@ if (installBtn) {
             if (pwaBanner) pwaBanner.style.display = 'none';
         } else {
             // Fallback for when button is clicked but prompt isn't ready
-            showAlert('O navegador ainda está preparando a instalação. Por favor, aguarde alguns segundos e tente novamente, ou use o menu do navegador e selecione "Instalar Aplicativo".', 'Quase pronto');
+            const manualGuide = document.getElementById('android-manual-guide');
+            if (manualGuide) manualGuide.style.display = 'block';
+            showAlert('O seu navegador ainda está preparando a instalação. Você pode clicar nos "3 pontinhos" ⋮ do Chrome e selecionar "Instalar Aplicativo" ou usar o guia que apareceu abaixo.', 'Quase pronto');
         }
     };
 }
