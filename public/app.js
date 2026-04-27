@@ -2641,26 +2641,33 @@ document.getElementById('event-payment-form').onsubmit = async (e) => {
 };
 
 // --- Initialization ---
-document.getElementById('p-cpf').addEventListener('input', (e) => {
-    e.target.value = formatCPF(e.target.value);
-});
+const pCpf = document.getElementById('p-cpf');
+if (pCpf) {
+    pCpf.addEventListener('input', (e) => {
+        e.target.value = formatCPF(e.target.value);
+    });
+}
 
-document.getElementById('p-birth').addEventListener('change', (e) => {
-    const birthDate = e.target.value;
-    const age = calculateAge(birthDate);
-    const ageField = document.getElementById('p-age');
-    const unitField = document.getElementById('p-unit');
+const pBirth = document.getElementById('p-birth');
+if (pBirth) {
+    pBirth.addEventListener('change', (e) => {
+        const birthDate = e.target.value;
+        const age = calculateAge(birthDate);
+        const ageField = document.getElementById('p-age');
+        const unitField = document.getElementById('p-unit');
 
-    ageField.value = age;
-    
-    if (age !== '') {
-        if (age < 16) {
-            unitField.value = 'DESBRAVADOR';
-        } else {
-            unitField.value = 'DIREÇÃO';
+        if (ageField) ageField.value = age;
+        
+        if (unitField && age !== '') {
+            if (age < 16) {
+                unitField.value = 'DESBRAVADOR';
+            } else {
+                unitField.value = 'DIREÇÃO';
+            }
         }
-    }
-});
+    });
+}
+
 
 yearSelect.addEventListener('change', (e) => {
     state.currentYear = e.target.value;
