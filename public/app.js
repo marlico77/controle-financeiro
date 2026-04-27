@@ -2942,26 +2942,20 @@ const mainInstallBtn = document.getElementById('pwa-main-install-btn');
 console.log('PWA Status:', { isStandalone, isIOS });
 
 const updatePWAUI = () => {
+    if (sidebarInstallBtn) sidebarInstallBtn.style.setProperty('display', 'flex', 'important');
+    if (menuInstallBtn) menuInstallBtn.style.setProperty('display', 'flex', 'important');
+    if (mobileInstallBtn) mobileInstallBtn.style.setProperty('display', 'flex', 'important');
+    if (pwaInstallCard) pwaInstallCard.style.setProperty('display', 'flex', 'important');
+
     if (isStandalone) {
-        console.log('App is standalone, hiding install buttons');
+        console.log('App is standalone');
         if (pwaBanner) pwaBanner.style.display = 'none';
-        if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
-        if (menuInstallBtn) menuInstallBtn.style.display = 'none';
-        if (mobileInstallBtn) mobileInstallBtn.style.display = 'none';
-        if (pwaInstallCard) pwaInstallCard.style.display = 'none';
-        
         if (installedSection) installedSection.style.display = 'block';
         if (androidSection) androidSection.style.display = 'none';
         if (iosSection) iosSection.style.display = 'none';
     } else {
-        console.log('App is not standalone, showing install buttons');
-        if (sidebarInstallBtn) sidebarInstallBtn.style.setProperty('display', 'flex', 'important');
-        if (menuInstallBtn) menuInstallBtn.style.setProperty('display', 'flex', 'important');
-        if (mobileInstallBtn) mobileInstallBtn.style.setProperty('display', 'flex', 'important');
-        if (pwaInstallCard) pwaInstallCard.style.setProperty('display', 'flex', 'important');
-        
+        console.log('App is not standalone');
         if (installedSection) installedSection.style.display = 'none';
-        
         if (isIOS) {
             if (iosSection) iosSection.style.display = 'block';
             if (androidSection) androidSection.style.display = 'none';

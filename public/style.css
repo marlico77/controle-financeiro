@@ -754,7 +754,7 @@ tfoot td {
     }
 
     #menu-install-btn {
-        display: none !important; /* Will be controlled by app.js */
+        display: flex; /* Always visible in mobile nav */
     }
 
     .nav-links li {
