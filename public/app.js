@@ -2934,51 +2934,96 @@ const sidebarInstallBtn = document.getElementById('sidebar-install-btn');
 const menuInstallBtn = document.getElementById('menu-install-btn');
 const mobileInstallBtn = document.getElementById('mobile-install-btn');
 const pwaInstallCard = document.getElementById('pwa-install-card');
+const androidSection = document.getElementById('android-install-section');
+const iosSection = document.getElementById('ios-install-section');
+const installedSection = document.getElementById('already-installed-section');
+const mainInstallBtn = document.getElementById('pwa-main-install-btn');
+
 console.log('PWA Status:', { isStandalone, isIOS });
 
-if (isStandalone) {
-    console.log('App is standalone, hiding install buttons');
-    if (pwaBanner) pwaBanner.style.display = 'none';
-    if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
-    if (menuInstallBtn) menuInstallBtn.style.display = 'none';
-    if (mobileInstallBtn) mobileInstallBtn.style.display = 'none';
-    if (pwaInstallCard) pwaInstallCard.style.display = 'none';
-} else {
-    console.log('App is not standalone, showing install buttons');
-    if (sidebarInstallBtn) {
-        sidebarInstallBtn.style.setProperty('display', 'flex', 'important');
+const updatePWAUI = () => {
+    if (isStandalone) {
+        console.log('App is standalone, hiding install buttons');
+        if (pwaBanner) pwaBanner.style.display = 'none';
+        if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
+        if (menuInstallBtn) menuInstallBtn.style.display = 'none';
+        if (mobileInstallBtn) mobileInstallBtn.style.display = 'none';
+        if (pwaInstallCard) pwaInstallCard.style.display = 'none';
+        
+        if (installedSection) installedSection.style.display = 'block';
+        if (androidSection) androidSection.style.display = 'none';
+        if (iosSection) iosSection.style.display = 'none';
+    } else {
+        console.log('App is not standalone, showing install buttons');
+        if (sidebarInstallBtn) sidebarInstallBtn.style.setProperty('display', 'flex', 'important');
+        if (menuInstallBtn) menuInstallBtn.style.setProperty('display', 'flex', 'important');
+        if (mobileInstallBtn) mobileInstallBtn.style.setProperty('display', 'flex', 'important');
+        if (pwaInstallCard) pwaInstallCard.style.setProperty('display', 'flex', 'important');
+        
+        if (installedSection) installedSection.style.display = 'none';
+        
+        if (isIOS) {
+            if (iosSection) iosSection.style.display = 'block';
+            if (androidSection) androidSection.style.display = 'none';
+        } else {
+            if (androidSection) androidSection.style.display = 'block';
+            if (iosSection) iosSection.style.display = 'none';
+        }
     }
-    if (menuInstallBtn) {
-        menuInstallBtn.style.setProperty('display', 'flex', 'important');
-    }
-    if (mobileInstallBtn) {
-        mobileInstallBtn.style.setProperty('display', 'flex', 'important');
-    }
-    if (pwaInstallCard) {
-        pwaInstallCard.style.setProperty('display', 'flex', 'important');
-    }
-}
-// menuInstallBtn visibility is handled by CSS (mobile only) and we keep it visible always as requested
+};
 
-const handleInstallClick = async () => {
-    if (isIOS) {
-        showAlert('Para instalar no iPhone:<br><br>1. Toque no ícone de <strong>Compartilhar</strong> (quadrado com seta)<br>2. Role para baixo e toque em <strong>Adicionar à Tela de Início</strong>', 'Instalação no iOS', '📱');
+updatePWAUI();
+
+const handleInstallClick = async (e) => {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    const target = (e && e.currentTarget) ? e.currentTarget.getAttribute('data-target') : null;
+    
+    // Switch to PWA install page if clicked from menu/sidebar/card
+    if (target === 'pwa-install' || (e && e.currentTarget === pwaInstallCard)) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+        document.getElementById('pwa-install-page').style.display = 'block';
+        document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
+        if (menuInstallBtn) menuInstallBtn.classList.add('active');
+        document.getElementById('page-title').textContent = 'Instalar Aplicativo';
+        if (window.innerWidth <= 768 && !document.querySelector('.sidebar').classList.contains('hidden')) {
+             // If sidebar is open, we might want to close it, but usually it's hidden on mobile anyway
+        }
         return;
     }
 
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log(`User response to the install prompt: ${outcome}`);
-        deferredPrompt = null;
-        if (pwaBanner) pwaBanner.style.display = 'none';
-        if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
-    } else {
-        showAlert('Para instalar:<br><br>1. Clique nos <strong>três pontos</strong> do Chrome (Canto superior direito)<br>2. Selecione <strong>Instalar Aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>', 'Como Instalar', '📱');
+    if (isStandalone) {
+        showAlert('O aplicativo já está instalado!', 'info');
+        return;
     }
+
+    if (isIOS) {
+        // Just make sure they see the instructions
+        document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+        document.getElementById('pwa-install-page').style.display = 'block';
+        document.getElementById('page-title').textContent = 'Instalar no iOS';
+        return;
+    }
+
+    if (!deferredPrompt) {
+        // Show help/instructions if direct prompt isn't ready
+        document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+        document.getElementById('pwa-install-page').style.display = 'block';
+        return;
+    }
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User choice: ${outcome}`);
+    deferredPrompt = null;
+    updatePWAUI();
 };
 
 if (sidebarInstallBtn) sidebarInstallBtn.onclick = handleInstallClick;
 if (menuInstallBtn) menuInstallBtn.onclick = handleInstallClick;
 if (mobileInstallBtn) mobileInstallBtn.onclick = handleInstallClick;
 if (pwaInstallCard) pwaInstallCard.onclick = handleInstallClick;
+if (mainInstallBtn) mainInstallBtn.onclick = handleInstallClick;
