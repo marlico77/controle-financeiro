@@ -108,11 +108,12 @@ const authenticateToken = (req, res, next) => {
         
         if (!dbUser) return res.status(401).json({ error: 'Usuário não encontrado' });
 
-        // Single Session Rule: Check if session ID matches
+        /* Single Session Rule: Disabled to fix persistence issues on refresh
         if (dbUser.current_session_id && decoded.sid !== dbUser.current_session_id) {
             console.warn(`[AUTH] Sessão duplicada para ${dbUser.username}. Token SID: ${decoded.sid}, DB SID: ${dbUser.current_session_id}`);
             return res.status(401).json({ error: 'Sessão expirada. Logado em outro local.' });
         }
+        */
 
         // Block access if password change is required (except for auth status and change-password)
         const allowedPaths = ['/api/auth/change-password', '/api/auth/status'];
