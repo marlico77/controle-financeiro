@@ -23,9 +23,16 @@ Uma solução robusta, moderna e multiplataforma para controle financeiro, gest�
 
 ### 🛡️ Segurança e Auditoria
 - **Troca de Senha Obrigatória**: Segurança reforçada no primeiro acesso do usuário.
-- **Sessão Única**: Detecção de conflitos de sessão para impedir múltiplos acessos simultâneos.
+- **Sessão Persistente**: Melhoria na lógica de JWT para permitir uso fluido em múltiplos dispositivos simultaneamente.
 - **Logs de Auditoria**: Registro completo de ações, incluindo IP, dispositivo e navegador, com política de limpeza automática (24h).
-- **Controle de Acesso (RBAC)**: Níveis diferenciados para Administradores, Secretários e Membros.
+- **Controle de Acesso (RBAC)**: Gerenciamento dinâmico de níveis para Administradores, Secretários e Membros feito pelo Admin Master.
+
+### 🔔 Sistema de Mensagens e Notificações (Novo v2.0)
+- **Mensagens Diretas**: Painel administrativo para envio de avisos globais ou individuais.
+- **Notificações Push PWA**: Alertas na barra de notificações do celular (Android e iOS 16.4+).
+- **Modais de Aviso**: Janelas de notificação inteligentes que aparecem no primeiro acesso após uma nova mensagem.
+- **Automação de Cobrança**: Lembretes automáticos inteligentes nos dias 5 e 20, enviados apenas para membros inadimplentes.
+- **Respeito ao Sábado**: Lógica automática que adia o envio de notificações para após o pôr do sol se o dia 20 cair em um sábado.
 
 ---
 
@@ -37,6 +44,8 @@ Uma solução robusta, moderna e multiplataforma para controle financeiro, gest�
 - **PWA**: Service Workers e Web App Manifest.
 - **Gráficos**: Chart.js.
 - **Segurança**: JWT (JSON Web Tokens) e BcryptJS para criptografia de senhas.
+- **Agendamento**: Node-cron para tarefas automatizadas em segundo plano.
+- **Notificações**: Web-Push para integração com a barra de tarefas mobile.
 
 ---
 

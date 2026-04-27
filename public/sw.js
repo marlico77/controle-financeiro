@@ -48,3 +48,38 @@ self.addEventListener('fetch', event => {
     })
   );
 });
+
+// --- Push Notifications Support ---
+
+self.addEventListener('push', event => {
+  let data = { title: 'Nova Mensagem', body: 'Você tem uma nova notificação do Clube.' };
+  
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = { title: 'Nova Mensagem', body: event.data.text() };
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: '/logo.png',
+    badge: '/logo.png',
+    vibrate: [100, 50, 100],
+    data: {
+      url: '/'
+    }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow('/')
+  );
+});

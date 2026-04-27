@@ -747,6 +747,14 @@ async function checkAuth() {
                 setTimeout(() => splash.style.display = 'none', 500);
             }
             
+            // Fetch notifications for the user
+            fetchNotifications();
+            
+            // Ask for push permission if not already granted
+            if ('serviceWorker' in navigator && Notification.permission === 'default') {
+                setTimeout(requestPushPermission, 5000); // Ask after 5s
+            }
+            
             // --- Tab Visibility Logic Based on Role ---
             const isAdmin = state.role === 'admin';
             const isSecretary = state.role === 'secretário';
@@ -3267,3 +3275,132 @@ if (salesForm) {
         }
     };
 }
+// --- Notification & Messaging System ---
+
+async function fetchNotifications() {
+    try {
+        const unread = await apiFetch('/api/notifications/unread');
+        if (unread && unread.length > 0) {
+            showNotificationModal(unread[0]);
+        }
+    } catch (err) {
+        console.error('Erro ao buscar notificações:', err);
+    }
+}
+
+function showNotificationModal(notif) {
+    const modal = document.getElementById('notification-modal');
+    const title = document.getElementById('notif-title');
+    const content = document.getElementById('notif-content');
+    const closeBtn = document.getElementById('close-notif-btn');
+
+    if (!modal || !title || !content) return;
+
+    title.textContent = notif.title;
+    content.textContent = notif.content;
+    modal.style.display = 'flex';
+
+    closeBtn.onclick = async () => {
+        modal.style.display = 'none';
+        try {
+            await apiFetch(`/api/notifications/${notif.id}/read`, { method: 'PUT' });
+        } catch (err) {
+            console.error('Erro ao marcar como lida:', err);
+        }
+    };
+}
+
+async function requestPushPermission() {
+    if (!('Notification' in window)) return;
+    
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+        subscribeToPush();
+    }
+}
+
+async function subscribeToPush() {
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        const response = await apiFetch('/api/notifications/vapid-public-key');
+        const vapidPublicKey = response.publicKey;
+
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+        });
+
+        await apiFetch('/api/notifications/subscribe', {
+            method: 'POST',
+            body: JSON.stringify({ subscription })
+        });
+        
+        console.log('[PUSH] Inscrito com sucesso!');
+    } catch (err) {
+        console.error('[PUSH] Erro na inscrição:', err);
+    }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+// --- Admin Messages Logic ---
+
+async function renderMessages() {
+    const targetSelect = document.getElementById('msg-target');
+    if (!targetSelect) return;
+
+    // Keep "All Members" option
+    targetSelect.innerHTML = '<option value="all">Todos os Membros</option>';
+
+    try {
+        const people = await apiFetch('/api/people');
+        people.sort((a, b) => a.name.localeCompare(b.name)).forEach(p => {
+            if (p.u_id) { // Only members with login
+                const option = document.createElement('option');
+                option.value = p.u_id;
+                option.textContent = p.name;
+                targetSelect.appendChild(option);
+            }
+        });
+    } catch (err) {
+        console.error('Erro ao carregar membros:', err);
+    }
+}
+
+document.getElementById('send-msg-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const target = document.getElementById('msg-target').value;
+    const title = document.getElementById('msg-title').value;
+    const content = document.getElementById('msg-content').value;
+
+    try {
+        await apiFetch('/api/notifications/send', {
+            method: 'POST',
+            body: JSON.stringify({
+                userId: target === 'all' ? null : parseInt(target),
+                title,
+                content
+            })
+        });
+        showAlert('Mensagem enviada com sucesso!', 'Sucesso');
+        e.target.reset();
+    } catch (err) {
+        showAlert('Erro ao enviar mensagem.', 'Erro');
+    }
+};
+
+// --- Tab switch logic update ---
+const originalSwitchTabNotif = switchTab;
+switchTab = (target) => {
+    originalSwitchTabNotif(target);
+    if (target === 'messages') renderMessages();
+};

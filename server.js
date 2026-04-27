@@ -9,6 +9,8 @@ const xlsx = require('xlsx');
 const sharp = require('sharp');
 const db = require('./database');
 const UAParser = require('ua-parser-js');
+const webPush = require('web-push');
+const cron = require('node-cron');
 const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
@@ -56,6 +58,16 @@ const JWT_SECRET = SECRET || 'dev-secret-only';
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// --- Web Push Configuration ---
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BPdV8b0gIcNWcgEfsVoyNMXrfBa-MFC4rMeqhDKC2PbN5O1Erq6aCo-E_4ev6SCgsalWP5WqpeZVcK95WV_GIhQ';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'bfjF8hipfmuLyvm6CJJZMHTnHIzGvHPTkm_gENlNubo';
+
+webPush.setVapidDetails(
+    'mailto:contato@tribodedavi.net.br',
+    VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY
+);
 
 // Explicit root route for robustness
 app.get('/', (req, res) => {
@@ -1368,6 +1380,174 @@ app.get('/api/admin/logs', authenticateToken, async (req, res) => {
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: 'Erro ao buscar logs' });
+    }
+});
+
+// --- Notification Routes ---
+
+app.get('/api/notifications/vapid-public-key', (req, res) => {
+    res.json({ publicKey: VAPID_PUBLIC_KEY });
+});
+
+app.post('/api/notifications/subscribe', authenticateToken, async (req, res) => {
+    const { subscription } = req.body;
+    if (!subscription) return res.status(400).json({ error: 'Inscrição ausente' });
+    
+    try {
+        await db.query(`
+            INSERT INTO push_subscriptions (user_id, subscription_data)
+            VALUES ($1, $2)
+            ON CONFLICT (user_id, subscription_data) DO NOTHING
+        `, [req.user.id, JSON.stringify(subscription)]);
+        res.status(201).json({ message: 'Inscrito com sucesso' });
+    } catch (err) {
+        console.error('[PUSH] Erro ao inscrever:', err);
+        res.status(500).json({ error: 'Falha na inscrição' });
+    }
+});
+
+app.get('/api/notifications/unread', authenticateToken, async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT * FROM notifications 
+            WHERE (user_id = $1 OR user_id IS NULL) 
+            AND is_read = false 
+            ORDER BY created_at DESC
+        `, [req.user.id]);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao buscar notificações' });
+    }
+});
+
+app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+    try {
+        await db.query('UPDATE notifications SET is_read = true WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)', [req.params.id, req.user.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao marcar como lida' });
+    }
+});
+
+app.post('/api/notifications/send', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.sendStatus(403).json({ error: 'Acesso negado' });
+    
+    const { userId, title, content } = req.body;
+    
+    try {
+        // 1. Save to DB for internal modal
+        const result = await db.query(`
+            INSERT INTO notifications (user_id, title, content, type)
+            VALUES ($1, $2, $3, 'manual') RETURNING id
+        `, [userId || null, title, content]);
+
+        // 2. Try to send push notification
+        const pushResult = await db.query(`
+            SELECT subscription_data FROM push_subscriptions 
+            WHERE ($1::int IS NULL OR user_id = $1)
+        `, [userId || null]);
+
+        const payload = JSON.stringify({ title, body: content });
+
+        pushResult.rows.forEach(sub => {
+            const subscription = JSON.parse(sub.subscription_data);
+            webPush.sendNotification(subscription, payload).catch(err => {
+                console.error('[PUSH] Erro no envio individual:', err.statusCode);
+                if (err.statusCode === 410 || err.statusCode === 404) {
+                    // Subscription expired, remove it
+                    db.query('DELETE FROM push_subscriptions WHERE subscription_data = $1', [sub.subscription_data]);
+                }
+            });
+        });
+
+        res.json({ success: true, notificationId: result.rows[0].id });
+    } catch (err) {
+        console.error('[NOTIF] Erro ao enviar:', err);
+        res.status(500).json({ error: 'Erro ao processar envio' });
+    }
+});
+
+// --- Automated Reminders Logic (CRON) ---
+
+const sendPaymentReminders = async (message) => {
+    try {
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+
+        // 1. Find users with UNPAID fees for current month
+        const unpaidUsers = await db.query(`
+            SELECT u.id, u.username, p.name 
+            FROM users u
+            JOIN people p ON u.person_id = p.id
+            WHERE u.id NOT IN (
+                SELECT user_id FROM fees 
+                WHERE month = $1 AND year = $2 AND status = 'paid'
+            )
+        `, [currentMonth, currentYear]);
+
+        console.log(`[CRON] Enviando lembretes para ${unpaidUsers.rows.length} usuários.`);
+
+        for (const user of unpaidUsers.rows) {
+            const title = 'Lembrete de Mensalidade';
+            const content = `Olá ${user.name || user.username}, lembramos que a mensalidade deste mês ainda está pendente. Regularize para nos ajudar a manter o clube!`;
+            
+            // Save to DB
+            await db.query(`
+                INSERT INTO notifications (user_id, title, content, type)
+                VALUES ($1, $2, $3, 'automated_reminder')
+            `, [user.id, title, content]);
+
+            // Send Push
+            const pushResult = await db.query('SELECT subscription_data FROM push_subscriptions WHERE user_id = $1', [user.id]);
+            const payload = JSON.stringify({ title, body: content });
+
+            pushResult.rows.forEach(sub => {
+                webPush.sendNotification(JSON.parse(sub.subscription_data), payload).catch(err => {
+                    if (err.statusCode === 410) db.query('DELETE FROM push_subscriptions WHERE subscription_data = $1', [sub.subscription_data]);
+                });
+            });
+        }
+    } catch (err) {
+        console.error('[CRON] Erro no processamento automático:', err);
+    }
+};
+
+// CRON JOB: Every day at 09:00 (Check for day 5 and 20)
+cron.schedule('0 9 * * *', async () => {
+    const today = new Date();
+    const day = today.getDate();
+    const dayOfWeek = today.getDay(); // 0: Sun, 6: Sat
+    
+    // Day 20 Logic
+    if (day === 20) {
+        if (dayOfWeek === 6) { // Saturday
+            console.log('[CRON] Dia 20 é Sábado. Agendando para o pôr do sol (19:00).');
+            // We schedule a one-time execution for today at 19:00
+            setTimeout(() => sendPaymentReminders(), (19 - 9) * 60 * 60 * 1000);
+        } else {
+            sendPaymentReminders();
+        }
+    }
+
+    // 5th Working Day Logic
+    if (day >= 5 && day <= 10) {
+        const result = await db.query(`
+            WITH RECURSIVE work_days AS (
+                SELECT date_trunc('month', CURRENT_DATE)::date AS d, 1 AS count
+                WHERE EXTRACT(DOW FROM date_trunc('month', CURRENT_DATE)) BETWEEN 1 AND 5
+                UNION ALL
+                SELECT (d + 1)::date, CASE WHEN EXTRACT(DOW FROM (d + 1)) BETWEEN 1 AND 5 THEN count + 1 ELSE count END
+                FROM work_days
+                WHERE count < 5 AND d < date_trunc('month', CURRENT_DATE) + interval '15 days'
+            )
+            SELECT d FROM work_days WHERE count = 5 ORDER BY d DESC LIMIT 1
+        `);
+        
+        const fifthWorkingDay = new Date(result.rows[0].d).getDate();
+        if (day === fifthWorkingDay) {
+            console.log('[CRON] Hoje é o 5º dia útil. Enviando lembretes.');
+            sendPaymentReminders();
+        }
     }
 });
 
