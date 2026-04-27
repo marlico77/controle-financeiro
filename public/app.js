@@ -187,19 +187,21 @@ async function generateGeneralReport() {
                 </div>
             </div>
             <h3>Resumo por Unidade</h3>
-            <table class="report-table">
-                <thead>
-                    <tr><th>Unidade</th><th>Valor Arrecadado (Ano)</th></tr>
-                </thead>
-                <tbody>
-                    ${Object.entries(byUnit).sort((a,b) => b[1] - a[1]).map(([unit, val]) => `
-                        <tr>
-                            <td><strong>${unit}</strong></td>
-                            <td>R$ ${val.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
+            <div class="report-table-wrapper">
+                <table class="report-table">
+                    <thead>
+                        <tr><th>Unidade</th><th>Valor Arrecadado (Ano)</th></tr>
+                    </thead>
+                    <tbody>
+                        ${Object.entries(byUnit).sort((a,b) => b[1] - a[1]).map(([unit, val]) => `
+                            <tr>
+                                <td><strong>${unit}</strong></td>
+                                <td>R$ ${val.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
         `;
         const printable = document.getElementById('report-printable');
         const modal = document.getElementById('report-modal');
@@ -248,24 +250,26 @@ async function generateMemberReport() {
                 </div>
             </div>
             <h3>Histórico Mensal (${currentYear})</h3>
-            <table class="report-table">
-                <thead>
-                    <tr><th>Mês</th><th>Status</th><th>Valor</th><th>Data</th></tr>
-                </thead>
-                <tbody>
-                    ${months.map((m, idx) => {
-                        const pay = payments.find(p => p.month === idx + 1);
-                        return `
-                            <tr>
-                                <td>${m}</td>
-                                <td>${pay ? (pay.status === 'approved' ? 'PAGO' : pay.status === 'pending' ? 'PENDENTE' : 'RECUSADO') : 'NÃO REALIZADO'}</td>
-                                <td>${pay ? 'R$ ' + parseFloat(pay.amount || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
-                                <td>${pay && pay.updated_at ? new Date(pay.updated_at).toLocaleDateString('pt-BR') : '-'}</td>
-                            </tr>
-                        `;
-                    }).join('')}
-                </tbody>
-            </table>
+            <div class="report-table-wrapper">
+                <table class="report-table">
+                    <thead>
+                        <tr><th>Mês</th><th>Status</th><th>Valor</th><th>Data</th></tr>
+                    </thead>
+                    <tbody>
+                        ${months.map((m, idx) => {
+                            const pay = payments.find(p => p.month === idx + 1);
+                            return `
+                                <tr>
+                                    <td>${m}</td>
+                                    <td>${pay ? (pay.status === 'approved' ? 'PAGO' : pay.status === 'pending' ? 'PENDENTE' : 'RECUSADO') : 'NÃO REALIZADO'}</td>
+                                    <td>${pay ? 'R$ ' + parseFloat(pay.amount || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
+                                    <td>${pay && pay.updated_at ? new Date(pay.updated_at).toLocaleDateString('pt-BR') : '-'}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
         `;
         const printable = document.getElementById('report-printable');
         const modal = document.getElementById('report-modal');
@@ -305,31 +309,35 @@ async function generateEventReport() {
             });
             contentHtml = `
                 <h3>Resumo por Unidade</h3>
-                <table class="report-table">
-                    <thead>
-                        <tr><th>Unidade</th><th>Participantes</th><th>Arrecadação</th></tr>
-                    </thead>
-                    <tbody>
-                        ${Object.entries(byUnit).map(([unit, stats]) => `
-                            <tr><td>${unit}</td><td>${stats.count}</td><td>R$ ${stats.paid.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td></tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+                <div class="report-table-wrapper">
+                    <table class="report-table">
+                        <thead>
+                            <tr><th>Unidade</th><th>Participantes</th><th>Arrecadação</th></tr>
+                        </thead>
+                        <tbody>
+                            ${Object.entries(byUnit).map(([unit, stats]) => `
+                                <tr><td>${unit}</td><td>${stats.count}</td><td>R$ ${stats.paid.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td></tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
             `;
         } else {
             contentHtml = `
                 <h3>Lista de Participantes</h3>
-                <table class="report-table">
-                    <thead>
-                        <tr><th>Membro</th><th>Unidade</th><th>Status</th><th>Total Pago</th></tr>
-                    </thead>
-                    <tbody>
-                        ${(participants || []).map(p => {
-                            const amount = (payments || []).filter(pay => pay.person_id === p.id && pay.status === 'approved').reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
-                            return `<tr><td>${p.name}</td><td>${p.unit || '-'}</td><td>${amount > 0 ? 'PARTICIPANDO' : 'PENDENTE'}</td><td>R$ ${amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td></tr>`;
-                        }).join('')}
-                    </tbody>
-                </table>
+                <div class="report-table-wrapper">
+                    <table class="report-table">
+                        <thead>
+                            <tr><th>Membro</th><th>Unidade</th><th>Status</th><th>Total Pago</th></tr>
+                        </thead>
+                        <tbody>
+                            ${(participants || []).map(p => {
+                                const amount = (payments || []).filter(pay => pay.person_id === p.id && pay.status === 'approved').reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
+                                return `<tr><td>${p.name}</td><td>${p.unit || '-'}</td><td>${amount > 0 ? 'PARTICIPANDO' : 'PENDENTE'}</td><td>R$ ${amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td></tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
             `;
         }
 
@@ -388,7 +396,7 @@ async function generateAuthDocument(type) {
         const logoSrc = await getLogoBase64();
 
         const htmlContent = `
-            <div style="font-family: Arial; line-height: 1.8; max-width: 800px; margin: 0 auto; padding: 30px; color: black;">
+            <div class="report-canvas" style="font-family: Arial; line-height: 1.8; max-width: 100%; margin: 0 auto; padding: 20px; color: black;">
                 <div class="report-header">
                     <img src="${logoSrc}">
                     <div>
@@ -396,7 +404,9 @@ async function generateAuthDocument(type) {
                         <h3 style="margin: 5px 0 0 0; font-size: 1rem; text-decoration: underline;">Autorização de Saída</h3>
                     </div>
                 </div>
-                <p style="margin-top: 40px; text-align: justify; line-height: 2;">Eu, ________________________________________________________________, responsável pelo(a) desbravador(a) ________________________________________________________________, autorizo-o(a) a participar do evento <strong>${eventName}</strong>, que será realizado no dia <strong>${formattedDate}</strong>, no local <strong>${eventLocation}</strong>. Os desbravadores deverão se apresentar às <strong>${departureTime}</strong>h em <strong>${departureLocation}</strong> para a partida.</p>
+                <div style="margin-top: 40px; text-align: justify; line-height: 2;">
+                    Eu, ________________________________________________________________, responsável pelo(a) desbravador(a) ________________________________________________________________, autorizo-o(a) a participar do evento <strong>${eventName}</strong>, que será realizado no dia <strong>${formattedDate}</strong>, no local <strong>${eventLocation}</strong>. Os desbravadores deverão se apresentar às <strong>${departureTime}</strong>h em <strong>${departureLocation}</strong> para a partida.
+                </div>
                 <p style="text-align: justify; line-height: 2;">O evento tem término previsto para as <strong>${returnTime}</strong>h, momento em que o responsável deverá buscar a criança no mesmo local de partida indicado acima.</p>
                 <p style="margin-top: 20px; text-align: center; font-weight: bold;">Estou ciente de que estará acompanhado(a) pela direção do Clube TRIBO DE DAVI, permanecendo sob sua responsabilidade durante todo esse período.</p>
                 <div style="margin-top: 50px; text-align: right;">_________ / _________ / ${currentYear}</div>
@@ -406,7 +416,7 @@ async function generateAuthDocument(type) {
                     <p style="margin: 10px 0;">Telefone: (____) ________________________________________________________________</p>
                 </div>
                 <div style="margin-top: 80px; text-align: center;">
-                    <div style="border-top: 1px solid black; width: 400px; margin: 0 auto; padding-top: 5px;">Assinatura do responsável</div>
+                    <div style="border-top: 1px solid black; max-width: 400px; width: 100%; margin: 0 auto; padding-top: 5px;">Assinatura do responsável</div>
                 </div>
             </div>
         `;
@@ -2927,10 +2937,14 @@ if (isStandalone) {
     console.log('App is standalone, hiding install buttons');
     if (pwaBanner) pwaBanner.style.display = 'none';
     if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
+    if (menuInstallBtn) menuInstallBtn.style.display = 'none';
 } else {
     console.log('App is not standalone, showing install buttons');
     if (sidebarInstallBtn) {
         sidebarInstallBtn.style.setProperty('display', 'flex', 'important');
+    }
+    if (menuInstallBtn) {
+        menuInstallBtn.style.setProperty('display', 'flex', 'important');
     }
 }
 // menuInstallBtn visibility is handled by CSS (mobile only) and we keep it visible always as requested
