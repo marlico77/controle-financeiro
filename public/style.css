@@ -1778,3 +1778,7 @@ tfoot td {
     from { transform: translateY(100px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
+
+.month-check { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: white; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; color: black; }
+.month-check:hover { border-color: var(--accent-color); background: rgba(229, 9, 20, 0.05); }
+.month-check input { width: 16px; height: 16px; cursor: pointer; }

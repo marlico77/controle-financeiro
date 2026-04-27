@@ -16,6 +16,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET;
+const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 // --- Image Compression Helper ---
 const compressReceipt = async (file) => {
@@ -591,29 +592,27 @@ app.get('/api/payments/detail/:id', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/payments', authenticateToken, upload.single('receipt'), async (req, res) => {
-  const { person_id, month, year, amount } = req.body;
+  const { person_id, month, year, amount, months } = req.body;
   
-  // Use memory buffer and mime type from multer
-  const compressed = await compressReceipt(req.file);
-  const receipt_content = compressed ? compressed.buffer : null;
-  const receipt_mime = compressed ? compressed.mimetype : null;
-  const receipt_filename = req.file ? `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
-  const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
-
-  if (!person_id || !month || !year || !amount) {
+  if (!person_id || (!month && !months) || !year || !amount) {
     return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
   }
 
-  try {
-    const status = req.user.role === 'admin' ? 'approved' : 'pending';
+  const monthList = months ? JSON.parse(months) : [month];
+  const amountPerMonth = (parseFloat(amount) / monthList.length).toFixed(2);
+  const status = req.user.role === 'admin' ? 'approved' : 'pending';
 
-    const existingResult = await db.query('SELECT id, receipt_path, status FROM payments WHERE person_id = $1 AND month = $2 AND year = $3', [person_id, month, year]);
-    const existing = existingResult.rows[0];
+  try {
+    // Process Receipt (only once for all months)
+    const compressed = await compressReceipt(req.file);
+    const receipt_content = compressed ? compressed.buffer : null;
+    const receipt_mime = compressed ? compressed.mimetype : null;
+    const receipt_filename = req.file ? `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
+    const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
 
     let isUploadedToStorage = false;
-    // Upload to Supabase Storage if file exists
     if (req.file && compressed) {
-        console.log(`[STORAGE] Fazendo upload para Supabase: ${receipt_filename}`);
+        console.log(`[STORAGE] Multi-month upload to Supabase: ${receipt_filename}`);
         const { error } = await supabase.storage
             .from('receipts')
             .upload(receipt_filename, compressed.buffer, {
@@ -621,57 +620,58 @@ app.post('/api/payments', authenticateToken, upload.single('receipt'), async (re
                 upsert: true
             });
         
-        if (error) {
-            console.error('[STORAGE] Erro no upload Supabase:', error);
-        } else {
-            isUploadedToStorage = true;
-        }
+        if (!error) isUploadedToStorage = true;
+        else console.error('[STORAGE] Error in multi-month upload:', error);
     }
 
     const finalDBContent = isUploadedToStorage ? null : receipt_content;
+    const results = [];
 
-    if (existing) {
-        const finalContent = finalDBContent || existing.receipt_content;
-        const finalMime = receipt_mime || existing.receipt_mime;
-        const finalPath = receipt_path || existing.receipt_path;
+    // Common data for logs and notifications
+    const personResult = await db.query("SELECT name FROM people WHERE id = $1", [person_id]);
+    const personName = personResult.rows[0]?.name || 'Membro';
+    const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
 
-        await db.query(`
-            UPDATE payments 
-            SET amount = $1, receipt_path = $2, receipt_content = $3, receipt_mime = $4, status = $5, rejection_reason = NULL 
-            WHERE id = $6
-        `, [amount, finalPath, finalContent, finalMime, status, existing.id]);
-        
-        if (status === 'pending') {
-            const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
-            const personResult = await db.query("SELECT name FROM people WHERE id = $1", [person_id]);
-            const person = personResult.rows[0];
-            for (const admin of adminsResult.rows) {
-                await createNotification(admin.id, 'Novo Comprovante', `O membro ${person.name} atualizou um comprovante para o mês de ${monthNames[month-1]}.`, 'info', existing.id, 'monthly');
+    for (const m of monthList) {
+        const existingResult = await db.query('SELECT id FROM payments WHERE person_id = $1 AND month = $2 AND year = $3', [person_id, m, year]);
+        const existing = existingResult.rows[0];
+
+        if (existing) {
+            await db.query(`
+                UPDATE payments 
+                SET amount = $1, receipt_path = $2, receipt_content = $3, receipt_mime = $4, status = $5, rejection_reason = NULL 
+                WHERE id = $6
+            `, [amountPerMonth, receipt_path, finalDBContent, receipt_mime, status, existing.id]);
+            
+            if (status === 'pending') {
+                for (const admin of adminsResult.rows) {
+                    await createNotification(admin.id, 'Novo Comprovante', `O membro ${personName} atualizou um comprovante para o mês de ${monthNames[m-1]}.`, 'info', existing.id, 'monthly');
+                }
             }
-        }
-        res.json({ id: existing.id, updated: true, status });
-    } else {
-        const insertResult = await db.query(`
-            INSERT INTO payments (person_id, month, year, amount, receipt_path, receipt_content, receipt_mime, status) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
-            RETURNING id
-        `, [person_id, month, year, amount, receipt_path, finalDBContent, receipt_mime, status]);
-        const newId = insertResult.rows[0].id;
-        
-        if (status === 'pending') {
-            const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
-            const personResult = await db.query("SELECT name FROM people WHERE id = $1", [person_id]);
-            const person = personResult.rows[0];
-            for (const admin of adminsResult.rows) {
-                await createNotification(admin.id, 'Novo Comprovante', `O membro ${person.name} enviou um novo comprovante para o mês de ${monthNames[month-1]}.`, 'info', newId, 'monthly');
+            results.push({ id: existing.id, updated: true });
+        } else {
+            const insertResult = await db.query(`
+                INSERT INTO payments (person_id, month, year, amount, receipt_path, receipt_content, receipt_mime, status) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+                RETURNING id
+            `, [person_id, m, year, amountPerMonth, receipt_path, finalDBContent, receipt_mime, status]);
+            const newId = insertResult.rows[0].id;
+
+            if (status === 'pending') {
+                for (const admin of adminsResult.rows) {
+                    await createNotification(admin.id, 'Novo Comprovante', `O membro ${personName} enviou um novo comprovante para o mês de ${monthNames[m-1]}.`, 'info', newId, 'monthly');
+                }
             }
+            results.push({ id: newId, updated: false });
         }
-        res.json({ id: newId, updated: false, status });
-        logAction(req, 'CREATE_PAYMENT', { person_id, month, year, amount, status });
     }
+
+    logAction(req, 'CREATE_PAYMENT_BATCH', { person_id, months: monthList, year, total_amount: amount, status });
+    res.json({ results, status });
+
   } catch (err) {
       console.error(err);
-      res.status(500).json({ error: 'Erro ao salvar pagamento' });
+      res.status(500).json({ error: 'Erro ao salvar pagamentos' });
   }
 });
 

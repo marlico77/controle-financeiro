@@ -2151,7 +2151,21 @@ const openPaymentModal = (person, month, payment = null) => {
     rejectionForm.style.display = 'none';
     document.getElementById('receipt').parentElement.style.display = 'block';
 
+    // Multi-month Reset
+    const multiToggle = document.getElementById('p-multi-month-toggle');
+    const multiSelector = document.getElementById('p-multi-month-selector');
+    const singleInfo = document.getElementById('p-single-month-info');
+    
+    multiToggle.checked = false;
+    multiSelector.style.display = 'none';
+    singleInfo.style.display = 'block';
+    
+    // Clear all checkboxes
+    document.querySelectorAll('#p-months-grid input').forEach(cb => cb.checked = false);
+
     if (payment) {
+        // Hide multi-month toggle when editing existing single payment
+        multiToggle.parentElement.parentElement.style.display = 'none';
         title.textContent = 'Gerenciar Pagamento';
         amountInput.value = payment.amount;
         
@@ -2189,6 +2203,9 @@ const openPaymentModal = (person, month, payment = null) => {
         amountInput.value = '20.00';
         saveBtn.textContent = 'Salvar Pagamento';
         document.getElementById('receipt').value = '';
+        
+        // Show multi-month toggle for new payments
+        multiToggle.parentElement.parentElement.style.display = 'block';
     }
 
     // Handlers for Admin
@@ -2470,9 +2487,23 @@ document.getElementById('person-form').onsubmit = async (e) => {
 
 document.getElementById('payment-form').onsubmit = async (e) => {
     e.preventDefault();
+    const isMulti = document.getElementById('p-multi-month-toggle').checked;
+    const selectedMonths = Array.from(document.querySelectorAll('#p-months-grid input:checked')).map(cb => cb.value);
+
+    if (isMulti && selectedMonths.length === 0) {
+        document.getElementById('payment-error').textContent = 'Selecione pelo menos um mês.';
+        return;
+    }
+
     const formData = new FormData();
     formData.append('person_id', document.getElementById('p-person-id').value);
-    formData.append('month', document.getElementById('p-month').value);
+    
+    if (isMulti) {
+        formData.append('months', JSON.stringify(selectedMonths));
+    } else {
+        formData.append('month', document.getElementById('p-month').value);
+    }
+
     formData.append('year', state.currentYear);
     formData.append('amount', document.getElementById('amount').value);
     
@@ -3036,3 +3067,13 @@ const handleInstallClick = async (e) => {
 if (menuInstallBtn) menuInstallBtn.onclick = handleInstallClick;
 if (pwaInstallCard) pwaInstallCard.onclick = handleInstallClick;
 if (mainInstallBtn) mainInstallBtn.onclick = handleInstallClick;
+
+// Multi-month toggle listener
+const pMultiToggle = document.getElementById('p-multi-month-toggle');
+if (pMultiToggle) {
+    pMultiToggle.onchange = (e) => {
+        const isChecked = e.target.checked;
+        document.getElementById('p-multi-month-selector').style.display = isChecked ? 'block' : 'none';
+        document.getElementById('p-single-month-info').style.display = isChecked ? 'none' : 'block';
+    };
+}

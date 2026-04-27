@@ -625,11 +625,42 @@ const initApp = () => {
                 <form id="payment-form">
                     <input type="hidden" id="p-person-id">
                     <input type="hidden" id="p-month">
-                    <div class="info-tag">
-                        Membro: <span id="p-member-name"></span> | Mês: <span id="p-month-name"></span>
+                    <div class="input-group" id="p-single-month-info">
+                        <label>Mês de Referência</label>
+                        <div class="info-tag" style="margin-top: 0.5rem;">
+                            Membro: <span id="p-member-name"></span> | Mês: <span id="p-month-name"></span>
+                        </div>
                     </div>
+
+                    <div class="input-group" style="margin-bottom: 1.5rem;">
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.8rem; cursor: pointer; background: rgba(229, 9, 20, 0.05); padding: 0.8rem; border-radius: 8px; border: 1px dashed var(--accent-color);">
+                            <input type="checkbox" id="p-multi-month-toggle" style="width: 18px; height: 18px;">
+                            <span style="font-weight: 600; color: var(--accent-color);">Este pagamento é referente a vários meses?</span>
+                        </label>
+                    </div>
+
+                    <div id="p-multi-month-selector" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px;">
+                        <label style="display: block; margin-bottom: 1rem; font-weight: 600; font-size: 0.9rem;">Selecione os meses incluídos:</label>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;" id="p-months-grid">
+                            <!-- Months checkboxes -->
+                            <label class="month-check"><input type="checkbox" value="1"> Jan</label>
+                            <label class="month-check"><input type="checkbox" value="2"> Fev</label>
+                            <label class="month-check"><input type="checkbox" value="3"> Mar</label>
+                            <label class="month-check"><input type="checkbox" value="4"> Abr</label>
+                            <label class="month-check"><input type="checkbox" value="5"> Mai</label>
+                            <label class="month-check"><input type="checkbox" value="6"> Jun</label>
+                            <label class="month-check"><input type="checkbox" value="7"> Jul</label>
+                            <label class="month-check"><input type="checkbox" value="8"> Ago</label>
+                            <label class="month-check"><input type="checkbox" value="9"> Set</label>
+                            <label class="month-check"><input type="checkbox" value="10"> Out</label>
+                            <label class="month-check"><input type="checkbox" value="11"> Nov</label>
+                            <label class="month-check"><input type="checkbox" value="12"> Dez</label>
+                        </div>
+                        <p style="margin-top: 0.8rem; font-size: 0.8rem; color: var(--text-dim);">O valor total será dividido igualmente entre os meses selecionados.</p>
+                    </div>
+
                     <div class="input-group">
-                        <label for="amount">Valor (R$)</label>
+                        <label for="amount">Valor Total (R$)</label>
                         <input type="number" id="amount" step="0.01" required placeholder="0,00">
                     </div>
                     <div class="input-group">
