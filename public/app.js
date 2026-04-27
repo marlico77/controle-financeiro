@@ -3049,8 +3049,8 @@ console.log('PWA Status:', { isStandalone, isIOS });
 
 const updatePWAUI = () => {
     // Re-fetch elements to avoid null references if script ran too early
-    const androidSection = document.getElementById('android-install-section');
-    const iosSection = document.getElementById('ios-install-section');
+    const androidSection = document.getElementById('android-guide-box');
+    const iosSection = document.getElementById('ios-guide-box');
     const installedSection = document.getElementById('already-installed-section');
     const menuInstallBtn = document.getElementById('menu-install-btn');
     const pwaInstallCard = document.getElementById('pwa-install-card');
@@ -3083,11 +3083,14 @@ const updatePWAUI = () => {
         // Handle Page Content Visibility
         if (isPageActive) {
             if (isIOS) {
-                if (iosSection) iosSection.style.setProperty('display', 'block', 'important');
+                if (iosSection) iosSection.style.display = 'block';
                 if (androidSection) androidSection.style.display = 'none';
+            } else if (/Android/.test(navigator.userAgent)) {
+                if (androidSection) androidSection.style.display = 'block';
+                if (iosSection) iosSection.style.display = 'none';
             } else {
-                // For Android/Chrome or others, show the install button section
-                if (androidSection) androidSection.style.setProperty('display', 'block', 'important');
+                // Outros dispositivos: esconder ambos
+                if (androidSection) androidSection.style.display = 'none';
                 if (iosSection) iosSection.style.display = 'none';
             }
             if (installedSection) installedSection.style.display = 'none';
