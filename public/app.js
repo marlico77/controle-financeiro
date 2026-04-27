@@ -3076,40 +3076,33 @@ if (menuInstallBtn) menuInstallBtn.onclick = handleInstallClick;
 if (pwaInstallCard) pwaInstallCard.onclick = handleInstallClick;
 if (mainInstallBtn) mainInstallBtn.onclick = handleInstallClick;
 
-// Multi-month logic and interactions
+// Multi-month logic and interactions (Robust Event Delegation)
 const initMultiMonthListeners = () => {
-    const pMultiToggle = document.getElementById('p-multi-month-toggle');
-    const pMonthsGrid = document.getElementById('p-months-grid');
-
-    if (pMultiToggle) {
-        pMultiToggle.addEventListener('change', (e) => {
+    // Listen for changes globally on the document to avoid attachment issues
+    document.addEventListener('change', (e) => {
+        if (e.target.id === 'p-multi-month-toggle') {
             const isChecked = e.target.checked;
             const selector = document.getElementById('p-multi-month-selector');
             const singleInfo = document.getElementById('p-single-month-info');
+            
             if (selector) {
                 selector.style.display = isChecked ? 'block' : 'none';
                 if (isChecked) selector.classList.add('animate-slide-down');
             }
             if (singleInfo) singleInfo.style.display = isChecked ? 'none' : 'block';
-        });
-    }
+        }
 
-    if (pMonthsGrid) {
-        pMonthsGrid.addEventListener('change', (e) => {
+        // Handle month grid item changes
+        if (e.target.closest('#p-months-grid')) {
             const input = e.target;
             const item = input.closest('.month-grid-item');
             if (item) {
                 item.classList.toggle('selected', input.checked);
-                
-                // Visual feedback
-                if (input.checked) {
-                    item.style.transform = 'scale(0.95)';
-                    setTimeout(() => item.style.transform = '', 100);
-                }
             }
-        });
-    }
+        }
+    });
 };
+
 
 
 
