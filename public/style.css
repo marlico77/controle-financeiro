@@ -1414,10 +1414,28 @@ tfoot td {
     color: #e50914; 
 }
 
+/* PWA Menu Item Button Style */
+#menu-install-btn {
+    background: var(--accent-color) !important;
+    color: white !important;
+    border-radius: 8px;
+    margin: 4px 8px;
+    padding: 8px 12px !important;
+    justify-content: center !important;
+    font-weight: 600;
+    box-shadow: 0 4px 10px var(--accent-glow);
+}
+
+#menu-install-btn .icon svg {
+    fill: white !important;
+}
+
 @media (max-width: 768px) {
     #report-printable {
-        padding: 2rem 1rem !important;
-        min-height: auto !important;
+        padding: 1.5rem 0.5rem !important; /* Even smaller padding for mobile */
+        min-height: 100px !important; /* Remove the 1000px height constraint */
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
     .report-header img {
         position: static;
@@ -1426,6 +1444,9 @@ tfoot td {
     }
     .report-canvas {
         font-size: 10pt;
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow-x: hidden;
     }
     .report-table {
         min-width: 500px;

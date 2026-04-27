@@ -404,16 +404,18 @@ async function generateAuthDocument(type) {
                         <h3 style="margin: 5px 0 0 0; font-size: 1rem; text-decoration: underline;">Autorização de Saída</h3>
                     </div>
                 </div>
-                <div style="margin-top: 40px; text-align: justify; line-height: 2;">
-                    Eu, ________________________________________________________________, responsável pelo(a) desbravador(a) ________________________________________________________________, autorizo-o(a) a participar do evento <strong>${eventName}</strong>, que será realizado no dia <strong>${formattedDate}</strong>, no local <strong>${eventLocation}</strong>. Os desbravadores deverão se apresentar às <strong>${departureTime}</strong>h em <strong>${departureLocation}</strong> para a partida.
+                <div style="margin-top: 40px; text-align: justify; line-height: 2.2;">
+                    Eu, <span style="border-bottom: 1px solid black; display: inline-block; min-width: 200px; margin: 0 5px;"></span>, 
+                    responsável pelo(a) desbravador(a) <span style="border-bottom: 1px solid black; display: inline-block; min-width: 200px; margin: 0 5px;"></span>, 
+                    autorizo-o(a) a participar do evento <strong>${eventName}</strong>, que será realizado no dia <strong>${formattedDate}</strong>, no local <strong>${eventLocation}</strong>. Os desbravadores deverão se apresentar às <strong>${departureTime}</strong>h em <strong>${departureLocation}</strong> para a partida.
                 </div>
-                <p style="text-align: justify; line-height: 2;">O evento tem término previsto para as <strong>${returnTime}</strong>h, momento em que o responsável deverá buscar a criança no mesmo local de partida indicado acima.</p>
-                <p style="margin-top: 20px; text-align: center; font-weight: bold;">Estou ciente de que estará acompanhado(a) pela direção do Clube TRIBO DE DAVI, permanecendo sob sua responsabilidade durante todo esse período.</p>
-                <div style="margin-top: 50px; text-align: right;">_________ / _________ / ${currentYear}</div>
+                <p style="text-align: justify; line-height: 2.2;">O evento tem término previsto para as <strong>${returnTime}</strong>h, momento em que o responsável deverá buscar a criança no mesmo local de partida indicado acima.</p>
+                <p style="margin-top: 25px; text-align: center; font-weight: bold; border: 1px solid #ddd; padding: 15px; border-radius: 8px;">Estou ciente de que estará acompanhado(a) pela direção do Clube TRIBO DE DAVI, permanecendo sob sua responsabilidade durante todo esse período.</p>
+                <div style="margin-top: 50px; text-align: right; font-weight: bold;">_____ / _____ / ${currentYear}</div>
                 <div style="margin-top: 40px;">
-                    <p style="margin: 10px 0;">Nome do responsável: ________________________________________________________________</p>
-                    <p style="margin: 10px 0;">CPF: ________________________________________________________________</p>
-                    <p style="margin: 10px 0;">Telefone: (____) ________________________________________________________________</p>
+                    <p style="margin: 15px 0; display: flex; flex-wrap: wrap; gap: 10px;">Nome do responsável: <span style="border-bottom: 1px solid black; flex: 1; min-width: 150px;"></span></p>
+                    <p style="margin: 15px 0; display: flex; flex-wrap: wrap; gap: 10px;">CPF: <span style="border-bottom: 1px solid black; flex: 1; min-width: 150px;"></span></p>
+                    <p style="margin: 15px 0; display: flex; flex-wrap: wrap; gap: 10px;">Telefone: <span style="border-bottom: 1px solid black; flex: 1; min-width: 150px;"></span></p>
                 </div>
                 <div style="margin-top: 80px; text-align: center;">
                     <div style="border-top: 1px solid black; max-width: 400px; width: 100%; margin: 0 auto; padding-top: 5px;">Assinatura do responsável</div>
@@ -2930,7 +2932,7 @@ if (closeBtn) {
 // Initial check for standalone mode (if it's already installed, ensure banner is hidden)
 const sidebarInstallBtn = document.getElementById('sidebar-install-btn');
 const menuInstallBtn = document.getElementById('menu-install-btn');
-
+const pwaInstallCard = document.getElementById('pwa-install-card');
 console.log('PWA Status:', { isStandalone, isIOS });
 
 if (isStandalone) {
@@ -2938,6 +2940,7 @@ if (isStandalone) {
     if (pwaBanner) pwaBanner.style.display = 'none';
     if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
     if (menuInstallBtn) menuInstallBtn.style.display = 'none';
+    if (pwaInstallCard) pwaInstallCard.style.display = 'none';
 } else {
     console.log('App is not standalone, showing install buttons');
     if (sidebarInstallBtn) {
@@ -2945,6 +2948,9 @@ if (isStandalone) {
     }
     if (menuInstallBtn) {
         menuInstallBtn.style.setProperty('display', 'flex', 'important');
+    }
+    if (pwaInstallCard) {
+        pwaInstallCard.style.setProperty('display', 'flex', 'important');
     }
 }
 // menuInstallBtn visibility is handled by CSS (mobile only) and we keep it visible always as requested
@@ -2969,3 +2975,4 @@ const handleInstallClick = async () => {
 
 if (sidebarInstallBtn) sidebarInstallBtn.onclick = handleInstallClick;
 if (menuInstallBtn) menuInstallBtn.onclick = handleInstallClick;
+if (pwaInstallCard) pwaInstallCard.onclick = handleInstallClick;
