@@ -2943,7 +2943,6 @@ const updatePWAUI = () => {
     const isMobile = window.innerWidth <= 768;
 
     if (isStandalone) {
-        console.log('App is standalone');
         if (pwaBanner) pwaBanner.style.display = 'none';
         if (menuInstallBtn) menuInstallBtn.style.display = 'none';
         if (pwaInstallCard) pwaInstallCard.style.display = 'none';
@@ -2952,8 +2951,6 @@ const updatePWAUI = () => {
         if (androidSection) androidSection.style.display = 'none';
         if (iosSection) iosSection.style.display = 'none';
     } else {
-        console.log('App is not standalone');
-        // Only show install options on mobile
         if (isMobile) {
             if (menuInstallBtn) menuInstallBtn.style.setProperty('display', 'flex', 'important');
             if (pwaInstallCard) pwaInstallCard.style.setProperty('display', 'flex', 'important');
@@ -2964,10 +2961,12 @@ const updatePWAUI = () => {
         
         if (installedSection) installedSection.style.display = 'none';
         
+        // MOSTRAR SEMPRE UMA OPÇÃO
         if (isIOS) {
             if (iosSection) iosSection.style.display = 'block';
             if (androidSection) androidSection.style.display = 'none';
         } else {
+            // No Android/Chrome, mostramos a seção sempre que não estiver instalado
             if (androidSection) androidSection.style.display = 'block';
             if (iosSection) iosSection.style.display = 'none';
         }
