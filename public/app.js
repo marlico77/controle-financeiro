@@ -2148,6 +2148,8 @@ const openPaymentModal = (person, month, payment = null) => {
     deleteBtn.style.display = 'none';
     adminActions.style.display = 'none';
     rejectionReasonContainer.style.display = 'none';
+
+
     rejectionForm.style.display = 'none';
     document.getElementById('receipt').parentElement.style.display = 'block';
 
@@ -2159,9 +2161,8 @@ const openPaymentModal = (person, month, payment = null) => {
     multiToggle.checked = false;
     multiSelector.style.display = 'none';
     singleInfo.style.display = 'block';
-    
-    // Clear all checkboxes
-    document.querySelectorAll('#p-months-grid input').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#p-months-grid input').forEach(i => i.checked = false);
+    document.querySelectorAll('.month-grid-item').forEach(item => item.classList.remove('selected'));
 
     if (payment) {
         // Hide multi-month toggle when editing existing single payment
@@ -3068,12 +3069,47 @@ if (menuInstallBtn) menuInstallBtn.onclick = handleInstallClick;
 if (pwaInstallCard) pwaInstallCard.onclick = handleInstallClick;
 if (mainInstallBtn) mainInstallBtn.onclick = handleInstallClick;
 
-// Multi-month toggle listener
-const pMultiToggle = document.getElementById('p-multi-month-toggle');
-if (pMultiToggle) {
-    pMultiToggle.onchange = (e) => {
-        const isChecked = e.target.checked;
-        document.getElementById('p-multi-month-selector').style.display = isChecked ? 'block' : 'none';
-        document.getElementById('p-single-month-info').style.display = isChecked ? 'none' : 'block';
-    };
+// Multi-month logic and interactions
+const initMultiMonthListeners = () => {
+    const pMultiToggle = document.getElementById('p-multi-month-toggle');
+    const pMonthsGrid = document.getElementById('p-months-grid');
+
+    if (pMultiToggle) {
+        pMultiToggle.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            const selector = document.getElementById('p-multi-month-selector');
+            const singleInfo = document.getElementById('p-single-month-info');
+            if (selector) {
+                selector.style.display = isChecked ? 'block' : 'none';
+                if (isChecked) selector.classList.add('animate-slide-down');
+            }
+            if (singleInfo) singleInfo.style.display = isChecked ? 'none' : 'block';
+        });
+    }
+
+    if (pMonthsGrid) {
+        pMonthsGrid.addEventListener('change', (e) => {
+            const input = e.target;
+            const item = input.closest('.month-grid-item');
+            if (item) {
+                item.classList.toggle('selected', input.checked);
+                
+                // Visual feedback
+                if (input.checked) {
+                    item.style.transform = 'scale(0.95)';
+                    setTimeout(() => item.style.transform = '', 100);
+                }
+            }
+        });
+    }
+};
+
+
+
+
+// Initialize on load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMultiMonthListeners);
+} else {
+    initMultiMonthListeners();
 }

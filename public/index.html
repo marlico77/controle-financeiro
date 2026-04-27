@@ -632,31 +632,31 @@ const initApp = () => {
                         </div>
                     </div>
 
-                    <div class="input-group" style="margin-bottom: 1.5rem;">
-                        <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.8rem; cursor: pointer; background: rgba(229, 9, 20, 0.05); padding: 0.8rem; border-radius: 8px; border: 1px dashed var(--accent-color);">
-                            <input type="checkbox" id="p-multi-month-toggle" style="width: 18px; height: 18px;">
-                            <span style="font-weight: 600; color: var(--accent-color);">Este pagamento é referente a vários meses?</span>
+                    <div class="toggle-wrapper">
+                        <span>Este pagamento é referente a vários meses?</span>
+                        <label class="switch">
+                            <input type="checkbox" id="p-multi-month-toggle">
+                            <span class="slider round"></span>
                         </label>
                     </div>
 
-                    <div id="p-multi-month-selector" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px;">
-                        <label style="display: block; margin-bottom: 1rem; font-weight: 600; font-size: 0.9rem;">Selecione os meses incluídos:</label>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;" id="p-months-grid">
-                            <!-- Months checkboxes -->
-                            <label class="month-check"><input type="checkbox" value="1"> Jan</label>
-                            <label class="month-check"><input type="checkbox" value="2"> Fev</label>
-                            <label class="month-check"><input type="checkbox" value="3"> Mar</label>
-                            <label class="month-check"><input type="checkbox" value="4"> Abr</label>
-                            <label class="month-check"><input type="checkbox" value="5"> Mai</label>
-                            <label class="month-check"><input type="checkbox" value="6"> Jun</label>
-                            <label class="month-check"><input type="checkbox" value="7"> Jul</label>
-                            <label class="month-check"><input type="checkbox" value="8"> Ago</label>
-                            <label class="month-check"><input type="checkbox" value="9"> Set</label>
-                            <label class="month-check"><input type="checkbox" value="10"> Out</label>
-                            <label class="month-check"><input type="checkbox" value="11"> Nov</label>
-                            <label class="month-check"><input type="checkbox" value="12"> Dez</label>
+                    <div id="p-multi-month-selector" style="display: none; margin-bottom: 1.5rem; padding: 1.2rem; background: rgba(0,0,0,0.02); border: 1px solid var(--border-color); border-radius: 12px;">
+                        <label style="display: block; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; color: var(--accent-color);">Selecione os meses incluídos:</label>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem;" id="p-months-grid">
+                            <label class="month-grid-item">Jan <input type="checkbox" value="1"></label>
+                            <label class="month-grid-item">Fev <input type="checkbox" value="2"></label>
+                            <label class="month-grid-item">Mar <input type="checkbox" value="3"></label>
+                            <label class="month-grid-item">Abr <input type="checkbox" value="4"></label>
+                            <label class="month-grid-item">Mai <input type="checkbox" value="5"></label>
+                            <label class="month-grid-item">Jun <input type="checkbox" value="6"></label>
+                            <label class="month-grid-item">Jul <input type="checkbox" value="7"></label>
+                            <label class="month-grid-item">Ago <input type="checkbox" value="8"></label>
+                            <label class="month-grid-item">Set <input type="checkbox" value="9"></label>
+                            <label class="month-grid-item">Out <input type="checkbox" value="10"></label>
+                            <label class="month-grid-item">Nov <input type="checkbox" value="11"></label>
+                            <label class="month-grid-item">Dez <input type="checkbox" value="12"></label>
                         </div>
-                        <p style="margin-top: 0.8rem; font-size: 0.8rem; color: var(--text-dim);">O valor total será dividido igualmente entre os meses selecionados.</p>
+                        <p style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-dim); text-align: center;">O valor total será dividido igualmente entre os meses selecionados.</p>
                     </div>
 
                     <div class="input-group">
@@ -1092,6 +1092,6 @@ const initApp = () => {
         </div>
     </div>
 
-    <script src="app.js?v=200"></script>
+    <script src="app.js?v=201"></script>
 </body>
 </html>
