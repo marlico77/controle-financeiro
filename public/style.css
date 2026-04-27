@@ -1891,10 +1891,10 @@ input:checked + .slider:before {
 }
 
 .month-grid-item.selected {
-    background: var(--accent-color);
-    background: linear-gradient(135deg, #e50914 0%, #9b060d 100%);
+    background: #e50914 !important;
     border-color: transparent;
     color: white;
+    box-shadow: none !important;
 }
 
 .month-grid-item input {
