@@ -2933,9 +2933,13 @@ if ('serviceWorker' in navigator) {
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 let deferredPrompt = null;
+// Initial PWA setup
 const pwaBanner = document.getElementById('pwa-install-banner');
 const installBtn = document.getElementById('pwa-install-btn');
 const closeBtn = document.getElementById('pwa-close-btn');
+const menuInstallBtn = document.getElementById('menu-install-btn');
+const pwaInstallCard = document.getElementById('pwa-install-card');
+const mainInstallBtn = document.getElementById('pwa-main-install-btn');
 
 // Show immediately for iOS if not standalone
 if (isIOS && !window.matchMedia('(display-mode: standalone)').matches && !window.navigator.standalone && !sessionStorage.getItem('pwa-dismissed')) {
@@ -2958,13 +2962,15 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 function showPWABanner() {
-    if (pwaBanner) {
-        pwaBanner.style.display = 'block';
+    const banner = document.getElementById('pwa-install-banner');
+    const btn = document.getElementById('pwa-install-btn');
+    if (banner) {
+        banner.style.display = 'block';
         
         // If it's iOS, change button text and behavior
-        if (isIOS) {
-            installBtn.textContent = 'Como Instalar';
-            const pwaTextSpan = pwaBanner.querySelector('.pwa-text span');
+        if (isIOS && btn) {
+            btn.textContent = 'Como Instalar';
+            const pwaTextSpan = banner.querySelector('.pwa-text span');
             if (pwaTextSpan) pwaTextSpan.textContent = 'Toque em compartilhar e "Adicionar à Tela de Início".';
         }
     }
@@ -2982,7 +2988,7 @@ if (installBtn) {
             const { outcome } = await deferredPrompt.userChoice;
             console.log(`User response to the install prompt: ${outcome}`);
             deferredPrompt = null;
-            pwaBanner.style.display = 'none';
+            if (pwaBanner) pwaBanner.style.display = 'none';
         } else {
             // Fallback for when button is clicked but prompt isn't ready
             showAlert('O navegador ainda está preparando a instalação. Por favor, aguarde alguns segundos e tente novamente, ou use o menu do navegador e selecione "Instalar Aplicativo".', 'Quase pronto');
@@ -2992,26 +2998,25 @@ if (installBtn) {
 
 if (closeBtn) {
     closeBtn.onclick = () => {
-        pwaBanner.style.display = 'none';
+        if (pwaBanner) pwaBanner.style.display = 'none';
         sessionStorage.setItem('pwa-dismissed', 'true');
     };
 }
 
-// Initial check for standalone mode
-const menuInstallBtn = document.getElementById('menu-install-btn');
-const pwaInstallCard = document.getElementById('pwa-install-card');
-const androidSection = document.getElementById('android-install-section');
-const iosSection = document.getElementById('ios-install-section');
-const installedSection = document.getElementById('already-installed-section');
-const mainInstallBtn = document.getElementById('pwa-main-install-btn');
-
 console.log('PWA Status:', { isStandalone, isIOS });
 
 const updatePWAUI = () => {
+    // Re-fetch elements to avoid null references if script ran too early
+    const androidSection = document.getElementById('android-install-section');
+    const iosSection = document.getElementById('ios-install-section');
+    const installedSection = document.getElementById('already-installed-section');
+    const menuInstallBtn = document.getElementById('menu-install-btn');
+    const pwaInstallCard = document.getElementById('pwa-install-card');
+    const pwaBanner = document.getElementById('pwa-install-banner');
+
     const isMobile = window.innerWidth <= 768;
-    // isStandalone is now global
     const pwaInstallPage = document.getElementById('pwa-install-page');
-    const isPageActive = pwaInstallPage && pwaInstallPage.style.display === 'block';
+    const isPageActive = state.activeTab === 'pwa-install' || (pwaInstallPage && pwaInstallPage.style.display === 'block');
 
     if (isStandalone) {
         if (pwaBanner) pwaBanner.style.display = 'none';
@@ -3039,7 +3044,7 @@ const updatePWAUI = () => {
                 if (iosSection) iosSection.style.display = 'block';
                 if (androidSection) androidSection.style.display = 'none';
             } else {
-                // No Android/Chrome, mostramos a seção sempre que não estiver instalado
+                // For Android/Chrome or others, show the install button section
                 if (androidSection) androidSection.style.display = 'block';
                 if (iosSection) iosSection.style.display = 'none';
             }
@@ -3061,12 +3066,18 @@ const handleInstallClick = async (e) => {
     
     // Switch to PWA install page if clicked from menu or dashboard card
     if (target === 'pwa-install' || (e && e.currentTarget === pwaInstallCard)) {
-        document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
-        document.getElementById('pwa-install-page').style.display = 'block';
-        document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
-        if (menuInstallBtn) menuInstallBtn.classList.add('active');
-        document.getElementById('page-title').textContent = 'Instalar Aplicativo';
-        if (typeof updatePWAUI === 'function') updatePWAUI();
+        if (typeof switchTab === 'function') {
+            switchTab('pwa-install');
+        } else {
+            // Fallback if switchTab is not available
+            state.activeTab = 'pwa-install';
+            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+            if (pwaInstallPage) pwaInstallPage.style.display = 'block';
+            document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
+            if (menuInstallBtn) menuInstallBtn.classList.add('active');
+            document.getElementById('page-title').textContent = 'Instalar Aplicativo';
+            updatePWAUI();
+        }
         return;
     }
 
