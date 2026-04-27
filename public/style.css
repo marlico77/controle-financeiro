@@ -754,7 +754,7 @@ tfoot td {
     }
 
     #menu-install-btn {
-        display: flex !important;
+        display: none !important; /* Will be controlled by app.js */
     }
 
     .nav-links li {
@@ -769,7 +769,7 @@ tfoot td {
         justify-content: center !important;
         gap: 2px; /* Espaço quase nulo entre ícone e texto */
         border-radius: 4px;
-        background: transparent !important;
+        background: transparent;
         color: #888;
         text-transform: none;
         font-weight: 500;

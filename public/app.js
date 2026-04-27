@@ -2932,6 +2932,7 @@ if (closeBtn) {
 // Initial check for standalone mode (if it's already installed, ensure banner is hidden)
 const sidebarInstallBtn = document.getElementById('sidebar-install-btn');
 const menuInstallBtn = document.getElementById('menu-install-btn');
+const mobileInstallBtn = document.getElementById('mobile-install-btn');
 const pwaInstallCard = document.getElementById('pwa-install-card');
 console.log('PWA Status:', { isStandalone, isIOS });
 
@@ -2940,6 +2941,7 @@ if (isStandalone) {
     if (pwaBanner) pwaBanner.style.display = 'none';
     if (sidebarInstallBtn) sidebarInstallBtn.style.display = 'none';
     if (menuInstallBtn) menuInstallBtn.style.display = 'none';
+    if (mobileInstallBtn) mobileInstallBtn.style.display = 'none';
     if (pwaInstallCard) pwaInstallCard.style.display = 'none';
 } else {
     console.log('App is not standalone, showing install buttons');
@@ -2948,6 +2950,9 @@ if (isStandalone) {
     }
     if (menuInstallBtn) {
         menuInstallBtn.style.setProperty('display', 'flex', 'important');
+    }
+    if (mobileInstallBtn) {
+        mobileInstallBtn.style.setProperty('display', 'flex', 'important');
     }
     if (pwaInstallCard) {
         pwaInstallCard.style.setProperty('display', 'flex', 'important');
@@ -2975,4 +2980,5 @@ const handleInstallClick = async () => {
 
 if (sidebarInstallBtn) sidebarInstallBtn.onclick = handleInstallClick;
 if (menuInstallBtn) menuInstallBtn.onclick = handleInstallClick;
+if (mobileInstallBtn) mobileInstallBtn.onclick = handleInstallClick;
 if (pwaInstallCard) pwaInstallCard.onclick = handleInstallClick;
