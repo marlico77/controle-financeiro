@@ -819,12 +819,17 @@ async function loadInitialData() {
         if (state.role === 'admin') {
             renderPeople();
             
-            // Check for pending approvals
+            // Check for pending approvals - Transform into Central Modal
             const pendingPayments = state.payments.filter(p => p.status === 'pending');
             if (pendingPayments.length > 0) {
                 setTimeout(() => {
                     if (state.role === 'admin') { 
-                        showStatus(`⚠️ ATENÇÃO: Existem ${pendingPayments.length} comprovante(s) aguardando aprovação.`, 'info');
+                        const modal = document.getElementById('notification-modal');
+                        const msgEl = document.getElementById('notif-modal-message');
+                        if (modal && msgEl) {
+                            msgEl.innerHTML = `Existem <strong>${pendingPayments.length}</strong> comprovante(s) aguardando sua aprovação no sistema.`;
+                            modal.style.display = 'flex';
+                        }
                     }
                 }, 1500);
             }
@@ -2830,6 +2835,7 @@ window.addEventListener('load', () => {
         checkAuth();
     } else {
         loginSection.style.display = 'flex';
+        mainSection.style.display = 'none';
     }
 });
 
