@@ -3089,30 +3089,29 @@ if (mainInstallBtn) mainInstallBtn.onclick = handleInstallClick;
 
 // Multi-month logic and interactions (Robust Event Delegation)
 const initMultiMonthListeners = () => {
-    // Listen for changes globally on the document to avoid attachment issues
-    document.addEventListener('change', (e) => {
+    // Listen for changes and clicks globally
+    const handleInteraction = (e) => {
         if (e.target.id === 'p-multi-month-toggle') {
             const isChecked = e.target.checked;
-            const selector = document.getElementById('p-multi-month-selector');
-            const singleInfo = document.getElementById('p-single-month-info');
-            
-            if (selector) {
-                selector.style.display = isChecked ? 'block' : 'none';
-                if (isChecked) selector.classList.add('animate-slide-down');
-            }
-            if (singleInfo) singleInfo.style.display = isChecked ? 'none' : 'block';
+            window.toggleMultiMonth(isChecked);
         }
 
-        // Handle month grid item changes
-        if (e.target.closest('#p-months-grid')) {
-            const input = e.target;
-            const item = input.closest('.month-grid-item');
-            if (item) {
-                item.classList.toggle('selected', input.checked);
+        // Handle month grid item clicks (Robust Selection)
+        const monthItem = e.target.closest('.month-grid-item');
+        if (monthItem && e.type === 'click') {
+            const input = monthItem.querySelector('input');
+            if (input) {
+                input.checked = !input.checked;
+                monthItem.classList.toggle('selected', input.checked);
             }
         }
-    });
+    };
+
+    document.addEventListener('change', handleInteraction);
+    document.addEventListener('click', handleInteraction);
 };
+
+
 
 
 
