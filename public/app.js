@@ -2931,6 +2931,7 @@ if ('serviceWorker' in navigator) {
 // --- PWA Installation Logic ---
 // PWA State Management
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 let deferredPrompt = null;
 const pwaBanner = document.getElementById('pwa-install-banner');
 const installBtn = document.getElementById('pwa-install-btn');
@@ -3008,7 +3009,7 @@ console.log('PWA Status:', { isStandalone, isIOS });
 
 const updatePWAUI = () => {
     const isMobile = window.innerWidth <= 768;
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    // isStandalone is now global
     const pwaInstallPage = document.getElementById('pwa-install-page');
     const isPageActive = pwaInstallPage && pwaInstallPage.style.display === 'block';
 
