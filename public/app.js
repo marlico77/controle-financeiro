@@ -2839,6 +2839,9 @@ const originalSwitchTab = switchTab;
 switchTab = (target) => {
     originalSwitchTab(target);
     setTimeout(initStickyScrollbars, 200);
+    if (target === 'pwa-install' && typeof updatePWAUI === 'function') {
+        updatePWAUI();
+    }
 };
 
 // Start initialization on window load for total stability
@@ -2861,16 +2864,15 @@ if ('serviceWorker' in navigator) {
 }
 
 // --- PWA Installation Logic ---
-let deferredPrompt;
+// PWA State Management
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+let deferredPrompt = null;
 const pwaBanner = document.getElementById('pwa-install-banner');
 const installBtn = document.getElementById('pwa-install-btn');
 const closeBtn = document.getElementById('pwa-close-btn');
 
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-
 // Show immediately for iOS if not standalone
-if (isIOS && !isStandalone && !sessionStorage.getItem('pwa-dismissed')) {
+if (isIOS && !window.matchMedia('(display-mode: standalone)').matches && !window.navigator.standalone && !sessionStorage.getItem('pwa-dismissed')) {
     setTimeout(showPWABanner, 2000); // Small delay for better UX
 }
 
@@ -2941,16 +2943,22 @@ console.log('PWA Status:', { isStandalone, isIOS });
 
 const updatePWAUI = () => {
     const isMobile = window.innerWidth <= 768;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    const pwaInstallPage = document.getElementById('pwa-install-page');
+    const isPageActive = pwaInstallPage && pwaInstallPage.style.display === 'block';
 
     if (isStandalone) {
         if (pwaBanner) pwaBanner.style.display = 'none';
         if (menuInstallBtn) menuInstallBtn.style.display = 'none';
         if (pwaInstallCard) pwaInstallCard.style.display = 'none';
         
-        if (installedSection) installedSection.style.display = 'block';
-        if (androidSection) androidSection.style.display = 'none';
-        if (iosSection) iosSection.style.display = 'none';
+        if (isPageActive) {
+            if (installedSection) installedSection.style.display = 'block';
+            if (androidSection) androidSection.style.display = 'none';
+            if (iosSection) iosSection.style.display = 'none';
+        }
     } else {
+        // Handle Banner/Menu Visibility
         if (isMobile) {
             if (menuInstallBtn) menuInstallBtn.style.setProperty('display', 'flex', 'important');
             if (pwaInstallCard) pwaInstallCard.style.setProperty('display', 'flex', 'important');
@@ -2958,17 +2966,18 @@ const updatePWAUI = () => {
             if (menuInstallBtn) menuInstallBtn.style.display = 'none';
             if (pwaInstallCard) pwaInstallCard.style.display = 'none';
         }
-        
-        if (installedSection) installedSection.style.display = 'none';
-        
-        // MOSTRAR SEMPRE UMA OPÇÃO
-        if (isIOS) {
-            if (iosSection) iosSection.style.display = 'block';
-            if (androidSection) androidSection.style.display = 'none';
-        } else {
-            // No Android/Chrome, mostramos a seção sempre que não estiver instalado
-            if (androidSection) androidSection.style.display = 'block';
-            if (iosSection) iosSection.style.display = 'none';
+
+        // Handle Page Content Visibility
+        if (isPageActive) {
+            if (isIOS) {
+                if (iosSection) iosSection.style.display = 'block';
+                if (androidSection) androidSection.style.display = 'none';
+            } else {
+                // No Android/Chrome, mostramos a seção sempre que não estiver instalado
+                if (androidSection) androidSection.style.display = 'block';
+                if (iosSection) iosSection.style.display = 'none';
+            }
+            if (installedSection) installedSection.style.display = 'none';
         }
     }
 };
@@ -2991,6 +3000,7 @@ const handleInstallClick = async (e) => {
         document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
         if (menuInstallBtn) menuInstallBtn.classList.add('active');
         document.getElementById('page-title').textContent = 'Instalar Aplicativo';
+        if (typeof updatePWAUI === 'function') updatePWAUI();
         return;
     }
 
