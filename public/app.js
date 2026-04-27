@@ -1683,11 +1683,18 @@ const updateDashboardStats = () => {
         const totalCashElem = document.getElementById('stat-total-cash');
         if (totalCashElem) totalCashElem.textContent = `R$ ${totalCash.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         
-        const direcaoStat = document.getElementById('stat-direcao-total');
-        const desbravaStat = document.getElementById('stat-desbrava-total');
+        const direcaoStat = document.getElementById('stat-direcao');
+        const desbravaStat = document.getElementById('stat-desbravadores');
+        const eventosStat = document.getElementById('stat-eventos');
+        const outflowsStat = document.getElementById('stat-total-outflows');
+        const outflowsCard = document.getElementById('stat-outflows-card');
         
         if (direcaoStat) direcaoStat.textContent = `R$ ${direcaoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         if (desbravaStat) desbravaStat.textContent = `R$ ${desbravadoresTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        if (eventosStat) eventosStat.textContent = `R$ ${eventosTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        
+        if (outflowsStat) outflowsStat.textContent = `R$ ${totalOutflows.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        if (outflowsCard) outflowsCard.style.display = 'block';
         
         // Gráfico de pizza: Mensalidades vs Eventos vs Despesas vs Vendas
         let mensalidadesPuro = 0;
@@ -1988,8 +1995,9 @@ let renderDashboard = () => {
     const footer = document.getElementById('payments-footer');
     footer.innerHTML = '';
     
-    // Atualizar Dashboard de Mensalidades
+    // Atualizar Dashboard de Mensalidades e Estatísticas Gerais
     renderMensalidadeDashboard();
+    updateDashboardStats();
     
     const searchTerm = document.getElementById('mens-search')?.value.toLowerCase() || '';
     const filteredPeople = state.people.filter(p => p.name.toLowerCase().includes(searchTerm));
