@@ -140,9 +140,11 @@ const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) {
-        console.error(`[AUTH] Verificação falhou: ${err.message}`);
+        console.error(`[AUTH] Verificação falhou: ${err.message} | Token: ${token.substring(0, 15)}...`);
         return res.status(401).json({ error: 'Sessão inválida', details: err.message });
     }
+    
+    console.log(`[AUTH] Token válido. ID Decodificado: ${decoded ? decoded.id : 'NULO'}`);
     
     try {
         // Check mandatory password change in DB
@@ -169,13 +171,6 @@ const authenticateToken = (req, res, next) => {
 
         console.log(`[AUTH] Usuário: ${req.user.username} | Role: ${req.user.role} | ID: ${req.user.personId}`);
         
-        // Log network protocol info for every authenticated request
-        logAction(req, 'NETWORK_HTTP_REQUEST', { 
-            method: req.method, 
-            path: req.path, 
-            protocol: req.protocol,
-            httpVersion: req.httpVersion
-        });
         
         next();
     } catch (err) {

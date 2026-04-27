@@ -565,7 +565,14 @@ async function apiFetch(url, options = {}) {
         headers
     });
     
-    const data = await res.json();
+    let data = {};
+    try {
+        const text = await res.text();
+        data = text ? JSON.parse(text) : {};
+    } catch (e) {
+        console.warn('[API] Resposta não é JSON:', url);
+    }
+
     if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
             const prohibitedSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" style="width: 60px; height: 60px; fill: var(--accent-color);"><path d="M431.2 476.5L163.5 208.8C141.1 240.2 128 278.6 128 320C128 426 214 512 320 512C361.5 512 399.9 498.9 431.2 476.5zM476.5 431.2C498.9 399.8 512 361.4 512 320C512 214 426 128 320 128C278.5 128 240.1 141.1 208.8 163.5L476.5 431.2zM64 320C64 178.6 178.6 64 320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576C178.6 576 64 461.4 64 320z"/></svg>`;
@@ -943,12 +950,23 @@ loginForm.addEventListener('submit', async (e) => {
 });
 
 function logout() {
+    const hadToken = !!localStorage.getItem('token');
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     localStorage.removeItem('username');
     localStorage.removeItem('name');
     localStorage.removeItem('personId');
-    window.location.reload();
+    state.token = null;
+    state.role = null;
+
+    if (hadToken) {
+        window.location.reload();
+    } else {
+        document.getElementById('main-section').style.display = 'none';
+        document.getElementById('login-section').style.display = 'flex';
+        const splash = document.getElementById('splash-screen');
+        if (splash) splash.style.display = 'none';
+    }
 }
 
 if (logoutBtn) logoutBtn.onclick = logout;
