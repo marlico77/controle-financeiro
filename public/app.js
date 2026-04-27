@@ -784,20 +784,9 @@ async function checkAuth() {
             loadInitialData();
         } catch (err) {
             console.error('Auth verification failed:', err);
-            if (splash) {
-                splash.classList.add('fade-out');
-                setTimeout(() => splash.style.display = 'none', 500);
-            }
-            loginSection.style.display = 'flex';
-            mainSection.style.display = 'none';
+            // Don't auto-logout on network errors or simple failures
+            // Only logout if explicit 401/403 is received in apiFetch
         }
-    } else {
-        if (splash) {
-            splash.style.display = 'none';
-            splash.classList.add('fade-out');
-        }
-        loginSection.style.display = 'flex';
-        mainSection.style.display = 'none';
     }
 }
 
@@ -2835,23 +2824,14 @@ switchTab = (target) => {
     setTimeout(initStickyScrollbars, 200);
 };
 
-// Start initialization immediately
-const initApp = () => {
-    const token = localStorage.getItem('token');
-    
-    if (token) {
+// Start initialization on window load for total stability
+window.addEventListener('load', () => {
+    if (localStorage.getItem('token')) {
         checkAuth();
     } else {
         loginSection.style.display = 'flex';
     }
-};
-
-// Run as soon as DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
-} else {
-    initApp();
-}
+});
 
 // --- Service Worker Registration ---
 if ('serviceWorker' in navigator) {
