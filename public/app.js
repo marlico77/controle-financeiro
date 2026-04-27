@@ -1208,30 +1208,33 @@ const renderEvents = () => {
     }
 };
 
-const openEventDetail = async (eventId) => {
+const openEventDetail = async (eventId, preserveUI = false) => {
     try {
         const data = await apiFetch(`/api/events/${eventId}/details`);
         state.currentEvent = data.event;
         state.currentEventParticipants = data.participants;
         state.currentEventPayments = data.payments;
         
-        document.getElementById('events-master-view').style.display = 'none';
-        document.getElementById('events-detail-view').style.display = 'block';
-        document.getElementById('detail-event-title').textContent = data.event.name;
-        
-        // Toggle button visibility
-        if (state.role === 'admin' || state.role === 'secretário') {
-            document.getElementById('add-event-btn').style.display = 'none';
-            document.getElementById('add-participants-btn').style.display = 'block';
+        if (!preserveUI) {
+            document.getElementById('events-master-view').style.display = 'none';
+            document.getElementById('events-detail-view').style.display = 'block';
+            
+            // Toggle button visibility
+            if (state.role === 'admin' || state.role === 'secretário') {
+                document.getElementById('add-event-btn').style.display = 'none';
+                document.getElementById('add-participants-btn').style.display = 'block';
+            }
+
+            // Reset details toggle (apenas na abertura inicial)
+            document.getElementById('event-details-table-container').style.display = 'none';
+            document.getElementById('toggle-event-details').textContent = 'Ver Detalhamento Membro a Membro ↓';
+            
+            // Limpar busca anterior ao abrir novo evento
+            const evSearch = document.getElementById('ev-detail-search');
+            if (evSearch) evSearch.value = '';
         }
 
-        // Reset details toggle (apenas na abertura inicial)
-        document.getElementById('event-details-table-container').style.display = 'none';
-        document.getElementById('toggle-event-details').textContent = 'Ver Detalhamento Membro a Membro ↓';
-        
-        // Limpar busca anterior ao abrir novo evento
-        const evSearch = document.getElementById('ev-detail-search');
-        if (evSearch) evSearch.value = '';
+        document.getElementById('detail-event-title').textContent = data.event.name;
         
         // Ajustar cabeçalho da tabela conforme o tipo de pagamento
         const tableHead = document.querySelector('#event-detail-table thead');
@@ -1420,7 +1423,7 @@ const saveNewParticipants = async () => {
         
         showStatus('Membros adicionados com sucesso!', 'success');
         document.getElementById('event-participants-modal').style.display = 'none';
-        openEventDetail(state.currentEvent.id);
+        openEventDetail(state.currentEvent.id, true);
     } catch (err) {
         showStatus('Erro ao adicionar membros: ' + err.message, 'error');
     }
@@ -1534,7 +1537,7 @@ const deleteEventPayment = async (id) => {
             
             // Refresh current grid view
             const activeEventId = document.getElementById('ep-event-id').value;
-            if (activeEventId) openEventDetail(parseInt(activeEventId));
+            if (activeEventId) openEventDetail(parseInt(activeEventId), true);
         } catch (err) {
             showStatus('Erro ao remover pagamento', 'error');
         }
@@ -1550,7 +1553,8 @@ const approveEventPayment = async (id) => {
     try {
         await apiFetch(`/api/event-payments/${id}/approve`, { method: 'POST' });
         eventPaymentModal.style.display = 'none';
-        fetchEventsData();
+        if (state.currentEvent) openEventDetail(state.currentEvent.id, true);
+        else fetchEventsData();
     } catch (err) { showStatus(err.message, 'error'); }
 };
 
@@ -1561,7 +1565,8 @@ const rejectEventPayment = async (id, reason) => {
             body: JSON.stringify({ reason })
         });
         eventPaymentModal.style.display = 'none';
-        fetchEventsData();
+        if (state.currentEvent) openEventDetail(state.currentEvent.id, true);
+        else fetchEventsData();
     } catch (err) { showStatus(err.message, 'error'); }
 };
 
@@ -2594,7 +2599,7 @@ document.getElementById('event-payment-form').onsubmit = async (e) => {
         });
         if (res.ok) {
             eventPaymentModal.style.display = 'none';
-            if (state.currentEvent) openEventDetail(state.currentEvent.id);
+            if (state.currentEvent) openEventDetail(state.currentEvent.id, true);
             else fetchEventsData();
         } else {
             const data = await res.json();
