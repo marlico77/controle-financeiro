@@ -2929,10 +2929,8 @@ if (closeBtn) {
     };
 }
 
-// Initial check for standalone mode (if it's already installed, ensure banner is hidden)
-const sidebarInstallBtn = document.getElementById('sidebar-install-btn');
+// Initial check for standalone mode
 const menuInstallBtn = document.getElementById('menu-install-btn');
-const mobileInstallBtn = document.getElementById('mobile-install-btn');
 const pwaInstallCard = document.getElementById('pwa-install-card');
 const androidSection = document.getElementById('android-install-section');
 const iosSection = document.getElementById('ios-install-section');
@@ -2942,20 +2940,30 @@ const mainInstallBtn = document.getElementById('pwa-main-install-btn');
 console.log('PWA Status:', { isStandalone, isIOS });
 
 const updatePWAUI = () => {
-    if (sidebarInstallBtn) sidebarInstallBtn.style.setProperty('display', 'flex', 'important');
-    if (menuInstallBtn) menuInstallBtn.style.setProperty('display', 'flex', 'important');
-    if (mobileInstallBtn) mobileInstallBtn.style.setProperty('display', 'flex', 'important');
-    if (pwaInstallCard) pwaInstallCard.style.setProperty('display', 'flex', 'important');
+    const isMobile = window.innerWidth <= 768;
 
     if (isStandalone) {
         console.log('App is standalone');
         if (pwaBanner) pwaBanner.style.display = 'none';
+        if (menuInstallBtn) menuInstallBtn.style.display = 'none';
+        if (pwaInstallCard) pwaInstallCard.style.display = 'none';
+        
         if (installedSection) installedSection.style.display = 'block';
         if (androidSection) androidSection.style.display = 'none';
         if (iosSection) iosSection.style.display = 'none';
     } else {
         console.log('App is not standalone');
+        // Only show install options on mobile
+        if (isMobile) {
+            if (menuInstallBtn) menuInstallBtn.style.setProperty('display', 'flex', 'important');
+            if (pwaInstallCard) pwaInstallCard.style.setProperty('display', 'flex', 'important');
+        } else {
+            if (menuInstallBtn) menuInstallBtn.style.display = 'none';
+            if (pwaInstallCard) pwaInstallCard.style.display = 'none';
+        }
+        
         if (installedSection) installedSection.style.display = 'none';
+        
         if (isIOS) {
             if (iosSection) iosSection.style.display = 'block';
             if (androidSection) androidSection.style.display = 'none';
@@ -2967,6 +2975,7 @@ const updatePWAUI = () => {
 };
 
 updatePWAUI();
+window.addEventListener('resize', updatePWAUI);
 
 const handleInstallClick = async (e) => {
     if (e) {
@@ -2976,26 +2985,20 @@ const handleInstallClick = async (e) => {
 
     const target = (e && e.currentTarget) ? e.currentTarget.getAttribute('data-target') : null;
     
-    // Switch to PWA install page if clicked from menu/sidebar/card
+    // Switch to PWA install page if clicked from menu or dashboard card
     if (target === 'pwa-install' || (e && e.currentTarget === pwaInstallCard)) {
         document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
         document.getElementById('pwa-install-page').style.display = 'block';
         document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
         if (menuInstallBtn) menuInstallBtn.classList.add('active');
         document.getElementById('page-title').textContent = 'Instalar Aplicativo';
-        if (window.innerWidth <= 768 && !document.querySelector('.sidebar').classList.contains('hidden')) {
-             // If sidebar is open, we might want to close it, but usually it's hidden on mobile anyway
-        }
         return;
     }
 
-    if (isStandalone) {
-        showAlert('O aplicativo já está instalado!', 'info');
-        return;
-    }
+    if (isStandalone) return;
 
     if (isIOS) {
-        // Just make sure they see the instructions
+        // Show instructions page
         document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
         document.getElementById('pwa-install-page').style.display = 'block';
         document.getElementById('page-title').textContent = 'Instalar no iOS';
@@ -3003,7 +3006,7 @@ const handleInstallClick = async (e) => {
     }
 
     if (!deferredPrompt) {
-        // Show help/instructions if direct prompt isn't ready
+        // Show install page if prompt not ready
         document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
         document.getElementById('pwa-install-page').style.display = 'block';
         return;
@@ -3016,8 +3019,6 @@ const handleInstallClick = async (e) => {
     updatePWAUI();
 };
 
-if (sidebarInstallBtn) sidebarInstallBtn.onclick = handleInstallClick;
 if (menuInstallBtn) menuInstallBtn.onclick = handleInstallClick;
-if (mobileInstallBtn) mobileInstallBtn.onclick = handleInstallClick;
 if (pwaInstallCard) pwaInstallCard.onclick = handleInstallClick;
 if (mainInstallBtn) mainInstallBtn.onclick = handleInstallClick;

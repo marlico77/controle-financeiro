@@ -14,6 +14,10 @@
     --glass-blur: 10px;
 }
 
+#menu-install-btn {
+    display: none !important; /* Hidden on Desktop */
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -754,7 +758,15 @@ tfoot td {
     }
 
     #menu-install-btn {
-        display: flex; /* Always visible in mobile nav */
+        display: flex !important; /* Visible on Mobile */
+        background: transparent !important;
+        color: #888 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    #menu-install-btn.active {
+        color: var(--accent-color) !important;
     }
 
     .nav-links li {

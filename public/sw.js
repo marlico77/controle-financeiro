@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestao-fin-v7';
+const CACHE_NAME = 'gestao-fin-v8';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
