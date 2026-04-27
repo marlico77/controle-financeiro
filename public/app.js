@@ -747,13 +747,6 @@ async function checkAuth() {
                 setTimeout(() => splash.style.display = 'none', 500);
             }
             
-            // Fetch notifications for the user
-            fetchNotifications();
-            
-            // Ask for push permission if not already granted
-            if ('serviceWorker' in navigator && Notification.permission === 'default') {
-                setTimeout(requestPushPermission, 5000); // Ask after 5s
-            }
             
             // --- Tab Visibility Logic Based on Role ---
             const isAdmin = state.role === 'admin';
@@ -805,7 +798,6 @@ async function checkAuth() {
             }
 
             initializeSidebar();
-            initializeNotifications();
 
             // Restore active tab
             if (state.role === 'member' && (state.activeTab === 'people' || state.activeTab === 'reports')) {
@@ -817,6 +809,14 @@ async function checkAuth() {
             switchTab(state.activeTab);
             resetInactivityTimer(); // Start timer after auth verification
             loadInitialData();
+
+            // Mensagens e Notificações (em segundo plano para não travar o login)
+            setTimeout(() => {
+                fetchNotifications();
+                if ('serviceWorker' in navigator && Notification.permission === 'default') {
+                    requestPushPermission();
+                }
+            }, 2000);
         } catch (err) {
             console.error('Auth verification failed:', err);
         }
