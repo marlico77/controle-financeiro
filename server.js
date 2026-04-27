@@ -6,12 +6,40 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const xlsx = require('xlsx');
+const sharp = require('sharp');
 const db = require('./database');
 const UAParser = require('ua-parser-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.JWT_SECRET;
+
+// --- Image Compression Helper ---
+const compressReceipt = async (file) => {
+    if (!file) return null;
+    
+    // Only compress images
+    if (file.mimetype.startsWith('image/')) {
+        try {
+            console.log(`[COMPRESS] Otimizando imagem: ${file.originalname} (${(file.size / 1024).toFixed(1)} KB)`);
+            const buffer = await sharp(file.buffer)
+                .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
+                .jpeg({ quality: 80, progressive: true })
+                .toBuffer();
+            console.log(`[COMPRESS] Sucesso: ${(buffer.length / 1024).toFixed(1)} KB`);
+            return {
+                buffer,
+                mimetype: 'image/jpeg' // We convert all to JPEG for better compression
+            };
+        } catch (err) {
+            console.error('[COMPRESS] Erro ao comprimir imagem, usando original:', err);
+            return { buffer: file.buffer, mimetype: file.mimetype };
+        }
+    }
+    
+    // Return original for PDFs and other files
+    return { buffer: file.buffer, mimetype: file.mimetype };
+};
 
 console.log(`[SERVER] Started on PORT ${PORT} - ENV: ${process.env.NODE_ENV || 'development'}`);
 
@@ -536,12 +564,12 @@ app.get('/api/payments', authenticateToken, async (req, res) => {
 
   try {
     if (req.user.role === 'admin') {
-      const result = await db.query('SELECT * FROM payments WHERE year = $1', [targetYear]);
+      const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason FROM payments WHERE year = $1', [targetYear]);
       return res.json(result.rows);
     }
 
     if (!req.user.personId) return res.json([]);
-    const result = await db.query('SELECT * FROM payments WHERE person_id = $1 AND year = $2', [req.user.personId, targetYear]);
+    const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason FROM payments WHERE person_id = $1 AND year = $2', [req.user.personId, targetYear]);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar pagamentos' });
@@ -551,7 +579,7 @@ app.get('/api/payments', authenticateToken, async (req, res) => {
 app.get('/api/payments/detail/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
-        const result = await db.query('SELECT * FROM payments WHERE id = $1', [req.params.id]);
+        const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason FROM payments WHERE id = $1', [req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Pagamento não encontrado' });
         res.json(result.rows[0]);
     } catch (err) {
@@ -563,8 +591,9 @@ app.post('/api/payments', authenticateToken, upload.single('receipt'), async (re
   const { person_id, month, year, amount } = req.body;
   
   // Use memory buffer and mime type from multer
-  const receipt_content = req.file ? req.file.buffer : null;
-  const receipt_mime = req.file ? req.file.mimetype : null;
+  const compressed = await compressReceipt(req.file);
+  const receipt_content = compressed ? compressed.buffer : null;
+  const receipt_mime = compressed ? compressed.mimetype : null;
   const receipt_filename = req.file ? `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
   const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
 
@@ -875,7 +904,7 @@ app.get('/api/events/:id/details', authenticateToken, async (req, res) => {
                 ORDER BY p.name ASC
             `, [id]);
             participants = pResult.rows;
-            const payResult = await db.query('SELECT * FROM event_payments WHERE event_id = $1', [id]);
+            const payResult = await db.query('SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, rejection_reason FROM event_payments WHERE event_id = $1', [id]);
             payments = payResult.rows;
         } else {
             const pResult = await db.query(`
@@ -885,7 +914,7 @@ app.get('/api/events/:id/details', authenticateToken, async (req, res) => {
                 WHERE ep.event_id = $1 AND p.id = $2
             `, [id, req.user.personId]);
             participants = pResult.rows;
-            const payResult = await db.query('SELECT * FROM event_payments WHERE event_id = $1 AND person_id = $2', [id, req.user.personId]);
+            const payResult = await db.query('SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, rejection_reason FROM event_payments WHERE event_id = $1 AND person_id = $2', [id, req.user.personId]);
             payments = payResult.rows;
         }
 
@@ -911,7 +940,7 @@ app.get('/api/event-payments', authenticateToken, async (req, res) => {
     const { event_id, month, year } = req.query;
     try {
         if (req.user.role === 'admin') {
-            let sql = 'SELECT ep.*, p.name as member_name FROM event_payments ep JOIN people p ON ep.person_id = p.id';
+            let sql = 'SELECT ep.id, ep.event_id, ep.person_id, ep.amount, ep.month, ep.year, ep.status, ep.receipt_path, ep.receipt_mime, ep.rejection_reason, p.name as member_name FROM event_payments ep JOIN people p ON ep.person_id = p.id';
             let params = [];
             let conditions = [];
             if (event_id) { conditions.push('ep.event_id = $' + (params.length + 1)); params.push(event_id); }
@@ -925,7 +954,7 @@ app.get('/api/event-payments', authenticateToken, async (req, res) => {
         }
         
         if (!req.user.personId) return res.json([]);
-        let sql = 'SELECT * FROM event_payments WHERE person_id = $1';
+        let sql = 'SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, rejection_reason FROM event_payments WHERE person_id = $1';
         let params = [req.user.personId];
         if (event_id) { sql += ' AND event_id = $' + (params.length + 1); params.push(event_id); }
         if (month) { sql += ' AND month = $' + (params.length + 1); params.push(month); }
@@ -941,7 +970,7 @@ app.get('/api/event-payments', authenticateToken, async (req, res) => {
 app.get('/api/event-payments/detail/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
-        const result = await db.query('SELECT * FROM event_payments WHERE id = $1', [req.params.id]);
+        const result = await db.query('SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, rejection_reason FROM event_payments WHERE id = $1', [req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Pagamento de evento não encontrado' });
         res.json(result.rows[0]);
     } catch (err) {
@@ -952,8 +981,9 @@ app.get('/api/event-payments/detail/:id', authenticateToken, async (req, res) =>
 app.post('/api/event-payments', authenticateToken, upload.single('receipt'), async (req, res) => {
     const { person_id, event_id, amount, month, year } = req.body || {};
     
-    const receipt_content = req.file ? req.file.buffer : null;
-    const receipt_mime = req.file ? req.file.mimetype : null;
+    const compressed = await compressReceipt(req.file);
+    const receipt_content = compressed ? compressed.buffer : null;
+    const receipt_mime = compressed ? compressed.mimetype : null;
     const receipt_filename = req.file ? `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
     const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
     
@@ -1080,7 +1110,7 @@ app.delete('/api/event-payments/:id', authenticateToken, async (req, res) => {
 app.get('/api/outflows', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     try {
-        const result = await db.query('SELECT * FROM outflows ORDER BY date DESC');
+        const result = await db.query('SELECT id, amount, category, date, description, receipt_path, receipt_mime, created_at FROM outflows ORDER BY date DESC');
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: 'Erro ao buscar saídas' });
@@ -1095,8 +1125,9 @@ app.post('/api/outflows', authenticateToken, upload.single('receipt'), async (re
         return res.status(400).json({ error: 'Valor, categoria e data são obrigatórios.' });
     }
 
-    const receipt_content = req.file ? req.file.buffer : null;
-    const receipt_mime = req.file ? req.file.mimetype : null;
+    const compressed = await compressReceipt(req.file);
+    const receipt_content = compressed ? compressed.buffer : null;
+    const receipt_mime = compressed ? compressed.mimetype : null;
     const receipt_filename = req.file ? `${Date.now()}-outflow-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
     const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
 
