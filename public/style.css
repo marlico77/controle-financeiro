@@ -1350,20 +1350,21 @@ tfoot td {
     position: relative; 
     text-align: center; 
     border-bottom: 2px solid #000; 
-    padding: 0 0 1rem 0; 
+    padding: 1rem 0; 
     margin-bottom: 2rem; 
-    min-height: 60px; 
     display: flex; 
-    flex-direction: column; 
-    justify-content: flex-end; 
+    flex-direction: row; 
+    justify-content: center; 
     align-items: center; 
+    gap: 2rem;
 }
 .report-header img { 
-    position: absolute; 
-    left: 0; 
-    top: -70px; 
-    height: 100px; 
+    height: 90px; 
     width: auto; 
+    flex-shrink: 0;
+}
+.report-header div {
+    text-align: left;
 }
 
 /* Responsive Wrapper for Report Tables */
@@ -1436,6 +1437,14 @@ tfoot td {
         min-height: 100px !important; /* Remove the 1000px height constraint */
         width: 100% !important;
         box-sizing: border-box !important;
+    }
+    .report-header {
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+        text-align: center !important;
+    }
+    .report-header div {
+        text-align: center !important;
     }
     .report-header img {
         position: static;
