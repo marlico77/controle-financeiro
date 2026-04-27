@@ -2837,24 +2837,11 @@ switchTab = (target) => {
 
 // Start initialization immediately
 const initApp = () => {
-    const splash = document.getElementById('splash-screen');
     const token = localStorage.getItem('token');
     
-    const hideSplash = () => {
-        if (splash) {
-            splash.classList.add('fade-out');
-            splash.style.display = 'none';
-            splash.style.pointerEvents = 'none';
-        }
-    };
-
-    // Failsafe: Hard hide splash after 3 seconds no matter what
-    setTimeout(hideSplash, 3000);
-
     if (token) {
         checkAuth();
     } else {
-        hideSplash();
         loginSection.style.display = 'flex';
     }
 };

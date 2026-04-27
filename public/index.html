@@ -15,7 +15,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="logo.png">
-    <link rel="stylesheet" href="style.css?v=102">
+    <link rel="stylesheet" href="style.css?v=200">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="dark-theme">
@@ -24,8 +24,8 @@
         
         <!-- Splash screen disabled for emergency recovery -->
 
-        <!-- Login Section -->
-        <section id="login-section" class="full-screen-center" style="display: none;">
+        <!-- Login Section (Visible by default) -->
+        <section id="login-section" class="full-screen-center">
             <div class="glass-card login-card animate-fade-in">
                 <h1>Login</h1>
                 <form id="login-form">
@@ -406,6 +406,18 @@
                             <h3 style="color: var(--accent-color); margin-bottom: 0.5rem; font-size: 1.8rem;">Central de Relatórios</h3>
                             <p style="color: var(--text-dim);">Gere extratos detalhados de mensalidades, membros ou eventos.</p>
                         </div>
+                        <script>
+const initApp = () => {
+    const token = localStorage.getItem('token');
+    
+    if (token) {
+        checkAuth();
+    } else {
+        loginSection.style.display = 'flex';
+        mainSection.style.display = 'none';
+    }
+};
+</script>
                         <button id="open-report-selector-btn" onclick="const m = document.getElementById('report-selector-modal'); if(m) m.style.display='flex'; window.toggleReportFields();" class="btn-primary" style="max-width: 300px; background: black; color: white; padding: 1.2rem 2rem; font-weight: 700;">Gerar Novo Relatório</button>
                     </div>
                 </div>
@@ -984,6 +996,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=102"></script>
+    <script src="app.js?v=200"></script>
 </body>
 </html>
