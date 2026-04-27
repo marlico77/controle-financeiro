@@ -9,6 +9,9 @@ const xlsx = require('xlsx');
 const sharp = require('sharp');
 const db = require('./database');
 const UAParser = require('ua-parser-js');
+const { createClient } = require('@supabase/supabase-js');
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -607,8 +610,28 @@ app.post('/api/payments', authenticateToken, upload.single('receipt'), async (re
     const existingResult = await db.query('SELECT id, receipt_path, status FROM payments WHERE person_id = $1 AND month = $2 AND year = $3', [person_id, month, year]);
     const existing = existingResult.rows[0];
 
+    let isUploadedToStorage = false;
+    // Upload to Supabase Storage if file exists
+    if (req.file && compressed) {
+        console.log(`[STORAGE] Fazendo upload para Supabase: ${receipt_filename}`);
+        const { error } = await supabase.storage
+            .from('receipts')
+            .upload(receipt_filename, compressed.buffer, {
+                contentType: compressed.mimetype,
+                upsert: true
+            });
+        
+        if (error) {
+            console.error('[STORAGE] Erro no upload Supabase:', error);
+        } else {
+            isUploadedToStorage = true;
+        }
+    }
+
+    const finalDBContent = isUploadedToStorage ? null : receipt_content;
+
     if (existing) {
-        const finalContent = receipt_content || existing.receipt_content;
+        const finalContent = finalDBContent || existing.receipt_content;
         const finalMime = receipt_mime || existing.receipt_mime;
         const finalPath = receipt_path || existing.receipt_path;
 
@@ -632,7 +655,7 @@ app.post('/api/payments', authenticateToken, upload.single('receipt'), async (re
             INSERT INTO payments (person_id, month, year, amount, receipt_path, receipt_content, receipt_mime, status) 
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
             RETURNING id
-        `, [person_id, month, year, amount, receipt_path, receipt_content, receipt_mime, status]);
+        `, [person_id, month, year, amount, receipt_path, finalDBContent, receipt_mime, status]);
         const newId = insertResult.rows[0].id;
         
         if (status === 'pending') {
@@ -997,6 +1020,21 @@ app.post('/api/event-payments', authenticateToken, upload.single('receipt'), asy
     try {
         const status = req.user.role === 'admin' ? 'approved' : 'pending';
 
+        let isUploadedToStorage = false;
+        // Upload to Supabase Storage if file exists
+        if (req.file && compressed) {
+            console.log(`[STORAGE] Upload Event Receipt: ${receipt_filename}`);
+            const { error } = await supabase.storage
+                .from('receipts')
+                .upload(receipt_filename, compressed.buffer, {
+                    contentType: compressed.mimetype,
+                    upsert: true
+                });
+            if (!error) isUploadedToStorage = true;
+        }
+
+        const finalDBContent = isUploadedToStorage ? null : receipt_content;
+
         const existingSql = (month && year)
             ? 'SELECT id FROM event_payments WHERE person_id = $1 AND event_id = $2 AND month = $3 AND year = $4'
             : 'SELECT id FROM event_payments WHERE person_id = $1 AND event_id = $2 AND month IS NULL';
@@ -1013,7 +1051,7 @@ app.post('/api/event-payments', authenticateToken, upload.single('receipt'), asy
                 UPDATE event_payments 
                 SET amount = $1, receipt_path = COALESCE($2, receipt_path), receipt_content = COALESCE($3, receipt_content), receipt_mime = COALESCE($4, receipt_mime), status = $5, rejection_reason = NULL 
                 WHERE id = $6
-            `, [amount, receipt_path, receipt_content, receipt_mime, status, existing.id]);
+            `, [amount, receipt_path, finalDBContent, receipt_mime, status, existing.id]);
             
             if (status === 'pending') {
                 const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
@@ -1032,7 +1070,7 @@ app.post('/api/event-payments', authenticateToken, upload.single('receipt'), asy
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
                 RETURNING id
             `;
-            const insertParams = [effectivePersonId, event_id, amount, month || null, year || null, receipt_path, receipt_content, receipt_mime, status];
+            const insertParams = [effectivePersonId, event_id, amount, month || null, year || null, receipt_path, finalDBContent, receipt_mime, status];
             const insertResult = await db.query(insertSql, insertParams);
             const newId = insertResult.rows[0].id;
 
@@ -1118,24 +1156,39 @@ app.get('/api/outflows', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/outflows', authenticateToken, upload.single('receipt'), async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
-    const { amount, category, date, description } = req.body;
-    
-    if (!amount || !category || !date) {
-        return res.status(400).json({ error: 'Valor, categoria e data são obrigatórios.' });
-    }
-
-    const compressed = await compressReceipt(req.file);
-    const receipt_content = compressed ? compressed.buffer : null;
-    const receipt_mime = compressed ? compressed.mimetype : null;
-    const receipt_filename = req.file ? `${Date.now()}-outflow-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
-    const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
-
     try {
+        if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+        const { amount, category, date, description } = req.body;
+        
+        if (!amount || !category || !date) {
+            return res.status(400).json({ error: 'Valor, categoria e data são obrigatórios.' });
+        }
+
+        const compressed = await compressReceipt(req.file);
+        const receipt_content = compressed ? compressed.buffer : null;
+        const receipt_mime = compressed ? compressed.mimetype : null;
+        const receipt_filename = req.file ? `${Date.now()}-outflow-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
+        const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
+
+        let isUploadedToStorage = false;
+        // Upload to Supabase Storage if file exists
+        if (req.file && compressed) {
+            console.log(`[STORAGE] Upload Outflow Receipt: ${receipt_filename}`);
+            const { error } = await supabase.storage
+                .from('receipts')
+                .upload(receipt_filename, compressed.buffer, {
+                    contentType: compressed.mimetype,
+                    upsert: true
+                });
+            if (!error) isUploadedToStorage = true;
+        }
+
+        const finalDBContent = isUploadedToStorage ? null : receipt_content;
+
         await db.query(`
             INSERT INTO outflows (amount, category, date, description, receipt_path, receipt_content, receipt_mime) 
             VALUES ($1, $2, $3, $4, $5, $6, $7)
-        `, [amount, category, date, description || null, receipt_path, receipt_content, receipt_mime]);
+        `, [amount, category, date, description || null, receipt_path, finalDBContent, receipt_mime]);
         
         logAction(req, 'CREATE_OUTFLOW', { amount, category, date });
         res.json({ success: true });
@@ -1167,6 +1220,21 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
     const fullRelativePath = path.join('uploads', filename).replace(/\\/g, '/');
 
     try {
+        // Try to fetch from Supabase Storage first
+        const { data, error } = await supabase.storage
+            .from('receipts')
+            .download(filename);
+
+        if (data) {
+            console.log(`[STORAGE] Arquivo servido via Supabase: ${filename}`);
+            const arrayBuffer = await data.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            res.set('Content-Type', data.type || 'application/octet-stream');
+            return res.send(buffer);
+        }
+
+        console.log(`[STORAGE] Arquivo não no Supabase, tentando banco de dados: ${filename}`);
+        
         // Try monthly payments
         let result = await db.query('SELECT person_id, receipt_content, receipt_mime FROM payments WHERE receipt_path = $1', [fullRelativePath]);
         let payment = result.rows[0];
