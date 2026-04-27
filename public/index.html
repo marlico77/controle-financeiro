@@ -6,6 +6,30 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Financeiro Tribo">
     <title>Financeiro Tribo</title>
+    <script>
+        // Lógica de Seleção Global - Injetada para garantir funcionamento imediato
+        window.selectMonth = (item) => {
+            if (window.event) {
+                window.event.preventDefault();
+                window.event.stopPropagation();
+            }
+            const input = item.querySelector('input');
+            if (input) {
+                input.checked = !input.checked;
+                item.classList.toggle('selected', input.checked);
+                console.log('[MONTH] Selecionado:', input.value, input.checked);
+            }
+        };
+        window.toggleMultiMonth = (isChecked) => {
+            const selector = document.getElementById('p-multi-month-selector');
+            const singleInfo = document.getElementById('p-single-month-info');
+            if (selector) {
+                selector.style.display = isChecked ? 'block' : 'none';
+                if (isChecked) selector.classList.add('animate-slide-down');
+            }
+            if (singleInfo) singleInfo.style.display = isChecked ? 'none' : 'block';
+        };
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -644,19 +668,20 @@ const initApp = () => {
                     <div id="p-multi-month-selector" style="display: none; margin-bottom: 1.5rem; padding: 1.2rem; background: rgba(0,0,0,0.02); border: 1px solid var(--border-color); border-radius: 12px;">
                         <label style="display: block; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; color: var(--accent-color);">Selecione os meses incluídos:</label>
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem;" id="p-months-grid">
-                            <label class="month-grid-item">Jan <input type="checkbox" value="1"></label>
-                            <label class="month-grid-item">Fev <input type="checkbox" value="2"></label>
-                            <label class="month-grid-item">Mar <input type="checkbox" value="3"></label>
-                            <label class="month-grid-item">Abr <input type="checkbox" value="4"></label>
-                            <label class="month-grid-item">Mai <input type="checkbox" value="5"></label>
-                            <label class="month-grid-item">Jun <input type="checkbox" value="6"></label>
-                            <label class="month-grid-item">Jul <input type="checkbox" value="7"></label>
-                            <label class="month-grid-item">Ago <input type="checkbox" value="8"></label>
-                            <label class="month-grid-item">Set <input type="checkbox" value="9"></label>
-                            <label class="month-grid-item">Out <input type="checkbox" value="10"></label>
-                            <label class="month-grid-item">Nov <input type="checkbox" value="11"></label>
-                            <label class="month-grid-item">Dez <input type="checkbox" value="12"></label>
+                            <label class="month-grid-item" onclick="window.selectMonth?.(this)">Jan <input type="checkbox" value="1"></label>
+                            <label class="month-grid-item" onclick="window.selectMonth?.(this)">Fev <input type="checkbox" value="2"></label>
+                            <label class="month-grid-item" onclick="window.selectMonth?.(this)">Mar <input type="checkbox" value="3"></label>
+                            <label class="month-grid-item" onclick="window.selectMonth?.(this)">Abr <input type="checkbox" value="4"></label>
+                            <label class="month-grid-item" onclick="window.selectMonth?.(this)">Mai <input type="checkbox" value="5"></label>
+                            <label class="month-grid-item" onclick="window.selectMonth?.(this)">Jun <input type="checkbox" value="6"></label>
+                            <label class="month-grid-item" onclick="window.selectMonth?.(this)">Jul <input type="checkbox" value="7"></label>
+                            <label class="month-grid-item" onclick="window.selectMonth?.(this)">Ago <input type="checkbox" value="8"></label>
+                            <label class="month-grid-item" onclick="window.selectMonth?.(this)">Set <input type="checkbox" value="9"></label>
+                            <label class="month-grid-item" onclick="window.selectMonth?.(this)">Out <input type="checkbox" value="10"></label>
+                            <label class="month-grid-item" onclick="window.selectMonth?.(this)">Nov <input type="checkbox" value="11"></label>
+                            <label class="month-grid-item" onclick="window.selectMonth?.(this)">Dez <input type="checkbox" value="12"></label>
                         </div>
+
                         <p style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-dim); text-align: center;">O valor total será dividido igualmente entre os meses selecionados.</p>
                     </div>
 
@@ -1093,6 +1118,6 @@ const initApp = () => {
         </div>
     </div>
 
-    <script src="app.js?v=205"></script>
+    <script src="app.js?v=206"></script>
 </body>
 </html>

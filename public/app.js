@@ -3089,27 +3089,14 @@ if (mainInstallBtn) mainInstallBtn.onclick = handleInstallClick;
 
 // Multi-month logic and interactions (Robust Event Delegation)
 const initMultiMonthListeners = () => {
-    // Listen for changes and clicks globally
-    const handleInteraction = (e) => {
+    // Only handling toggle here as fallback, months are handled via window.selectMonth
+    document.addEventListener('change', (e) => {
         if (e.target.id === 'p-multi-month-toggle') {
-            const isChecked = e.target.checked;
-            window.toggleMultiMonth(isChecked);
+            window.toggleMultiMonth(e.target.checked);
         }
-
-        // Handle month grid item clicks (Robust Selection)
-        const monthItem = e.target.closest('.month-grid-item');
-        if (monthItem && e.type === 'click') {
-            const input = monthItem.querySelector('input');
-            if (input) {
-                input.checked = !input.checked;
-                monthItem.classList.toggle('selected', input.checked);
-            }
-        }
-    };
-
-    document.addEventListener('change', handleInteraction);
-    document.addEventListener('click', handleInteraction);
+    });
 };
+
 
 
 
