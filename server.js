@@ -439,7 +439,7 @@ app.get('/api/people', authenticateToken, async (req, res) => {
   try {
     if (req.user.role === 'admin' || req.user.role === 'secretário') {
       const result = await db.query(`
-        SELECT p.*, u.username 
+        SELECT p.*, u.username, u.role 
         FROM people p 
         LEFT JOIN users u ON p.id = u.person_id 
         ORDER BY p.name ASC
@@ -459,7 +459,7 @@ app.get('/api/people', authenticateToken, async (req, res) => {
 app.post('/api/people', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
   
-  let { name, responsible, birth_date, cpf, unit, username, password } = req.body || {};
+  let { name, responsible, birth_date, cpf, unit, username, password, role } = req.body || {};
   if (!name || name.trim().split(/\s+/).length < 2) {
       return res.status(400).json({ error: 'O nome deve conter pelo menos Nome e Sobrenome.' });
   }
@@ -493,12 +493,11 @@ app.post('/api/people', authenticateToken, async (req, res) => {
           finalUsername = finalUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
           finalUsernameUsed = finalUsername;
 
-          const finalPassword = password || 'tribo@2026';
-          const hash = await bcrypt.hash(finalPassword, 10);
+          const finalRole = (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) ? role : 'member';
 
           await client.query(
               'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE)',
-              [finalUsername, hash, 'member', personId]
+              [finalUsername, hash, finalRole, personId]
           );
       }
 
@@ -750,7 +749,7 @@ app.delete('/api/payments/:id', authenticateToken, async (req, res) => {
 // Update person
 app.put('/api/people/:id', authenticateToken, async (req, res) => {
   try {
-    let { name, responsible, birth_date, cpf, unit, username, password } = req.body || {};
+    let { name, responsible, birth_date, cpf, unit, username, password, role } = req.body || {};
     if (username) username = username.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const { id } = req.params;
     
@@ -782,10 +781,22 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
                 if (password) {
                     const salt = bcrypt.genSaltSync(10);
                     const hash = bcrypt.hashSync(password, salt);
-                    await db.query('UPDATE users SET username = $1, password_hash = $2, must_change_password = TRUE WHERE id = $3', 
-                      [username, hash, existingUser.id]);
+                    
+                    // Master can change role
+                    if (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) {
+                        await db.query('UPDATE users SET username = $1, password_hash = $2, role = $3, must_change_password = TRUE WHERE id = $4', 
+                          [username, hash, role, existingUser.id]);
+                    } else {
+                        await db.query('UPDATE users SET username = $1, password_hash = $2, must_change_password = TRUE WHERE id = $3', 
+                          [username, hash, existingUser.id]);
+                    }
                 } else {
-                    await db.query('UPDATE users SET username = $1 WHERE id = $2', [username, existingUser.id]);
+                    // Master can change role even without password change
+                    if (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) {
+                        await db.query('UPDATE users SET username = $1, role = $2 WHERE id = $3', [username, role, existingUser.id]);
+                    } else {
+                        await db.query('UPDATE users SET username = $1 WHERE id = $2', [username, existingUser.id]);
+                    }
                 }
             }
         }

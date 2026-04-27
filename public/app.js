@@ -788,7 +788,7 @@ async function checkAuth() {
                 if (navItems.reports) navItems.reports.style.display = 'flex';
                 if (navItems.authorizations) navItems.authorizations.style.display = 'flex';
                 if (navItems.outflows) navItems.outflows.style.display = 'flex';
-                if (navItems.sales) navItems.sales.style.display = 'flex';
+                if (navItems.sales) navItems.sales.style.display = isAdmin ? 'flex' : 'none';
                 
                 // Logs ONLY for master
                 if (navItems.logs) navItems.logs.style.display = isMaster ? 'flex' : 'none';
@@ -2222,7 +2222,7 @@ const openPaymentModal = (person, month, payment = null) => {
             if (navOutflows) navOutflows.style.display = 'flex';
             
             // navSales selection removed as it is now handled globally or via ID if needed elsewhere.
-            if (navItems.sales) navItems.sales.style.display = 'flex';
+            if (navItems.sales) navItems.sales.style.display = isAdmin ? 'flex' : 'none';
             
             deleteBtn.style.display = 'block';
             deleteBtn.onclick = () => deletePayment(payment.id);
@@ -2344,6 +2344,13 @@ const editPerson = (id) => {
         credentialsSection.style.display = state.role === 'admin' ? 'block' : 'none';
         document.getElementById('u-username').value = person.username || '';
         document.getElementById('u-password').value = ''; // Don't show hashed password
+        
+        const roleSelect = document.getElementById('u-role');
+        if (roleSelect) {
+            roleSelect.value = person.role || 'member';
+            const isMaster = state.username && state.username.toUpperCase() === 'ADMINISTRADOR';
+            roleSelect.disabled = !isMaster;
+        }
     }
     
     // Auto-fill age
@@ -2496,7 +2503,8 @@ document.getElementById('person-form').onsubmit = async (e) => {
         birth_date: document.getElementById('p-birth').value,
         cpf: document.getElementById('p-cpf').value,
         username: document.getElementById('u-username').value,
-        password: document.getElementById('u-password').value
+        password: document.getElementById('u-password').value,
+        role: document.getElementById('u-role').value
     };
     
     if (!formData.name || formData.name.split(/\s+/).length < 2) {

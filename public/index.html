@@ -827,6 +827,14 @@ const initApp = () => {
                             <input type="text" id="u-username">
                         </div>
                         <div class="input-group">
+                            <label for="u-role">Nível de Acesso</label>
+                            <select id="u-role" class="form-control">
+                                <option value="member">Membro (Comum)</option>
+                                <option value="secretário">Secretário</option>
+                                <option value="admin">Administrador</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
                             <label for="u-password">Nova Senha (deixe vazio para manter)</label>
                             <div class="password-wrapper">
                                 <input type="password" id="u-password" placeholder="Digite para trocar">
