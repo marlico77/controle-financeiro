@@ -1249,7 +1249,7 @@ const openEventDetail = async (eventId, preserveUI = false) => {
         
         // Ajustar cabeçalho da tabela conforme o tipo de pagamento
         const tableHead = document.querySelector('#event-detail-table thead');
-        if (data.event.payment_type === 'unico') {
+        if (data.event.payment_type === 'unico' || data.event.payment_type === 'vendas') {
             tableHead.innerHTML = `
                 <tr>
                     <th>Membro</th>
@@ -1280,7 +1280,7 @@ let renderEventDetailGrid = (participants, payments) => {
     const searchTerm = document.getElementById('ev-detail-search')?.value.toLowerCase() || '';
     
     const filteredParticipants = participants.filter(p => p.name.toLowerCase().includes(searchTerm));
-    const isUnico = state.currentEvent.payment_type === 'unico';
+    const isUnico = (state.currentEvent.payment_type === 'unico' || state.currentEvent.payment_type === 'vendas');
 
     // O(n) optimization: Group payments by person_id
     const paymentsMap = new Map();
@@ -1482,7 +1482,7 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
 
     // Reset e Ajuste por tipo de evento
     const dateSelection = document.getElementById('ep-date-selection');
-    if (state.currentEvent && state.currentEvent.payment_type === 'unico') {
+    if (state.currentEvent && (state.currentEvent.payment_type === 'unico' || state.currentEvent.payment_type === 'vendas')) {
         dateSelection.style.display = 'none';
     } else {
         dateSelection.style.display = 'flex';
