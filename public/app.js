@@ -2164,22 +2164,32 @@ const openPaymentModal = (person, month, payment = null) => {
     rejectionForm.style.display = 'none';
     document.getElementById('receipt').parentElement.style.display = 'block';
 
-    // Multi-month Reset
+    // Multi-month Reset & Setup
     const multiToggle = document.getElementById('p-multi-month-toggle');
     const multiSelector = document.getElementById('p-multi-month-selector');
     const singleInfo = document.getElementById('p-single-month-info');
+    const multiWrapper = multiToggle.parentElement.parentElement;
     
     multiToggle.checked = false;
     multiSelector.style.display = 'none';
     singleInfo.style.display = 'block';
+    multiWrapper.style.display = 'block'; // Always show toggle
+
     document.querySelectorAll('#p-months-grid input').forEach(i => i.checked = false);
     document.querySelectorAll('.month-grid-item').forEach(item => item.classList.remove('selected'));
 
     if (payment) {
-        // Hide multi-month toggle when editing existing single payment
-        multiToggle.parentElement.parentElement.style.display = 'none';
         title.textContent = 'Gerenciar Pagamento';
         amountInput.value = payment.amount;
+
+        // Pre-select current month in the grid for easier multi-month conversion
+        const gridInputs = document.querySelectorAll('#p-months-grid input');
+        gridInputs.forEach(inp => {
+            if (parseInt(inp.value) === parseInt(month)) {
+                inp.checked = true;
+                inp.parentElement.classList.add('selected');
+            }
+        });
         
         if (payment.receipt_path) {
             receiptContainer.style.display = 'block';
