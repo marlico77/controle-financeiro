@@ -13,6 +13,7 @@ const state = {
     events: [],
     eventPayments: [],
     outflows: [],
+    sales: [],
     currentEvent: null,
     eventDetailYear: new Date().getFullYear(),
     charts: {
@@ -759,6 +760,7 @@ async function checkAuth() {
                 reports: document.querySelector('[data-target="reports"]'),
                 authorizations: document.getElementById('nav-authorizations'),
                 outflows: document.getElementById('nav-outflows'),
+                sales: document.querySelector('[data-target="sales"]'),
                 logs: document.getElementById('nav-logs')
             };
 
@@ -768,6 +770,7 @@ async function checkAuth() {
                 if (navItems.reports) navItems.reports.style.display = 'none';
                 if (navItems.authorizations) navItems.authorizations.style.display = 'none';
                 if (navItems.outflows) navItems.outflows.style.display = 'none';
+                if (navItems.sales) navItems.sales.style.display = 'none';
                 if (navItems.logs) navItems.logs.style.display = 'none';
                 
                 // Adjust Dashboard for common user
@@ -785,6 +788,7 @@ async function checkAuth() {
                 if (navItems.reports) navItems.reports.style.display = 'flex';
                 if (navItems.authorizations) navItems.authorizations.style.display = 'flex';
                 if (navItems.outflows) navItems.outflows.style.display = 'flex';
+                if (navItems.sales) navItems.sales.style.display = 'flex';
                 
                 // Logs ONLY for master
                 if (navItems.logs) navItems.logs.style.display = isMaster ? 'flex' : 'none';
@@ -807,8 +811,6 @@ async function checkAuth() {
             loadInitialData();
         } catch (err) {
             console.error('Auth verification failed:', err);
-            // Don't auto-logout on network errors or simple failures
-            // Only logout if explicit 401/403 is received in apiFetch
         }
     }
 }
@@ -832,9 +834,11 @@ async function loadInitialData() {
         if (state.role === 'admin' || state.role === 'secretário') {
             state.eventPayments = await apiFetch('/api/event-payments');
             state.outflows = await apiFetch('/api/outflows');
+            state.sales = await apiFetch('/api/sales');
         } else {
             state.eventPayments = await apiFetch(`/api/event-payments?person_id=${state.personId}`);
             state.outflows = [];
+            state.sales = [];
         }
 
         renderDashboard();
@@ -986,6 +990,7 @@ function switchTab(target) {
     else if (target === 'mensalidade') title.textContent = 'Controle de Mensalidades';
     else if (target === 'authorizations') title.textContent = 'Autorizações de Saída';
     else if (target === 'outflows') title.textContent = 'Gestão de Despesas';
+    else if (target === 'sales') title.textContent = 'Gestão de Vendas';
     else if (target === 'logs') title.textContent = 'Logs de Auditoria';
 
     // Refresh specific data if needed
@@ -993,6 +998,7 @@ function switchTab(target) {
     if (target === 'people') renderPeople();
     if (target === 'events') fetchEventsData();
     if (target === 'outflows') renderOutflows();
+    if (target === 'sales') fetchSales();
     if (target === 'logs') fetchLogs();
     if (target === 'reports') {
         populateReportSelects();
@@ -1189,7 +1195,7 @@ const renderEvents = () => {
                     <h4 style="margin: 0; color: var(--accent-color);">${event.name}</h4>
                     ${state.role === 'admin' ? `<button class="btn-text" onclick="event.stopPropagation(); deleteEvent(${event.id})" style="padding: 0; min-height: auto; display: flex; align-items: center; justify-content: center; color: var(--text-dim); transition: color 0.2s;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="18" height="18" fill="currentColor">
-                            <path d="M262.2 48C248.9 48 236.9 56.3 232.2 68.8L216 112L120 112C106.7 112 96 122.7 96 136C96 149.3 106.7 160 120 160L520 160C533.3 160 544 149.3 544 136C544 122.7 533.3 112 520 112L424 112L407.8 68.8C403.1 56.3 391.2 48 377.8 48L262.2 48zM128 208L128 512C128 547.3 156.7 576 192 576L448 576C483.3 576 512 547.3 512 512L512 208L464 208L464 512C464 520.8 456.8 528 448 528L192 528C183.2 528 176 520.8 176 512L176 208L128 208zM288 280C288 266.7 277.3 256 264 256C250.7 256 240 266.7 240 280L240 456C240 469.3 250.7 480 264 480C277.3 480 288 469.3 288 456L288 280zM400 280C400 266.7 389.3 256 376 256C362.7 256 352 266.7 352 280L352 456C352 469.3 362.7 480 376 480C389.3 480 400 469.3 400 456L400 280z"/>
+                            <path d="M262.2 48C248.9 48 236.9 56.3 232.2 68.8L216 112L120 112C106.7 112 96 122.7 96 136C96 149.3 106.7 160 120 160L520 160C533.3 160 544 149.3 544 136C544 122.7 533.3 112 520 112L424 112L407.8 68.8C403.1 56.3 391.2 48 377.8 48L262.2 48zM128 208L128 512C128 547.3 156.7 576 192 576L448 576C483.3 576 512 547.3 512 512L512 208L464 208L464 512C464 520.8 456.8 528 448 528L192 528C183.2 528 176 520.8 176 512L176 208L128 208zM288 280C288 266.7 277.3 256 264 256C250.7 256 240 266.7 240 280L240 456C240 469.3 250.7 480 264 480C277.3 480 288 469.3 288 456L280zM400 280C400 266.7 389.3 256 376 256C362.7 256 352 266.7 352 280L352 456C352 469.3 362.7 480 376 480C389.3 480 400 469.3 400 456L400 280z"/>
                         </svg>
                     </button>` : ''}
                 </div>
@@ -1249,7 +1255,7 @@ const openEventDetail = async (eventId, preserveUI = false) => {
         
         // Ajustar cabeçalho da tabela conforme o tipo de pagamento
         const tableHead = document.querySelector('#event-detail-table thead');
-        if (data.event.payment_type === 'unico' || data.event.payment_type === 'vendas') {
+        if (data.event.payment_type === 'unico') {
             tableHead.innerHTML = `
                 <tr>
                     <th>Membro</th>
@@ -1280,7 +1286,7 @@ let renderEventDetailGrid = (participants, payments) => {
     const searchTerm = document.getElementById('ev-detail-search')?.value.toLowerCase() || '';
     
     const filteredParticipants = participants.filter(p => p.name.toLowerCase().includes(searchTerm));
-    const isUnico = (state.currentEvent.payment_type === 'unico' || state.currentEvent.payment_type === 'vendas');
+    const isUnico = state.currentEvent.payment_type === 'unico';
 
     // O(n) optimization: Group payments by person_id
     const paymentsMap = new Map();
@@ -1358,7 +1364,7 @@ let renderEventDetailGrid = (participants, payments) => {
 // New helper to avoid JSON.stringify in HTML attributes
 window.openEventPaymentModalFromGridIndex = (personId, month, paymentIndex = -1) => {
     const payment = paymentIndex >= 0 ? window._tempEventPayments[paymentIndex] : null;
-    openEventPaymentModalFromGrid(personId, month, payment);
+    openEventPaymentModal(personId, month, payment);
 };
 
 const openEventPaymentModalFromGrid = (personId, month, payment = null) => {
@@ -1482,7 +1488,7 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
 
     // Reset e Ajuste por tipo de evento
     const dateSelection = document.getElementById('ep-date-selection');
-    if (state.currentEvent && (state.currentEvent.payment_type === 'unico' || state.currentEvent.payment_type === 'vendas')) {
+    if (state.currentEvent && state.currentEvent.payment_type === 'unico') {
         dateSelection.style.display = 'none';
     } else {
         dateSelection.style.display = 'flex';
@@ -1647,44 +1653,52 @@ const updateDashboardStats = () => {
         });
     }
 
+    // Somar Vendas / Arrecadações ao Caixa Geral
+    let totalSales = 0;
+    if (state.sales) {
+        state.sales.forEach(s => {
+            const amount = parseFloat(s.amount);
+            totalSales += amount;
+            totalCash += amount; // Soma ao total em caixa
+            
+            // Adicionar ao gráfico mensal se a data estiver no ano atual
+            const saleDate = new Date(s.date + 'T12:00:00');
+            if (saleDate.getFullYear() === parseInt(state.currentYear)) {
+                monthlyData[saleDate.getMonth()] += amount;
+            }
+        });
+    }
+
     // Subtrair Saídas (Outflows) do Caixa Geral
     let totalOutflows = 0;
     if (state.outflows) {
-        state.outflows.forEach(out => {
-            const amount = parseFloat(out.amount);
+        state.outflows.forEach(o => {
+            const amount = parseFloat(o.amount);
             totalOutflows += amount;
             totalCash -= amount; // Subtrai do total em caixa
         });
     }
 
     if (state.role === 'admin' || state.role === 'secretário') {
-        document.getElementById('stat-total-cash').textContent = `R$ ${totalCash.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        const direcaoStat = document.getElementById('stat-direcao');
-        const desbravaStat = document.getElementById('stat-desbravadores');
-        const eventosStat = document.getElementById('stat-eventos');
-        const outflowsCard = document.getElementById('stat-outflows-card');
-        const outflowsTotalElem = document.getElementById('stat-total-outflows');
+        const totalCashElem = document.getElementById('stat-total-cash');
+        if (totalCashElem) totalCashElem.textContent = `R$ ${totalCash.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        
+        const direcaoStat = document.getElementById('stat-direcao-total');
+        const desbravaStat = document.getElementById('stat-desbrava-total');
         
         if (direcaoStat) direcaoStat.textContent = `R$ ${direcaoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         if (desbravaStat) desbravaStat.textContent = `R$ ${desbravadoresTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        if (eventosStat) eventosStat.textContent = `R$ ${eventosTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         
-        if (outflowsCard && outflowsTotalElem) {
-            outflowsCard.style.display = 'block';
-            outflowsTotalElem.textContent = `R$ ${totalOutflows.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        }
-        
-        // Para o gráfico de pizza, queremos o total puro de mensalidades (sem eventos)
+        // Gráfico de pizza: Mensalidades vs Eventos vs Despesas vs Vendas
         let mensalidadesPuro = 0;
         state.payments.forEach(p => {
             if (p.status === 'approved') mensalidadesPuro += parseFloat(p.amount);
         });
 
-        // Gráfico simplificado: Mensalidades vs Eventos vs Despesas
         renderPieChart(
-            ['Mensalidades', 'Eventos', 'Despesas'], 
-            [mensalidadesPuro, eventosTotal, totalOutflows],
-            ['#e50914', '#111111', '#8b0000'] 
+            ['Mensalidades', 'Eventos', 'Despesas', 'Vendas'], 
+            [mensalidadesPuro, eventosTotal, totalOutflows, totalSales],
+            ['#e50914', '#111111', '#8b0000', '#228b22'] 
         );
     } else {
         const paidMonths = state.payments.length;
@@ -1951,8 +1965,12 @@ if (outflowForm) {
             if (res.ok) {
                 showStatus('Despesa registrada com sucesso!', 'success');
                 e.target.reset();
-                await loadInitialData();
-                renderOutflows();
+                await Promise.all([
+                    loadInitialData(),
+                    fetchLogs(),
+                    fetchOutflows(),
+                    fetchSales()
+                ]);
             } else {
                 const data = await res.json();
                 showStatus(data.error, 'error');
@@ -2200,6 +2218,12 @@ const openPaymentModal = (person, month, payment = null) => {
         }
 
         if (state.role === 'admin' || state.role === 'secretário') {
+            const navOutflows = document.getElementById('nav-outflows');
+            if (navOutflows) navOutflows.style.display = 'flex';
+            
+            const navSales = document.querySelector('[data-target="sales"]');
+            if (navSales) navSales.style.display = 'flex';
+            
             deleteBtn.style.display = 'block';
             deleteBtn.onclick = () => deletePayment(payment.id);
             if (payment.status === 'pending') {
@@ -3131,4 +3155,94 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initMultiMonthListeners);
 } else {
     initMultiMonthListeners();
+}
+
+// --- Sales Module ---
+async function fetchSales() {
+    try {
+        state.sales = await apiFetch('/api/sales');
+        renderSales();
+    } catch (err) {
+        console.error('Error fetching sales:', err);
+    }
+}
+
+function renderSales() {
+    const body = document.getElementById('sales-body');
+    if (!body) return;
+
+    if (state.sales.length === 0) {
+        body.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">Nenhuma venda registrada.</td></tr>';
+        return;
+    }
+
+    body.innerHTML = state.sales.map(sale => {
+        const date = formatDate(sale.date);
+        const amount = parseFloat(sale.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        
+        let receiptHtml = '-';
+        if (sale.receipt_path) {
+            const filename = sale.receipt_path.split(/[\\/]/).pop();
+            receiptHtml = `<a href="/api/files/receipt/${filename}?token=${state.token}" target="_blank" class="btn-text btn-small">Ver Comprovante</a>`;
+        }
+
+        return `
+            <tr>
+                <td><strong>${sale.event_name}</strong></td>
+                <td>${date}</td>
+                <td style="color: var(--outflow-color); font-weight: 600;">+ ${amount}</td>
+                <td>${receiptHtml}</td>
+                <td>
+                    <button class="btn-text btn-small" onclick="deleteSale(${sale.id})">Excluir</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+};
+
+async function deleteSale(id) {
+    if (await showConfirm('Tem certeza que deseja excluir esta venda?')) {
+        try {
+            await apiFetch(`/api/sales/${id}`, { method: 'DELETE' });
+            await loadInitialData();
+            if (state.activeTab === 'sales') renderSales();
+        } catch (err) {
+            showStatus(err.message, 'error');
+        }
+    }
+};
+
+const salesForm = document.getElementById('sales-form');
+if (salesForm) {
+    salesForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append('event_name', document.getElementById('sale-event-name').value);
+        formData.append('amount', document.getElementById('sale-amount').value);
+        formData.append('date', document.getElementById('sale-date').value);
+        formData.append('description', document.getElementById('sale-desc').value);
+        
+        const file = document.getElementById('sale-receipt').files[0];
+        if (file) formData.append('receipt', file);
+
+        try {
+            const res = await fetch('/api/sales', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${state.token}` },
+                body: formData
+            });
+
+            if (res.ok) {
+                showStatus('Venda registrada com sucesso!', 'success');
+                e.target.reset();
+                await loadInitialData();
+                if (state.activeTab === 'sales') renderSales();
+            } else {
+                const data = await res.json();
+                showStatus(data.error, 'error');
+            }
+        } catch (err) {
+            showStatus('Erro ao salvar venda', 'error');
+        }
+    };
 }

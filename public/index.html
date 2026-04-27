@@ -128,6 +128,11 @@
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path d="M216 64C229.3 64 240 74.7 240 88L240 128L400 128L400 88C400 74.7 410.7 64 424 64C437.3 64 448 74.7 448 88L448 128L480 128C515.3 128 544 156.7 544 192L544 480C544 515.3 515.3 544 480 544L160 544C124.7 544 96 515.3 96 480L96 192C96 156.7 124.7 128 160 128L192 128L192 88C192 74.7 202.7 64 216 64zM216 176L160 176C151.2 176 144 183.2 144 192L144 240L496 240L496 192C496 183.2 488.8 176 480 176L216 176zM144 288L144 480C144 488.8 151.2 496 160 496L480 496C488.8 496 496 488.8 496 480L496 288L144 288z"/></svg>
                         </span>Eventos
                     </li>
+                    <li data-target="sales">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M320 32C373 32 416 75 416 128C416 181 373 224 320 224C267 224 224 181 224 128C224 75 267 32 320 32zM80 368C80 297.9 127 236.6 197.1 203.1C222.4 244.4 268 272 320 272C375.7 272 424.1 240.3 448 194C463.8 182.7 483.1 176 504 176L523.5 176C533.9 176 541.5 185.8 539 195.9L521.9 264.2C531.8 276.6 540.1 289.9 546.3 304L568 304C581.3 304 592 314.7 592 328L592 440C592 453.3 581.3 464 568 464L528 464C511.5 486 489.5 503.6 464 514.7L464 544C464 561.7 449.7 576 432 576L399 576C384.7 576 372.2 566.5 368.2 552.8L361.1 528L278.8 528L271.7 552.8C267.8 566.5 255.3 576 241 576L208 576C190.3 576 176 561.7 176 544L176 514.7C119.5 490 80 433.6 80 368zM456 384C469.3 384 480 373.3 480 360C480 346.7 469.3 336 456 336C442.7 336 432 346.7 432 360C432 373.3 442.7 384 456 384z"/></svg>
+                        </span>Vendas
+                    </li>
                     <li data-target="outflows" id="nav-outflows" style="display: none;">
                         <span class="icon">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" style="width: 20px; height: 20px; fill: currentColor;"><!--!Font Awesome Pro v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2026 Fonticons, Inc.--><path d="M192 96C156.7 96 128 124.7 128 160L128 384C128 419.3 156.7 448 192 448L544 448C579.3 448 608 419.3 608 384L608 160C608 124.7 579.3 96 544 96L192 96zM368 192C412.2 192 448 227.8 448 272C448 316.2 412.2 352 368 352C323.8 352 288 316.2 288 272C288 227.8 323.8 192 368 192zM192 216L192 168C192 163.6 195.6 160 200 160L248 160C252.4 160 256.1 163.6 255.5 168C251.9 197 228.9 219.9 200 223.5C195.6 224 192 220.4 192 216zM192 328C192 323.6 195.6 319.9 200 320.5C229 324.1 251.9 347.1 255.5 376C256 380.4 252.4 384 248 384L200 384C195.6 384 192 380.4 192 376L192 328zM536 223.5C507 219.9 484.1 196.9 480.5 168C480 163.6 483.6 160 488 160L536 160C540.4 160 544 163.6 544 168L544 216C544 220.4 540.4 224.1 536 223.5zM544 328L544 376C544 380.4 540.4 384 536 384L488 384C483.6 384 479.9 380.4 480.5 376C484.1 347 507.1 324.1 536 320.5C540.4 320 544 323.6 544 328zM80 216C80 202.7 69.3 192 56 192C42.7 192 32 202.7 32 216L32 480C32 515.3 60.7 544 96 544L488 544C501.3 544 512 533.3 512 520C512 506.7 501.3 496 488 496L96 496C87.2 496 80 488.8 80 480L80 216z"/></svg>
@@ -494,6 +499,63 @@ const initApp = () => {
                     </div>
                 </div>
 
+                <!-- Sales Page -->
+                <div id="sales-page" class="tab-content" style="display: none;">
+                    <div class="grid-layout">
+                        <!-- Registration Form -->
+                        <div class="glass-card" style="padding: 1.5rem;">
+                            <h3 style="color: var(--outflow-color); margin-bottom: 1.5rem; font-size: 1.3rem;">Cadastrar Venda</h3>
+                            <form id="sales-form">
+                                <div class="input-group">
+                                    <label for="sale-event-name">Nome do Evento</label>
+                                    <input type="text" id="sale-event-name" required placeholder="Ex: Bazar Beneficente">
+                                </div>
+                                <div class="input-group">
+                                    <label for="sale-amount">Valor Arrecadado (R$)</label>
+                                    <input type="number" id="sale-amount" step="0.01" required placeholder="0,00">
+                                </div>
+                                <div class="input-group">
+                                    <label for="sale-date">Data</label>
+                                    <input type="date" id="sale-date" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="sale-receipt">Comprovante / Recibo (Opcional)</label>
+                                    <input type="file" id="sale-receipt" accept="image/*, application/pdf">
+                                </div>
+                                <div class="input-group">
+                                    <label for="sale-desc">Descrição / Detalhes</label>
+                                    <textarea id="sale-desc" style="width: 100%; min-height: 60px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;" placeholder="Opcional..."></textarea>
+                                </div>
+                                <button type="submit" class="btn-primary" style="width: 100%; background: var(--outflow-color); color: white; font-weight: 700;">Salvar Venda</button>
+                            </form>
+                        </div>
+
+                        <!-- Sales History -->
+                        <div class="glass-card table-container" style="padding: 0;">
+                            <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                                <h4 style="margin: 0;">Histórico de Vendas</h4>
+                            </div>
+                            <div class="table-responsive">
+                                <table id="sales-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Evento / Origem</th>
+                                            <th>Valor</th>
+                                            <th>Comprovante</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="sales-body">
+                                        <!-- Populated by JS -->
+                                        <tr><td colspan="5" style="text-align: center; padding: 2rem;">Nenhuma venda registrada.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Logs Page -->
                 <div id="logs-page" class="tab-content" style="display: none;">
                     <div class="glass-card table-container">
@@ -808,7 +870,6 @@ const initApp = () => {
                         <select id="event-payment-type" class="form-control">
                             <option value="parcelado">Parcelado (Janeiro a Dezembro)</option>
                             <option value="unico">Pagamento Único (Total)</option>
-                            <option value="vendas">Vendas</option>
                         </select>
                     </div>
                     <div class="participants-selector" style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">

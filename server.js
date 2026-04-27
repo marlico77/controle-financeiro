@@ -235,7 +235,20 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT NOW()
             )
         `);
-        console.log('[DB] Table outflows verified/created.');
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS sales (
+                id SERIAL PRIMARY KEY,
+                event_name VARCHAR(255) NOT NULL,
+                amount DECIMAL(10,2) NOT NULL,
+                date DATE NOT NULL,
+                description TEXT,
+                receipt_path VARCHAR(255),
+                receipt_content BYTEA,
+                receipt_mime VARCHAR(50),
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('[DB] Tables verified/created.');
     } catch (err) {
         console.error('[DB] Error initializing tables:', err);
     }
@@ -1088,6 +1101,76 @@ app.post('/api/event-payments', authenticateToken, upload.single('receipt'), asy
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Erro ao salvar pagamento do evento' });
+    }
+});
+
+// --- SALES API ---
+app.get('/api/sales', authenticateToken, async (req, res) => {
+    const { year } = req.query;
+    try {
+        let sql = 'SELECT * FROM sales';
+        let params = [];
+        if (year) {
+            sql += ' WHERE EXTRACT(YEAR FROM date) = $1';
+            params.push(year);
+        }
+        sql += ' ORDER BY date DESC';
+        const result = await db.query(sql, params);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao buscar vendas' });
+    }
+});
+
+app.post('/api/sales', authenticateToken, upload.single('receipt'), async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { event_name, amount, date, description } = req.body || {};
+    
+    if (!event_name || !amount || !date) {
+        return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
+    }
+
+    try {
+        const compressed = await compressReceipt(req.file);
+        const receipt_content = compressed ? compressed.buffer : null;
+        const receipt_mime = compressed ? compressed.mimetype : null;
+        const receipt_filename = req.file ? `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
+        const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
+
+        let isUploadedToStorage = false;
+        if (req.file && compressed) {
+            const { error } = await supabase.storage
+                .from('receipts')
+                .upload(receipt_filename, compressed.buffer, {
+                    contentType: compressed.mimetype,
+                    upsert: true
+                });
+            if (!error) isUploadedToStorage = true;
+        }
+
+        const finalDBContent = isUploadedToStorage ? null : receipt_content;
+
+        const result = await db.query(`
+            INSERT INTO sales (event_name, amount, date, description, receipt_path, receipt_content, receipt_mime) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+        `, [event_name, amount, date, description || null, receipt_path, finalDBContent, receipt_mime]);
+
+        logAction(req, 'CREATE_SALE', { id: result.rows[0].id, event_name, amount });
+        res.json({ success: true, id: result.rows[0].id });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao salvar venda' });
+    }
+});
+
+app.delete('/api/sales/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') return res.sendStatus(403);
+    try {
+        await db.query('DELETE FROM sales WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+        logAction(req, 'DELETE_SALE', { id: req.params.id });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao deletar venda' });
     }
 });
 
