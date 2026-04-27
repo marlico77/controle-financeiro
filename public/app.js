@@ -30,6 +30,17 @@ const state = {
     logFilter: 'all'
 };
 
+// Global Fail-safe for Multi-month Toggle
+window.toggleMultiMonth = (isChecked) => {
+    const selector = document.getElementById('p-multi-month-selector');
+    const singleInfo = document.getElementById('p-single-month-info');
+    if (selector) {
+        selector.style.display = isChecked ? 'block' : 'none';
+        if (isChecked) selector.classList.add('animate-slide-down');
+    }
+    if (singleInfo) singleInfo.style.display = isChecked ? 'none' : 'block';
+};
+
 const months = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"

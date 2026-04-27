@@ -635,10 +635,11 @@ const initApp = () => {
                     <div class="toggle-wrapper">
                         <span>Este pagamento é referente a vários meses?</span>
                         <label class="switch">
-                            <input type="checkbox" id="p-multi-month-toggle">
+                            <input type="checkbox" id="p-multi-month-toggle" onchange="window.toggleMultiMonth?.(this.checked)">
                             <span class="slider round"></span>
                         </label>
                     </div>
+
 
                     <div id="p-multi-month-selector" style="display: none; margin-bottom: 1.5rem; padding: 1.2rem; background: rgba(0,0,0,0.02); border: 1px solid var(--border-color); border-radius: 12px;">
                         <label style="display: block; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; color: var(--accent-color);">Selecione os meses incluídos:</label>
@@ -1092,6 +1093,6 @@ const initApp = () => {
         </div>
     </div>
 
-    <script src="app.js?v=203"></script>
+    <script src="app.js?v=204"></script>
 </body>
 </html>
