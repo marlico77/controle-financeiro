@@ -132,52 +132,19 @@ setInterval(cleanupLogs, 60 * 60 * 1000);
 
 // Middleware: Auth
 const authenticateToken = (req, res, next) => {
-    // Check if token is in header or in query string
     const authHeader = req.headers['authorization'];
     const token = (authHeader && authHeader.split(' ')[1]) || req.query.token;
 
-    if (token == null) return res.sendStatus(401);
+    if (!token) return res.status(401).json({ error: 'Token ausente' });
 
-  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
-    if (err) {
-        console.error(`[AUTH] Verificação falhou: ${err.message} | Token: ${token.substring(0, 15)}...`);
-        return res.status(401).json({ error: 'Sessão inválida', details: err.message });
-    }
-    
-    console.log(`[AUTH] Token válido. ID Decodificado: ${decoded ? decoded.id : 'NULO'}`);
-    
-    try {
-        // Check mandatory password change in DB
-        const result = await db.query('SELECT must_change_password, username, role, person_id FROM users WHERE id = $1', [decoded.id]);
-        const dbUser = result.rows[0];
-        
-        if (!dbUser) {
-            console.warn(`[AUTH] Usuário ID ${decoded.id} não encontrado no banco.`);
-            return res.status(401).json({ error: 'Usuário não encontrado' });
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) {
+            console.error(`[AUTH] Falha: ${err.message}`);
+            return res.status(401).json({ error: 'Sessão inválida' });
         }
-
-        // Block access if password change is required (except for auth status and change-password)
-        const allowedPaths = ['/api/auth/change-password', '/api/auth/status'];
-        if (dbUser.must_change_password && !allowedPaths.includes(req.path)) {
-            return res.status(403).json({ error: 'Alteração de senha obrigatória', mustChangePassword: true });
-        }
-
-        req.user = {
-            id: decoded.id,
-            username: dbUser.username,
-            role: dbUser.role || 'member',
-            personId: dbUser.person_id ? parseInt(dbUser.person_id) : null
-        };
-
-        console.log(`[AUTH] Usuário: ${req.user.username} | Role: ${req.user.role} | ID: ${req.user.personId}`);
-        
-        
+        req.user = decoded;
         next();
-    } catch (err) {
-        console.error('Auth DB error:', err);
-        res.status(500).json({ error: 'Erro ao verificar autenticação' });
-    }
-  });
+    });
 };
 
 // --- Sync Members to Users ---
