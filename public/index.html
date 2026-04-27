@@ -600,18 +600,22 @@ const initApp = () => {
                         </p>
                         
                         <!-- Botão de Instalação Fixo e Universal -->
-                        <div id="universal-install-section" style="margin-top: 2.5rem; width: 100%;">
-                            <button id="pwa-fixed-install-btn" class="btn-primary btn-install-main" style="width: 100%; justify-content: center; display: flex !important; background: var(--accent-color) !important;">
+                        <div id="universal-install-section" style="margin-top: 1.5rem; width: 100%;">
+                            <button id="pwa-fixed-install-btn" class="btn-primary btn-install-main" style="width: 100%; justify-content: center; display: flex !important; background: var(--accent-color) !important; box-shadow: none !important; border-radius: 8px;">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="24" height="24" fill="white" style="margin-right: 12px;"><path d="M144 128C144 92.7 172.7 64 208 64L432 64C467.3 64 496 92.7 496 128L496 512C496 547.3 467.3 576 432 576L208 576C172.7 576 144 547.3 144 512L144 128zM208 128L208 432L432 432L432 128L208 128zM320 536C337.7 536 352 521.7 352 504C352 486.3 337.7 472 320 472C302.3 472 288 486.3 288 504C288 521.7 302.3 536 320 536z"/></svg>
                                 Instalar Aplicativo Agora
                             </button>
                             <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 0.8rem; text-align: center;">Disponível para Android e iPhone</p>
                         </div>
 
-                        <!-- Detalhes Manuais (Opcionais) -->
-                        <div id="android-manual-guide" class="manual-install-box" style="margin-top: 1.5rem; display: none;">
-                            <h4>Como instalar manualmente:</h4>
-                            <p>Toque nos 3 pontos ⋮ e selecione "Instalar aplicativo".</p>
+                        <!-- Guia Android -->
+                        <div class="manual-install-box android-box" style="margin-top: 1.5rem; background: rgba(0,0,0,0.03); border-radius: 12px; padding: 1.5rem;">
+                            <h4 style="text-align: center; margin-bottom: 1rem;">Como instalar no Android (Chrome)</h4>
+                            <ol style="padding-left: 1.2rem; color: var(--text-dim); font-size: 0.9rem;">
+                                <li style="margin-bottom: 0.8rem;">Toque nos <strong>três pontos ⋮</strong> no canto superior direito.</li>
+                                <li style="margin-bottom: 0.8rem;">Selecione <strong>Instalar aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>.</li>
+                                <li>Confirme clicando em <strong>Instalar</strong>.</li>
+                            </ol>
                         </div>
 
                         <!-- iOS Install Section -->

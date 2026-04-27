@@ -216,7 +216,7 @@ body {
     align-items: center;
     gap: 12px;
     margin-bottom: 0.5rem;
-    box-shadow: 0 12px 24px rgba(229, 9, 20, 0.25);
+    box-shadow: none;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
     cursor: pointer;
@@ -226,9 +226,9 @@ body {
 }
 
 .btn-install-main:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 15px 30px rgba(229, 9, 20, 0.35);
+    transform: translateY(-2px);
     background: #ff1a1a;
+    box-shadow: none;
 }
 
 .btn-install-main:active {
