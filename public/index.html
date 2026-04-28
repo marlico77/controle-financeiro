@@ -1474,17 +1474,17 @@
     <script src="app.js"></script>
     <!-- Notification Modal (For priority alerts) -->
     <div id="notification-modal" class="modal" style="display: none;">
-        <div class="glass-card modal-content" style="max-width: 500px; text-align: center; padding: 2rem;">
-            <div style="margin-bottom: 1.5rem; color: var(--accent-color);">
-                <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5.002 5.002 0 0 1 13 6c0 .88.32 4.2 1.22 6z"/>
+        <div class="glass-card modal-content animate-slide-up" style="max-width: 450px; text-align: center; padding: 2.5rem; border: 1px solid rgba(229, 9, 20, 0.2);">
+            <div id="notif-icon" style="margin-bottom: 1.5rem; color: var(--accent-color); display: flex; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="80" height="80" fill="currentColor">
+                    <path d="M320 64C302.3 64 288 78.3 288 96L288 99.2C215 114 160 178.6 160 256L160 277.7C160 325.8 143.6 372.5 113.6 410.1L103.8 422.3C98.7 428.6 96 436.4 96 444.5C96 464.1 111.9 480 131.5 480L508.4 480C528 480 543.9 464.1 543.9 444.5C543.9 436.4 541.2 428.6 536.1 422.3L526.3 410.1C496.4 372.5 480 325.8 480 277.7L480 256C480 178.6 425 114 352 99.2L352 96C352 78.3 337.7 64 320 64zM258 528C265.1 555.6 290.2 576 320 576C349.8 576 374.9 555.6 382 528L258 528z"/>
                 </svg>
             </div>
-            <h3 id="notif-title" style="margin-bottom: 1rem; color: var(--accent-color);">Novo Aviso</h3>
-            <div id="notif-content" style="margin-bottom: 2rem; line-height: 1.6; color: var(--text-color);">
+            <h2 id="notif-title" style="margin-bottom: 1.2rem; color: var(--accent-color); font-weight: 800; font-size: 1.8rem; letter-spacing: -1px;">Novo Aviso</h2>
+            <div id="notif-content" style="margin-bottom: 2.5rem; line-height: 1.6; color: var(--text-color); font-size: 1.1rem; opacity: 0.9;">
                 <!-- Content here -->
             </div>
-            <button id="close-notif-btn" class="btn-primary" style="width: 100%;">Entendido</button>
+            <button id="close-notif-btn" class="btn-primary" style="width: 100%; padding: 1rem; font-weight: 700; border-radius: 12px; background: var(--accent-color);">Entendido</button>
         </div>
     </div>
 </body>
