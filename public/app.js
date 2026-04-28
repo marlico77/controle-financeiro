@@ -149,9 +149,24 @@ async function showAlert(message, title = 'Aviso', icon = '⚠️') {
         const iconEl = document.getElementById('alert-icon');
         const okBtn = document.getElementById('alert-ok');
 
+        const successSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="60" height="60" fill="var(--accent-color)"><path d="M320 576C178.6 576 64 461.4 64 320C64 178.6 178.6 64 320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576zM438 209.7C427.3 201.9 412.3 204.3 404.5 215L285.1 379.2L233 327.1C223.6 317.7 208.4 317.7 199.1 327.1C189.8 336.5 189.7 351.7 199.1 361L271.1 433C276.1 438 282.9 440.5 289.9 440C296.9 439.5 303.3 435.9 307.4 430.2L443.3 243.2C451.1 232.5 448.7 217.5 438 209.7z"/></svg>`;
+        
         titleEl.textContent = title;
         messageEl.innerHTML = message;
-        iconEl.innerHTML = icon;
+        
+        if (title === 'Sucesso') {
+            iconEl.innerHTML = successSvg;
+            titleEl.style.color = 'var(--accent-color)';
+            okBtn.style.backgroundColor = 'var(--accent-color)';
+        } else if (title === 'Erro') {
+            iconEl.innerHTML = '❌';
+            titleEl.style.color = 'var(--error-color)';
+            okBtn.style.backgroundColor = 'var(--error-color)';
+        } else {
+            iconEl.innerHTML = icon;
+            titleEl.style.color = 'var(--accent-color)';
+            okBtn.style.backgroundColor = 'var(--accent-color)';
+        }
         modal.style.display = 'flex';
 
         okBtn.onclick = () => {
@@ -584,9 +599,12 @@ async function apiFetch(url, options = {}) {
 
         if (res.status === 401 || res.status === 403) {
             console.warn(`[AUTH] Erro ${res.status} na URL: ${url}`);
-            if (res.status === 401 && document.getElementById('login-section').style.display !== 'flex') {
-                console.warn('[AUTH] Redirecionando para login...');
-                logout();
+            if (res.status === 401) {
+                // Se a seção principal estiver visível, significa que estávamos logados e perdemos a sessão
+                if (document.getElementById('main-section').style.display === 'flex') {
+                    console.warn('[AUTH] Sessão expirada ou inválida. Retornando ao login...');
+                    handleUnauthorized(url);
+                }
             }
         }
         throw new Error(data.error || 'Erro na requisição');
@@ -640,6 +658,79 @@ const eventPaymentModal = document.getElementById('event-payment-modal');
 const reportSelectorModal = document.getElementById('report-selector-modal');
 const reportModal = document.getElementById('report-modal');
 const closeButtons = document.querySelectorAll('.close-modal');
+
+// --- Messages Form Handler ---
+const initMessageForm = () => {
+    const form = document.getElementById('send-msg-form');
+    if (!form) return;
+    
+    // Search filter logic
+    const searchInput = document.getElementById('msg-search');
+    if (searchInput) {
+        searchInput.oninput = (e) => {
+            const term = e.target.value.toLowerCase();
+            document.querySelectorAll('#members-checkbox-container .checkbox-item').forEach(item => {
+                const name = item.querySelector('label').textContent.toLowerCase();
+                item.style.display = name.includes(term) ? 'flex' : 'none';
+            });
+        };
+    }
+
+    // Select All logic
+    const selectAll = document.getElementById('msg-select-all');
+    if (selectAll) {
+        selectAll.onchange = (e) => {
+            const isChecked = e.target.checked;
+            document.querySelectorAll('#members-checkbox-container input[type="checkbox"]').forEach(cb => {
+                if (cb.parentElement.style.display !== 'none') {
+                    cb.checked = isChecked;
+                }
+            });
+        };
+    }
+    
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const selectAllChecked = document.getElementById('msg-select-all').checked;
+        let selectedIds = [];
+        
+        if (selectAllChecked) {
+            selectedIds = null; // Backend handles null as ALL
+        } else {
+            const checkboxes = document.querySelectorAll('#members-checkbox-container input[type="checkbox"]:checked');
+            selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            
+            if (selectedIds.length === 0) {
+                showAlert('Por favor, selecione pelo menos um membro ou marque "Todos os Membros".', 'Aviso');
+                return;
+            }
+        }
+        
+        const title = document.getElementById('msg-title').value;
+        const content = document.getElementById('msg-content').value;
+
+        try {
+            await apiFetch('/api/notifications/send', {
+                method: 'POST',
+                body: JSON.stringify({
+                    userIds: selectedIds,
+                    title,
+                    content
+                })
+            });
+            showAlert('Mensagem enviada com sucesso!', 'Sucesso');
+            form.reset();
+            // Reset checkboxes
+            document.querySelectorAll('#msg-target-list input[type="checkbox"]').forEach(cb => cb.checked = false);
+        } catch (err) {
+            console.error('[MSG] Erro ao enviar:', err);
+            showAlert('Erro ao enviar mensagem: ' + err.message, 'Erro');
+        }
+    };
+};
+initMessageForm();
 
 // Global Modal Closing Logic
 closeButtons.forEach(btn => {
@@ -961,6 +1052,28 @@ loginForm.addEventListener('submit', async (e) => {
     }
 });
 
+function handleUnauthorized(originUrl = '') {
+    console.log(`[AUTH] Tratando acesso não autorizado: ${originUrl}`);
+    
+    // Limpa estado local sem forçar reload imediato
+    localStorage.removeItem('token');
+    state.token = null;
+    
+    // Mostra login com mensagem de erro
+    const loginSection = document.getElementById('login-section');
+    const mainSection = document.getElementById('main-section');
+    const loginError = document.getElementById('login-error');
+    
+    if (loginSection && mainSection) {
+        loginSection.style.display = 'flex';
+        mainSection.style.display = 'none';
+        if (loginError) {
+            loginError.textContent = 'Sessão expirada. Por favor, faça login novamente.';
+            loginError.style.color = 'var(--accent-color)';
+        }
+    }
+}
+
 function logout() {
     const hadToken = !!localStorage.getItem('token');
     localStorage.removeItem('token');
@@ -1093,6 +1206,9 @@ document.getElementById('back-to-events').onclick = () => {
 
 
 
+// Global session tracker for shown notification modals to avoid annoyance
+const sessionShownModals = new Set();
+
 const fetchNotifications = async () => {
     try {
         if (!state.token) return;
@@ -1101,15 +1217,15 @@ const fetchNotifications = async () => {
         state.notifications = await apiFetch('/api/notifications');
         updateNotificationUI();
 
-        // Also check for unread notifications to show the modal (for priority alerts)
-        // We only show the modal if there's a new unread notification we haven't alerted yet
-        const unread = state.notifications.filter(n => !n.is_read);
-        if (unread.length > 0) {
-            const latest = unread[0];
-            // Only show modal if it's recent (e.g., last 1 minute) or specific type
-            // For now, let's keep it simple: if it's unread, we can show it once
-            // (the modal logic should handle not showing the same one repeatedly if needed)
-            // showNotificationModal(latest); // Disabled for now to avoid spamming on login
+        // Check for unread manual notifications (priority alerts)
+        const unreadManual = state.notifications.filter(n => !n.is_read && n.type === 'manual');
+        if (unreadManual.length > 0) {
+            // Show the latest one if not already shown this session
+            const latest = unreadManual[0];
+            if (!sessionShownModals.has(latest.id)) {
+                sessionShownModals.add(latest.id);
+                showNotificationModal(latest);
+            }
         }
     } catch (err) {
         console.error('Error fetching notifications:', err);
@@ -2463,7 +2579,7 @@ backToTopBtn.onclick = () => {
 
 // --- Password Security Logic ---
 
-const complexityRegex = /^(?=.*[0-9])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{5,}$/;
+const complexityRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{5,}$/;
 
 // Recovery Modal
 const recoverModal = document.getElementById('recover-modal');
@@ -2525,7 +2641,7 @@ if (forceChangeForm) {
         }
 
         if (!complexityRegex.test(newPassword)) {
-            errorDiv.textContent = 'A senha deve ter no mínimo 5 caracteres, incluindo 1 letra maiúscula, 1 número e 1 caractere especial.';
+            errorDiv.textContent = 'A senha deve ter no mínimo 5 caracteres, incluindo pelo menos 1 número e 1 caractere especial.';
             return;
         }
 
@@ -3393,53 +3509,56 @@ function urlBase64ToUint8Array(base64String) {
 // --- Admin Messages Logic ---
 
 async function renderMessages() {
-    const targetSelect = document.getElementById('msg-target');
-    if (!targetSelect) return;
+    const container = document.getElementById('members-checkbox-container');
+    if (!container) return;
 
-    // Keep "All Members" option
-    targetSelect.innerHTML = '<option value="all">Todos os Membros</option>';
+    container.innerHTML = '<p style="text-align: center; padding: 10px; color: var(--text-dim);">Carregando membros...</p>';
 
     try {
-        // Force fresh fetch for total precision
         const people = await apiFetch('/api/people');
-        
-        // Filter those who have a user account (u_id) and sort by name
         const targets = people.filter(p => p.u_id != null);
-        
-        targets.sort((a, b) => a.name.localeCompare(b.name)).forEach(p => {
-            const option = document.createElement('option');
-            option.value = p.u_id;
-            option.textContent = p.name;
-            targetSelect.appendChild(option);
+        targets.sort((a, b) => a.name.localeCompare(b.name));
+
+        container.innerHTML = '';
+        targets.forEach(p => {
+            const item = document.createElement('div');
+            item.className = 'checkbox-item';
+            item.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-bottom: 1px solid rgba(0,0,0,0.03); cursor: pointer;';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `msg-user-${p.u_id}`;
+            checkbox.value = p.u_id;
+            checkbox.style.cssText = 'width: 18px; height: 18px; cursor: pointer;';
+            
+            const label = document.createElement('label');
+            label.htmlFor = `msg-user-${p.u_id}`;
+            label.textContent = p.name;
+            label.style.cssText = 'margin: 0; cursor: pointer; font-size: 0.9rem; flex-grow: 1; user-select: none;';
+            
+            // Permitir clicar na linha toda
+            item.onclick = (e) => {
+                if (e.target !== checkbox && e.target !== label) {
+                    checkbox.checked = !checkbox.checked;
+                    // Trigger change if needed, but here we just need the state
+                }
+            };
+
+            item.appendChild(checkbox);
+            item.appendChild(label);
+            container.appendChild(item);
         });
             
-        console.log(`[MESSAGES] Lista de alvos populada com ${targets.length} membros.`);
+        console.log(`[MESSAGES] Lista de checkboxes populada com ${targets.length} membros.`);
     } catch (err) {
         console.error('Erro ao carregar membros para mensagens:', err);
+        container.innerHTML = '<p style="color: var(--error-color); padding: 10px;">Erro ao carregar lista.</p>';
     }
 }
 
-document.getElementById('send-msg-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const target = document.getElementById('msg-target').value;
-    const title = document.getElementById('msg-title').value;
-    const content = document.getElementById('msg-content').value;
-
-    try {
-        await apiFetch('/api/notifications/send', {
-            method: 'POST',
-            body: JSON.stringify({
-                userId: target === 'all' ? null : parseInt(target),
-                title,
-                content
-            })
-        });
-        showAlert('Mensagem enviada com sucesso!', 'Sucesso');
-        e.target.reset();
-    } catch (err) {
-        showAlert('Erro ao enviar mensagem.', 'Erro');
-    }
-};
+// Message form handler initialized at the top for reliability
+initializeNotifications();
+initMessageForm();
 
 // --- Tab switch logic update ---
 

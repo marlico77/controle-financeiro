@@ -139,8 +139,9 @@ const authenticateToken = (req, res, next) => {
 
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
         if (err) {
-            console.error(`[AUTH] Falha: ${err.message}`);
-            return res.status(401).json({ error: 'Sessão inválida' });
+            const reason = err.name === 'TokenExpiredError' ? 'Expirado' : 'Inválido';
+            console.warn(`[AUTH] Falha (${reason}): ${err.message} | URL: ${req.originalUrl}`);
+            return res.status(401).json({ error: 'Sessão inválida', reason: err.message });
         }
         req.user = decoded;
         next();
@@ -398,7 +399,7 @@ app.get('/api/people', authenticateToken, async (req, res) => {
   try {
     if (req.user.role === 'admin' || req.user.role === 'secretário') {
       const result = await db.query(`
-        SELECT p.*, u.username, u.role 
+        SELECT p.*, u.username, u.role, u.id as u_id
         FROM people p 
         LEFT JOIN users u ON p.id = u.person_id 
         ORDER BY p.name ASC
@@ -1395,20 +1396,32 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
 app.post('/api/notifications/send', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403).json({ error: 'Acesso negado' });
     
-    const { userId, title, content } = req.body;
+    const { userId, userIds, title, content } = req.body;
     
+    // Normalize to an array of IDs
+    let targetIds = [];
+    if (userIds && Array.isArray(userIds)) {
+        targetIds = userIds;
+    } else if (userId) {
+        targetIds = [userId];
+    } else {
+        // null means ALL members
+        targetIds = [null];
+    }
+
     try {
         // 1. Save to DB for internal modal
         const result = await db.query(`
             INSERT INTO notifications (user_id, title, message, type)
-            VALUES ($1, $2, $3, 'manual') RETURNING id
-        `, [userId === 'all' ? null : parseInt(userId), title, content]);
+            SELECT unnest($1::int[]), $2, $3, 'manual' RETURNING id
+        `, [targetIds, title, content]);
 
         // 2. Try to send push notification
         const pushResult = await db.query(`
             SELECT subscription_data FROM push_subscriptions 
-            WHERE ($1::int IS NULL OR user_id = $1)
-        `, [userId || null]);
+            WHERE ($1::int[] IS NULL OR user_id = ANY($1::int[]))
+            OR (NULL = ANY($1::int[]))
+        `, [targetIds.includes(null) ? null : targetIds]);
 
         const payload = JSON.stringify({ title, body: content });
 

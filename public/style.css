@@ -1993,5 +1993,26 @@ input:checked + .slider:before {
     height: 0;
 }
 
+/* Checkbox Custom Styling for Messaging */
+.checkbox-item {
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+
+.checkbox-item:hover {
+    background-color: rgba(229, 9, 20, 0.03) !important;
+}
+
+.checkbox-item input[type="checkbox"] {
+    -webkit-appearance: checkbox !important;
+    -moz-appearance: checkbox !important;
+    appearance: checkbox !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--accent-color);
+}
+
 
 
