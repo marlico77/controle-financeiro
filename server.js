@@ -825,10 +825,11 @@ app.get('/api/events', authenticateToken, async (req, res) => {
                             JOIN people p ON ep.person_id = p.id 
                             WHERE ep.event_id = e.id 
                             GROUP BY p.unit
-                        ) unit_counts) as unit_counts
+                        ) unit_counts) as unit_counts,
+                       (ep.person_id IS NOT NULL) as is_participant
                 FROM events e
-                JOIN event_participants ep ON e.id = ep.event_id
-                WHERE ep.person_id = $1
+                LEFT JOIN event_participants ep ON e.id = ep.event_id AND ep.person_id = $1
+                WHERE e.status = 'active' OR ep.person_id IS NOT NULL
                 ORDER BY e.date ASC
             `;
             params = [req.user.personId];

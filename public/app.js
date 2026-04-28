@@ -992,7 +992,10 @@ async function loadInitialData() {
         }
         
         updateDashboardStats();
-        if (state.activeTab === 'events') fetchEventsData();
+        
+        // Always fetch events data for reports and global stats
+        await fetchEventsData();
+        
         if (state.activeTab === 'logs') fetchLogs();
     } catch (err) {
         console.error('Error loading data:', err);
@@ -1204,14 +1207,18 @@ function populateReportSelects() {
 };
 
 document.getElementById('back-to-events').onclick = () => {
-    document.getElementById('events-master-view').style.display = 'block';
-    document.getElementById('events-detail-view').style.display = 'none';
+    const masterView = document.getElementById('events-master-view');
+    const detailView = document.getElementById('events-detail-view');
+    if (masterView) masterView.style.display = 'block';
+    if (detailView) detailView.style.display = 'none';
     
     // Toggle button visibility
     const isAdmin = state.role === 'admin';
     if (isAdmin) {
-        document.getElementById('add-event-btn').style.display = 'block';
-        document.getElementById('add-participants-btn').style.display = 'none';
+        const addEventBtn = document.getElementById('add-event-btn');
+        const addPartBtn = document.getElementById('add-participants-btn');
+        if (addEventBtn) addEventBtn.style.display = 'block';
+        if (addPartBtn) addPartBtn.style.display = 'none';
     }
 };
 
@@ -1417,30 +1424,45 @@ const renderEvents = () => {
 const openEventDetail = async (eventId, preserveUI = false) => {
     try {
         const data = await apiFetch(`/api/events/${eventId}/details`);
+        if (!data.event) throw new Error('Evento não encontrado.');
+
         state.currentEvent = data.event;
-        state.currentEventParticipants = data.participants;
-        state.currentEventPayments = data.payments;
+        state.currentEventParticipants = data.participants || [];
+        state.currentEventPayments = data.payments || [];
+        
+        // Sync the detail view year with the event year
+        if (data.event.date) {
+            state.eventDetailYear = new Date(data.event.date).getFullYear();
+        }
         
         if (!preserveUI) {
-            document.getElementById('events-master-view').style.display = 'none';
-            document.getElementById('events-detail-view').style.display = 'block';
+            const masterView = document.getElementById('events-master-view');
+            const detailView = document.getElementById('events-detail-view');
+            if (masterView) masterView.style.display = 'none';
+            if (detailView) detailView.style.display = 'block';
             
             // Toggle button visibility
             if (state.role === 'admin' || state.role === 'secretário') {
-                document.getElementById('add-event-btn').style.display = 'none';
-                document.getElementById('add-participants-btn').style.display = 'block';
+                const addEventBtn = document.getElementById('add-event-btn');
+                const addPartBtn = document.getElementById('add-participants-btn');
+                if (addEventBtn) addEventBtn.style.display = 'none';
+                if (addPartBtn) addPartBtn.style.display = 'block';
             }
 
             // Reset details toggle (apenas na abertura inicial)
-            document.getElementById('event-details-table-container').style.display = 'none';
-            document.getElementById('toggle-event-details').textContent = 'Ver Detalhamento Membro a Membro ↓';
+            const detailContainer = document.getElementById('event-details-table-container');
+            if (detailContainer) detailContainer.style.display = 'none';
+            
+            const toggleBtn = document.getElementById('toggle-event-details');
+            if (toggleBtn) toggleBtn.textContent = 'Ver Detalhamento Membro a Membro ↓';
             
             // Limpar busca anterior ao abrir novo evento
             const evSearch = document.getElementById('ev-detail-search');
             if (evSearch) evSearch.value = '';
         }
 
-        document.getElementById('detail-event-title').textContent = data.event.name;
+        const titleElem = document.getElementById('detail-event-title');
+        if (titleElem) titleElem.textContent = data.event.name;
         
         // Ajustar cabeçalho da tabela conforme o tipo de pagamento
         const tableHead = document.querySelector('#event-detail-table thead');
@@ -1519,7 +1541,7 @@ let renderEventDetailGrid = (participants, payments) => {
             // Pre-index by month for O(1) month lookup
             const monthMap = new Map();
             personPayments.forEach(pay => {
-                if (pay.year === state.eventDetailYear) monthMap.set(pay.month, pay);
+                if (parseInt(pay.year) === parseInt(state.eventDetailYear)) monthMap.set(pay.month, pay);
             });
 
             for (let m = 1; m <= 12; m++) {
@@ -1552,18 +1574,43 @@ let renderEventDetailGrid = (participants, payments) => {
 
 // New helper to avoid JSON.stringify in HTML attributes
 window.openEventPaymentModalFromGridIndex = (personId, month, paymentIndex = -1) => {
+    // Only allow members to pay for themselves, or admins/secretaries to pay for anyone
+    if (state.role !== 'admin' && state.role !== 'secretário' && parseInt(personId) !== parseInt(state.personId)) return;
+
     const payment = paymentIndex >= 0 ? window._tempEventPayments[paymentIndex] : null;
-    openEventPaymentModal(personId, month, payment);
+    
+    if (!state.currentEvent) return;
+
+    // Set fields for the modal
+    const epEventId = document.getElementById('ep-event-id');
+    if (epEventId) epEventId.value = state.currentEvent.id;
+    const epEventName = document.getElementById('ep-event-name');
+    if (epEventName) epEventName.textContent = state.currentEvent.name;
+    const epMonth = document.getElementById('ep-month');
+    if (epMonth) epMonth.value = month || "";
+    const epYear = document.getElementById('ep-year');
+    if (epYear) epYear.value = month ? state.eventDetailYear : "";
+    
+    // Track who this payment is for
+    state.tempPaymentPersonId = personId;
+
+    openEventPaymentModal(state.currentEvent.id, state.currentEvent.name, payment);
 };
 
 const openEventPaymentModalFromGrid = (personId, month, payment = null) => {
     // Only allow members to pay for themselves, or admins/secretaries to pay for anyone
     if (state.role !== 'admin' && state.role !== 'secretário' && parseInt(personId) !== parseInt(state.personId)) return;
 
-    document.getElementById('ep-event-id').value = state.currentEvent.id;
-    document.getElementById('ep-event-name').textContent = state.currentEvent.name;
-    document.getElementById('ep-month').value = month || "";
-    document.getElementById('ep-year').value = month ? state.eventDetailYear : "";
+    if (!state.currentEvent) return;
+
+    const epEventId = document.getElementById('ep-event-id');
+    if (epEventId) epEventId.value = state.currentEvent.id;
+    const epEventName = document.getElementById('ep-event-name');
+    if (epEventName) epEventName.textContent = state.currentEvent.name;
+    const epMonth = document.getElementById('ep-month');
+    if (epMonth) epMonth.value = month || "";
+    const epYear = document.getElementById('ep-year');
+    if (epYear) epYear.value = month ? state.eventDetailYear : "";
     
     // Hidden fields or state to track person_id for admin
     state.tempPaymentPersonId = personId;
@@ -1604,12 +1651,24 @@ const openAddParticipantsModal = () => {
             </label>
         </div>
     `).join('');
-    
-    if (available.length === 0) {
-        list.innerHTML = '<p style="text-align: center; color: var(--text-dim); padding: 2rem;">Todos os membros já estão participando deste evento.</p>';
+    if (list) {
+        list.innerHTML = available.map(p => `
+            <div class="checklist-item" data-name="${p.name.toLowerCase()}" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border-color);">
+                <input type="checkbox" class="new-participant-check" data-id="${p.id}" id="check-${p.id}" style="width: 18px; height: 18px;">
+                <label for="check-${p.id}" style="cursor: pointer; flex: 1;">
+                    ${p.name} <br>
+                    <small style="color: var(--text-dim); font-size: 0.8rem;">${p.unit || 'Sem Unidade'}</small>
+                </label>
+            </div>
+        `).join('');
+        
+        if (available.length === 0) {
+            list.innerHTML = '<p style="text-align: center; color: var(--text-dim); padding: 2rem;">Todos os membros já estão participando deste evento.</p>';
+        }
     }
     
-    document.getElementById('event-participants-modal').style.display = 'flex';
+    const modal = document.getElementById('event-participants-modal');
+    if (modal) modal.style.display = 'flex';
 };
 
 const saveNewParticipants = async () => {
@@ -1628,45 +1687,58 @@ const saveNewParticipants = async () => {
         });
         
         showStatus('Membros adicionados com sucesso!', 'success');
-        document.getElementById('event-participants-modal').style.display = 'none';
+        const modal = document.getElementById('event-participants-modal');
+        if (modal) modal.style.display = 'none';
         openEventDetail(state.currentEvent.id, true);
     } catch (err) {
         showStatus('Erro ao adicionar membros: ' + err.message, 'error');
     }
 };
 
-document.getElementById('ev-clear-all').onclick = () => {
-    document.querySelectorAll('.participant-check').forEach(c => c.checked = false);
-};
+const evClearAll = document.getElementById('ev-clear-all');
+if (evClearAll) {
+    evClearAll.onclick = () => {
+        document.querySelectorAll('.participant-check').forEach(c => c.checked = false);
+    };
+}
 
-document.getElementById('ev-member-search').oninput = (e) => {
-    const term = e.target.value.toLowerCase();
-    const items = document.querySelectorAll('.checklist-item');
-    items.forEach(item => {
-        const name = item.getAttribute('data-name');
-        item.style.display = name.includes(term) ? 'flex' : 'none';
-    });
-};
-
-document.getElementById('ev-unit-filter').onchange = (e) => {
-    const val = e.target.value;
-    if (!val) return;
-    const checks = document.querySelectorAll('.participant-check');
-    
-    if (val === "ALL") {
-        checks.forEach(c => c.checked = true);
-    } else {
-        checks.forEach(c => {
-            if (c.getAttribute('data-unit') === val) c.checked = true;
+const evMemberSearch = document.getElementById('ev-member-search');
+if (evMemberSearch) {
+    evMemberSearch.oninput = (e) => {
+        const term = e.target.value.toLowerCase();
+        const items = document.querySelectorAll('.checklist-item');
+        items.forEach(item => {
+            const name = item.getAttribute('data-name');
+            item.style.display = name.includes(term) ? 'flex' : 'none';
         });
-    }
-    e.target.value = ""; // Reset filter
-};
+    };
+}
+
+const evUnitFilter = document.getElementById('ev-unit-filter');
+if (evUnitFilter) {
+    evUnitFilter.onchange = (e) => {
+        const val = e.target.value;
+        if (!val) return;
+        const checks = document.querySelectorAll('.participant-check');
+        
+        if (val === "ALL") {
+            checks.forEach(c => c.checked = true);
+        } else {
+            checks.forEach(c => {
+                if (c.getAttribute('data-unit') === val) c.checked = true;
+            });
+        }
+        e.target.value = ""; // Reset filter
+    };
+}
 
 const openEventPaymentModal = (eventId, eventName, payment = null) => {
-    document.getElementById('ep-event-id').value = eventId;
-    document.getElementById('ep-event-name').textContent = eventName;
-    document.getElementById('ep-modal-title').textContent = payment ? 'Visualizar Pagamento' : 'Enviar Comprovante';
+    const epEventId = document.getElementById('ep-event-id');
+    if (epEventId) epEventId.value = eventId;
+    const epEventName = document.getElementById('ep-event-name');
+    if (epEventName) epEventName.textContent = eventName;
+    const epModalTitle = document.getElementById('ep-modal-title');
+    if (epModalTitle) epModalTitle.textContent = payment ? 'Visualizar Pagamento' : 'Enviar Comprovante';
     
     const saveBtn = document.getElementById('ep-save-btn');
     const deleteBtn = document.getElementById('ep-delete-btn');
@@ -1824,7 +1896,7 @@ const updateDashboardStats = () => {
             eventosTotal += amount;
             
             // Distribuir o valor do evento para a unidade correspondente do membro
-            const person = state.people.find(pers => pers.id === p.person_id);
+            const person = state.people.find(pers => parseInt(pers.id) === parseInt(p.person_id));
             const unit = (person?.unit || '').toUpperCase();
 
             if (unit.includes('DIREÇÃO') || unit.includes('DIRECAO')) {
@@ -1937,9 +2009,13 @@ const renderEventDashboard = (participants, payments) => {
         }
     });
 
-    document.getElementById('ev-stat-total').textContent = `R$ ${evTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-    document.getElementById('ev-stat-direcao').textContent = `R$ ${evDirecao.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-    document.getElementById('ev-stat-desbrava').textContent = `R$ ${evDesbrava.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    const totalStat = document.getElementById('ev-stat-total');
+    const direcaoStat = document.getElementById('ev-stat-direcao');
+    const desbravaStat = document.getElementById('ev-stat-desbrava');
+
+    if (totalStat) totalStat.textContent = `R$ ${evTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    if (direcaoStat) direcaoStat.textContent = `R$ ${evDirecao.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    if (desbravaStat) desbravaStat.textContent = `R$ ${evDesbrava.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
 
     renderPieChart(
         ['Direção', 'Desbravadores', 'Outros'],

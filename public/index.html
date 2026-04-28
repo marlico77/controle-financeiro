@@ -273,6 +273,7 @@
                         </div>
                         <div id="events-actions" style="display: none; gap: 0.8rem; align-items: center;">
                             <button id="add-event-btn" class="btn-primary btn-small">Novo Evento</button>
+                            <button id="add-participants-btn" class="btn-primary btn-small" style="display: none;">Adicionar Participantes</button>
                         </div>
                         <div class="year-selector">
                             <select id="year-select">
@@ -1413,6 +1414,32 @@
                 <button type="submit" class="btn-primary" style="margin-top: 1rem;">Atualizar Senha e Entrar</button>
                 <div id="force-change-error" class="error-msg"></div>
             </form>
+        </div>
+    </div>
+
+    <!-- Event Participants Modal -->
+    <div id="event-participants-modal" class="modal">
+        <div class="modal-content glass-card animate-slide-up" style="max-width: 500px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="margin: 0; color: var(--accent-color);">Adicionar Participantes</h2>
+                <button class="btn-text close-modal" style="font-size: 1.5rem;">&times;</button>
+            </div>
+            
+            <div class="search-bar" style="margin-bottom: 1rem; background: rgba(0,0,0,0.05); padding: 0.5rem 1rem; border-radius: 50px; display: flex; align-items: center; gap: 0.5rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="16" height="16" fill="var(--text-dim)">
+                    <path d="M480 272C480 317.9 465.1 360.3 440 394.7L566.6 521.4C579.1 533.9 579.1 554.2 566.6 566.7C554.1 579.2 533.8 579.2 521.3 566.7L394.7 440C360.3 465.1 317.9 480 272 480C157.1 480 64 386.9 64 272C64 157.1 157.1 64 272 64C386.9 64 480 157.1 480 272zM272 416C351.5 416 416 351.5 416 272C416 192.5 351.5 128 272 128C192.5 128 128 192.5 128 272C128 351.5 192.5 416 272 416z" />
+                </svg>
+                <input type="text" id="add-member-search" placeholder="Pesquisar membro..." style="background: transparent; border: none; outline: none; width: 100%; color: var(--text-color);">
+            </div>
+
+            <div id="add-participants-list" class="checklist-container" style="max-height: 400px; overflow-y: auto; margin-bottom: 2rem;">
+                <!-- List populated by JS -->
+            </div>
+
+            <div style="display: flex; gap: 1rem;">
+                <button id="save-new-participants-btn" class="btn-primary" style="flex: 1;">Confirmar Inclusão</button>
+                <button class="btn-text close-modal" style="flex: 1;">Cancelar</button>
+            </div>
         </div>
     </div>
 
