@@ -195,8 +195,8 @@
                     </li>
                     <li data-target="messages" id="nav-messages" style="display: none;">
                         <span class="icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="width: 18px; height: 18px; fill: currentColor;">
-                                <path d="M160 368c26.5 0 48 21.5 48 48v16l72.5-54.4c8.3-6.2 18.4-9.6 28.8-9.6H448c35.3 0 64-28.7 64-64V64c0-35.3-28.7-64-64-64H64C28.7 0 0 28.7 0 64v224c0 35.3 28.7 64 64 64h96zM32 448c0-17.7 14.3-32 32-32h160c17.7 0 32 14.3 32 32s-14.3 32-32 32H64c-17.7 0-32-14.3-32-32z"/>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                                <path d="M112 128C85.5 128 64 149.5 64 176C64 191.1 71.1 205.3 83.2 214.4L291.2 370.4C308.3 383.2 331.7 383.2 348.8 370.4L556.8 214.4C568.9 205.3 576 191.1 576 176C576 149.5 554.5 128 528 128L112 128zM64 260L64 448C64 483.3 92.7 512 128 512L512 512C547.3 512 576 483.3 576 448L576 260L377.6 408.8C343.5 434.4 296.5 434.4 262.4 408.8L64 260z"/>
                             </svg>
                         </span>Mensagens
                     </li>
@@ -556,18 +556,7 @@
                             <p style="color: var(--text-dim);">Gere extratos detalhados de mensalidades, membros ou
                                 eventos.</p>
                         </div>
-                        <script>
-                            const initApp = () => {
-                                const token = localStorage.getItem('token');
 
-                                if (token) {
-                                    checkAuth();
-                                } else {
-                                    loginSection.style.display = 'flex';
-                                    mainSection.style.display = 'none';
-                                }
-                            };
-                        </script>
                         <button id="open-report-selector-btn"
                             onclick="const m = document.getElementById('report-selector-modal'); if(m) m.style.display='flex'; window.toggleReportFields();"
                             class="btn-primary"
@@ -745,11 +734,21 @@
                                     <!-- Options will be populated by JS -->
                                 </select>
                             </div>
-                            <div class="input-group">
-                                <label for="msg-title">Título do Aviso</label>
-                                <input type="text" id="msg-title" required placeholder="Ex: Lembrete de Reunião">
-                <!-- PWA Install Page -->
-                <div id="pwa-install-page" class="tab-content" style="display: none;">
+                        <div class="input-group">
+                            <label for="msg-title">Título do Aviso</label>
+                            <input type="text" id="msg-title" required placeholder="Ex: Lembrete de Reunião">
+                        </div>
+                        <div class="input-group">
+                            <label for="msg-content">Conteúdo da Mensagem</label>
+                            <textarea id="msg-content" required placeholder="Digite sua mensagem aqui..." style="width: 100%; min-height: 100px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;"></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary" style="width: 100%; font-weight: 700;">Enviar Mensagem</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- PWA Install Page -->
+            <div id="pwa-install-page" class="tab-content" style="display: none;">
                     <div class="glass-card install-card-container">
                         <img src="logo.png" alt="Logo" class="install-logo">
                         <h2 class="install-title">Instale nosso Aplicativo</h2>

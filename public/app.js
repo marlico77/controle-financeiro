@@ -575,17 +575,19 @@ async function apiFetch(url, options = {}) {
     }
 
     if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-            // Só desloga se não estivermos já na tela de login e o token for inválido
-            if (document.getElementById('login-section').style.display !== 'flex') {
-                logout();
-            }
-        }
+        // Prioridade: Se o servidor diz que precisa trocar senha, mostramos o modal antes de qualquer outra ação
         if (res.status === 403 && data.mustChangePassword) {
-            // Trigger forced modal if API blocks us
             document.getElementById('force-change-modal').style.display = 'flex';
             mainSection.style.display = 'none';
             throw new Error('Alteração de senha obrigatória');
+        }
+
+        if (res.status === 401 || res.status === 403) {
+            console.warn(`[AUTH] Erro ${res.status} na URL: ${url}`);
+            if (res.status === 401 && document.getElementById('login-section').style.display !== 'flex') {
+                console.warn('[AUTH] Redirecionando para login...');
+                logout();
+            }
         }
         throw new Error(data.error || 'Erro na requisição');
     }
@@ -769,6 +771,7 @@ async function checkAuth() {
                 authorizations: document.getElementById('nav-authorizations'),
                 outflows: document.getElementById('nav-outflows'),
                 sales: document.getElementById('nav-sales'),
+                messages: document.getElementById('nav-messages'),
                 logs: document.getElementById('nav-logs')
             };
 
@@ -779,6 +782,7 @@ async function checkAuth() {
                 if (navItems.authorizations) navItems.authorizations.style.display = 'none';
                 if (navItems.outflows) navItems.outflows.style.display = 'none';
                 if (navItems.sales) navItems.sales.style.display = 'none';
+                if (navItems.messages) navItems.messages.style.display = 'none';
                 if (navItems.logs) navItems.logs.style.display = 'none';
                 
                 // Adjust Dashboard for common user
@@ -797,6 +801,7 @@ async function checkAuth() {
                 if (navItems.authorizations) navItems.authorizations.style.display = 'flex';
                 if (navItems.outflows) navItems.outflows.style.display = 'flex';
                 if (navItems.sales) navItems.sales.style.display = isAdmin ? 'flex' : 'none';
+                if (navItems.messages) navItems.messages.style.display = 'flex';
                 
                 // Logs ONLY for master
                 if (navItems.logs) navItems.logs.style.display = isMaster ? 'flex' : 'none';
@@ -806,13 +811,20 @@ async function checkAuth() {
 
             initializeSidebar();
 
-            // Restore active tab
-            if (state.role === 'member' && (state.activeTab === 'people' || state.activeTab === 'reports')) {
+
+
+            // Sanity check for activeTab: se o usuário não é mestre e está tentando ver logs, volta pro dashboard
+            if (state.activeTab === 'logs' && !isMaster) {
                 state.activeTab = 'dashboard';
+                localStorage.setItem('activeTab', 'dashboard');
             }
-            if (state.role === 'secretário' && (state.activeTab === 'people' || state.activeTab === 'reports')) {
+            
+            // Outros resets de segurança para abas administrativas
+            if (state.role === 'member' && (state.activeTab === 'people' || state.activeTab === 'reports' || state.activeTab === 'outflows' || state.activeTab === 'sales')) {
                 state.activeTab = 'dashboard';
+                localStorage.setItem('activeTab', 'dashboard');
             }
+
             switchTab(state.activeTab);
             resetInactivityTimer(); // Start timer after auth verification
             loadInitialData();
@@ -1030,6 +1042,17 @@ function switchTab(target) {
         populateReportSelects();
     }
     
+    // Feature-specific initializations
+    if (target === 'messages') renderMessages();
+    if (target === 'pwa-install' && typeof updatePWAUI === 'function') {
+        updatePWAUI();
+    }
+    
+    // Sticky scrollbars helper
+    if (typeof initStickyScrollbars === 'function') {
+        setTimeout(initStickyScrollbars, 200);
+    }
+    
     // Close mobile sidebar if open
     const sidebar = document.querySelector('.sidebar');
     if (window.innerWidth <= 768 && sidebar.classList.contains('active')) {
@@ -1073,8 +1096,21 @@ document.getElementById('back-to-events').onclick = () => {
 const fetchNotifications = async () => {
     try {
         if (!state.token) return;
+        
+        // Fetch last 20 notifications for the UI list
         state.notifications = await apiFetch('/api/notifications');
         updateNotificationUI();
+
+        // Also check for unread notifications to show the modal (for priority alerts)
+        // We only show the modal if there's a new unread notification we haven't alerted yet
+        const unread = state.notifications.filter(n => !n.is_read);
+        if (unread.length > 0) {
+            const latest = unread[0];
+            // Only show modal if it's recent (e.g., last 1 minute) or specific type
+            // For now, let's keep it simple: if it's unread, we can show it once
+            // (the modal logic should handle not showing the same one repeatedly if needed)
+            // showNotificationModal(latest); // Disabled for now to avoid spamming on login
+        }
     } catch (err) {
         console.error('Error fetching notifications:', err);
     }
@@ -2966,14 +3002,7 @@ renderOutflows = (...args) => {
 };
 
 // Also init on tab switch
-const originalSwitchTab = switchTab;
-switchTab = (target) => {
-    originalSwitchTab(target);
-    setTimeout(initStickyScrollbars, 200);
-    if (target === 'pwa-install' && typeof updatePWAUI === 'function') {
-        updatePWAUI();
-    }
-};
+
 
 // Start initialization on window load for total stability
 window.addEventListener('load', () => {
@@ -3295,16 +3324,7 @@ if (salesForm) {
 }
 // --- Notification & Messaging System ---
 
-async function fetchNotifications() {
-    try {
-        const unread = await apiFetch('/api/notifications/unread');
-        if (unread && unread.length > 0) {
-            showNotificationModal(unread[0]);
-        }
-    } catch (err) {
-        console.error('Erro ao buscar notificações:', err);
-    }
-}
+
 
 function showNotificationModal(notif) {
     const modal = document.getElementById('notification-modal');
@@ -3315,7 +3335,7 @@ function showNotificationModal(notif) {
     if (!modal || !title || !content) return;
 
     title.textContent = notif.title;
-    content.textContent = notif.content;
+    content.textContent = notif.message;
     modal.style.display = 'flex';
 
     closeBtn.onclick = async () => {
@@ -3380,17 +3400,22 @@ async function renderMessages() {
     targetSelect.innerHTML = '<option value="all">Todos os Membros</option>';
 
     try {
+        // Force fresh fetch for total precision
         const people = await apiFetch('/api/people');
-        people.sort((a, b) => a.name.localeCompare(b.name)).forEach(p => {
-            if (p.u_id) { // Only members with login
-                const option = document.createElement('option');
-                option.value = p.u_id;
-                option.textContent = p.name;
-                targetSelect.appendChild(option);
-            }
+        
+        // Filter those who have a user account (u_id) and sort by name
+        const targets = people.filter(p => p.u_id != null);
+        
+        targets.sort((a, b) => a.name.localeCompare(b.name)).forEach(p => {
+            const option = document.createElement('option');
+            option.value = p.u_id;
+            option.textContent = p.name;
+            targetSelect.appendChild(option);
         });
+            
+        console.log(`[MESSAGES] Lista de alvos populada com ${targets.length} membros.`);
     } catch (err) {
-        console.error('Erro ao carregar membros:', err);
+        console.error('Erro ao carregar membros para mensagens:', err);
     }
 }
 
@@ -3417,8 +3442,4 @@ document.getElementById('send-msg-form').onsubmit = async (e) => {
 };
 
 // --- Tab switch logic update ---
-const originalSwitchTabNotif = switchTab;
-switchTab = (target) => {
-    originalSwitchTabNotif(target);
-    if (target === 'messages') renderMessages();
-};
+

@@ -453,6 +453,7 @@ app.post('/api/people', authenticateToken, async (req, res) => {
           finalUsernameUsed = finalUsername;
 
           const finalRole = (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) ? role : 'member';
+          const hash = await bcrypt.hash('tribo@2026', 10);
 
           await client.query(
               'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE)',
@@ -1399,9 +1400,9 @@ app.post('/api/notifications/send', authenticateToken, async (req, res) => {
     try {
         // 1. Save to DB for internal modal
         const result = await db.query(`
-            INSERT INTO notifications (user_id, title, content, type)
+            INSERT INTO notifications (user_id, title, message, type)
             VALUES ($1, $2, $3, 'manual') RETURNING id
-        `, [userId || null, title, content]);
+        `, [userId === 'all' ? null : parseInt(userId), title, content]);
 
         // 2. Try to send push notification
         const pushResult = await db.query(`
@@ -1455,7 +1456,7 @@ const sendPaymentReminders = async (message) => {
             
             // Save to DB
             await db.query(`
-                INSERT INTO notifications (user_id, title, content, type)
+                INSERT INTO notifications (user_id, title, message, type)
                 VALUES ($1, $2, $3, 'automated_reminder')
             `, [user.id, title, content]);
 
