@@ -1,14 +1,25 @@
+// --- Storage Helpers ---
+const getStorageItem = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
+const setStorageItem = (key, value, persistent = true) => {
+    if (persistent) localStorage.setItem(key, value);
+    else sessionStorage.setItem(key, value);
+};
+const removeStorageItem = (key) => {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+};
+
 // State Management
 const state = {
-    token: localStorage.getItem('token') || null,
+    token: getStorageItem('token') || null,
     people: [],
     payments: [],
     currentYear: new Date().getFullYear(),
-    activeTab: localStorage.getItem('activeTab') || 'dashboard',
-    role: localStorage.getItem('role') || null,
-    username: localStorage.getItem('username') || null,
-    name: localStorage.getItem('name') || null,
-    personId: localStorage.getItem('personId') || null,
+    activeTab: getStorageItem('activeTab') || 'dashboard',
+    role: getStorageItem('role') || null,
+    username: getStorageItem('username') || null,
+    name: getStorageItem('name') || null,
+    personId: getStorageItem('personId') || null,
     notifications: [],
     events: [],
     eventPayments: [],
@@ -622,7 +633,7 @@ function resetInactivityTimer() {
     if (inactivityTimeout) clearTimeout(inactivityTimeout);
     if (warningTimeout) clearTimeout(warningTimeout);
 
-    if (state.token || localStorage.getItem('token')) {
+    if (state.token || getStorageItem('token')) {
         warningTimeout = setTimeout(() => {
             showStatus('⚠️ Sua sessão expirará em 2 minutos por inatividade.', 'info');
         }, WARNING_TIME);
@@ -824,11 +835,17 @@ const initializeNotifications = () => {
 // --- Auth Functions ---
 async function checkAuth() {
     const splash = document.getElementById('splash-screen');
-    const token = localStorage.getItem('token');
+    const token = getStorageItem('token');
+    
+    // UI Optimization: If token exists, ensure login is hidden early
     if (token) {
+        loginSection.style.display = 'none';
+        mainSection.style.display = 'none'; // Will show after verification or keep hidden if forced pass change
+        if (splash) splash.style.display = 'flex';
+        
         state.token = token;
-        state.role = state.role || localStorage.getItem('role');
-        state.personId = state.personId || localStorage.getItem('personId');
+        state.role = state.role || getStorageItem('role');
+        state.personId = state.personId || getStorageItem('personId');
 
         try {
             // Verify status with server to ensure security
@@ -837,9 +854,12 @@ async function checkAuth() {
             state.role = status.role;
             state.username = status.username;
             state.name = status.name;
-            localStorage.setItem('role', status.role);
-            localStorage.setItem('username', status.username);
-            localStorage.setItem('name', status.name);
+            
+            // Re-save to correct storage to ensure persistence
+            const isPersistent = !!localStorage.getItem('token');
+            setStorageItem('role', status.role, isPersistent);
+            setStorageItem('username', status.username, isPersistent);
+            setStorageItem('name', status.name, isPersistent);
             
             document.getElementById('user-name-display').textContent = status.name || 'Usuário';
             
@@ -918,13 +938,13 @@ async function checkAuth() {
             // Sanity check for activeTab: se o usuário não é mestre e está tentando ver logs, volta pro dashboard
             if (state.activeTab === 'logs' && !isMaster) {
                 state.activeTab = 'dashboard';
-                localStorage.setItem('activeTab', 'dashboard');
+                setStorageItem('activeTab', 'dashboard', !!localStorage.getItem('token'));
             }
             
             // Outros resets de segurança para abas administrativas
             if (state.role === 'member' && (state.activeTab === 'people' || state.activeTab === 'reports' || state.activeTab === 'outflows' || state.activeTab === 'sales')) {
                 state.activeTab = 'dashboard';
-                localStorage.setItem('activeTab', 'dashboard');
+                setStorageItem('activeTab', 'dashboard', !!localStorage.getItem('token'));
             }
 
             switchTab(state.activeTab);
@@ -940,7 +960,12 @@ async function checkAuth() {
             }, 2000);
         } catch (err) {
             console.error('Auth verification failed:', err);
+            handleUnauthorized('checkAuth');
         }
+    } else {
+        if (splash) splash.style.display = 'none';
+        loginSection.style.display = 'flex';
+        mainSection.style.display = 'none';
     }
 }
 
@@ -1035,11 +1060,13 @@ loginForm.addEventListener('submit', async (e) => {
 
         if (res.ok) {
             const isForced = data.mustChangePassword;
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('role', data.role);
-            localStorage.setItem('username', data.username);
-            localStorage.setItem('name', data.name || data.username);
-            localStorage.setItem('personId', data.personId || '');
+            const rememberMe = document.getElementById('remember-me').checked;
+
+            setStorageItem('token', data.token, rememberMe);
+            setStorageItem('role', data.role, rememberMe);
+            setStorageItem('username', data.username, rememberMe);
+            setStorageItem('name', data.name || data.username, rememberMe);
+            setStorageItem('personId', data.personId || '', rememberMe);
             state.token = data.token;
             state.role = data.role;
             state.username = data.username;
@@ -1070,7 +1097,7 @@ function handleUnauthorized(originUrl = '') {
     console.log(`[AUTH] Tratando acesso não autorizado: ${originUrl}`);
     
     // Limpa estado local sem forçar reload imediato
-    localStorage.removeItem('token');
+    removeStorageItem('token');
     state.token = null;
     
     // Mostra login com mensagem de erro
@@ -1089,12 +1116,12 @@ function handleUnauthorized(originUrl = '') {
 }
 
 function logout() {
-    const hadToken = !!localStorage.getItem('token');
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    localStorage.removeItem('username');
-    localStorage.removeItem('name');
-    localStorage.removeItem('personId');
+    const hadToken = !!getStorageItem('token');
+    removeStorageItem('token');
+    removeStorageItem('role');
+    removeStorageItem('username');
+    removeStorageItem('name');
+    removeStorageItem('personId');
     state.token = null;
     state.role = null;
 
@@ -1125,12 +1152,13 @@ if (confirmForceLoginBtn) {
 }
 
 // --- Navigation ---
-function switchTab(target) {
-    state.activeTab = target;
-    localStorage.setItem('activeTab', target);
+function switchTab(tabName) {
+    if (state.activeTab === tabName) return;
+    state.activeTab = tabName;
+    setStorageItem('activeTab', tabName, !!localStorage.getItem('token'));
     
     navLinks.forEach(l => {
-        l.classList.toggle('active', l.dataset.target === target);
+        l.classList.toggle('active', l.dataset.target === tabName);
     });
 
     tabContents.forEach(tab => {
@@ -3217,10 +3245,12 @@ renderOutflows = (...args) => {
 
 
 // Start initialization on window load for total stability
-window.addEventListener('load', () => {
-    if (localStorage.getItem('token')) {
+window.addEventListener('DOMContentLoaded', () => {
+    if (getStorageItem('token')) {
         checkAuth();
     } else {
+        const splash = document.getElementById('splash-screen');
+        if (splash) splash.style.display = 'none';
         loginSection.style.display = 'flex';
         mainSection.style.display = 'none';
     }

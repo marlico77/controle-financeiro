@@ -253,7 +253,7 @@ app.post('/api/login', async (req, res) => {
       username: dbUsername, 
       role: finalRole, 
       personId: personId
-    }, JWT_SECRET, { expiresIn: '12h' });
+    }, JWT_SECRET, { expiresIn: '24h' });
 
     console.log(`Login Successful: ${dbUsername} as ${finalRole} ${force ? '[FORCED]' : ''}`);
     
