@@ -1081,7 +1081,7 @@ app.post('/api/event-payments', authenticateToken, upload.single('receipt'), asy
 app.get('/api/sales', authenticateToken, async (req, res) => {
     const { year } = req.query;
     try {
-        let sql = 'SELECT * FROM sales';
+        let sql = 'SELECT id, event_name, amount, date, description, receipt_path, receipt_mime, created_at FROM sales';
         let params = [];
         if (year) {
             sql += ' WHERE EXTRACT(YEAR FROM date) = $1';

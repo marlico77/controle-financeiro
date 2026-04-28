@@ -9,6 +9,17 @@ const removeStorageItem = (key) => {
     sessionStorage.removeItem(key);
 };
 
+// --- Security Helpers ---
+const escapeHTML = (str) => {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+};
+
 // State Management
 const state = {
     token: getStorageItem('token') || null,
@@ -972,27 +983,40 @@ async function checkAuth() {
 // --- Data Fetching ---
 async function loadInitialData() {
     try {
-        state.people = await apiFetch('/api/people');
+        // Carregamento em paralelo para máxima performance
+        const promises = [
+            apiFetch('/api/people'),
+            apiFetch(`/api/payments?year=${state.currentYear}`)
+        ];
+
+        if (state.role === 'admin' || state.role === 'secretário') {
+            promises.push(apiFetch('/api/event-payments'));
+            promises.push(apiFetch('/api/outflows'));
+            promises.push(apiFetch('/api/sales'));
+        } else {
+            promises.push(apiFetch(`/api/event-payments?person_id=${state.personId}`));
+        }
+
+        const results = await Promise.all(promises);
         
+        state.people = results[0];
+        state.payments = results[1];
+        state.eventPayments = results[2] || [];
+        
+        if (state.role === 'admin' || state.role === 'secretário') {
+            state.outflows = results[3] || [];
+            state.sales = results[4] || [];
+        } else {
+            state.outflows = [];
+            state.sales = [];
+        }
+
         // Priority: Update user name for non-admin accounts immediately
         if (state.role !== 'admin' && state.people.length > 0) {
             const person = state.people[0];
             if (person) {
                 document.getElementById('user-name-display').textContent = person.name;
             }
-        }
-
-        state.payments = await apiFetch(`/api/payments?year=${state.currentYear}`);
-        
-        // Buscar pagamentos de eventos e saídas também para compor o total do caixa
-        if (state.role === 'admin' || state.role === 'secretário') {
-            state.eventPayments = await apiFetch('/api/event-payments');
-            state.outflows = await apiFetch('/api/outflows');
-            state.sales = await apiFetch('/api/sales');
-        } else {
-            state.eventPayments = await apiFetch(`/api/event-payments?person_id=${state.personId}`);
-            state.outflows = [];
-            state.sales = [];
         }
 
         renderDashboard();
@@ -1162,37 +1186,37 @@ function switchTab(tabName) {
     });
 
     tabContents.forEach(tab => {
-        tab.style.display = tab.id === `${target}-page` ? 'block' : 'none';
+        tab.style.display = tab.id === `${tabName}-page` ? 'block' : 'none';
     });
 
     const peopleActions = document.getElementById('people-actions');
     if (peopleActions) {
-        peopleActions.style.display = target === 'people' ? 'flex' : 'none';
+        peopleActions.style.display = tabName === 'people' ? 'flex' : 'none';
     }
 
     const eventsActions = document.getElementById('events-actions');
     if (eventsActions && state.role === 'admin') {
-        eventsActions.style.display = target === 'events' ? 'flex' : 'none';
+        eventsActions.style.display = tabName === 'events' ? 'flex' : 'none';
     }
 
     const title = document.getElementById('page-title');
-    if (target === 'dashboard') title.textContent = state.role === 'admin' ? 'Dashboard de Mensalidades' : 'Meu Status de Mensalidade';
-    else if (target === 'people') title.textContent = 'Gerenciamento de Membros';
-    else if (target === 'events') title.textContent = 'Gestão de Eventos';
-    else if (target === 'reports') title.textContent = 'Relatórios do Sistema';
-    else if (target === 'mensalidade') title.textContent = 'Controle de Mensalidades';
-    else if (target === 'authorizations') title.textContent = 'Autorizações de Saída';
-    else if (target === 'outflows') title.textContent = 'Gestão de Despesas';
-    else if (target === 'sales') title.textContent = 'Gestão de Vendas';
-    else if (target === 'logs') title.textContent = 'Logs de Auditoria';
+    if (tabName === 'dashboard') title.textContent = state.role === 'admin' ? 'Dashboard de Mensalidades' : 'Meu Status de Mensalidade';
+    else if (tabName === 'people') title.textContent = 'Gerenciamento de Membros';
+    else if (tabName === 'events') title.textContent = 'Gestão de Eventos';
+    else if (tabName === 'reports') title.textContent = 'Relatórios do Sistema';
+    else if (tabName === 'mensalidade') title.textContent = 'Controle de Mensalidades';
+    else if (tabName === 'authorizations') title.textContent = 'Autorizações de Saída';
+    else if (tabName === 'outflows') title.textContent = 'Gestão de Despesas';
+    else if (tabName === 'sales') title.textContent = 'Gestão de Vendas';
+    else if (tabName === 'logs') title.textContent = 'Logs de Auditoria';
 
     // Refresh specific data if needed
-    if (target === 'dashboard') renderDashboard();
-    if (target === 'people') renderPeople();
-    if (target === 'events') fetchEventsData();
-    if (target === 'outflows') renderOutflows();
-    if (target === 'sales') fetchSales();
-    if (target === 'logs') fetchLogs();
+    if (tabName === 'dashboard') renderDashboard();
+    if (tabName === 'people') renderPeople();
+    if (tabName === 'events') fetchEventsData();
+    if (tabName === 'outflows') renderOutflows();
+    if (tabName === 'sales') fetchSales();
+    if (tabName === 'logs') fetchLogs();
     if (target === 'reports') {
         populateReportSelects();
     }
@@ -1225,12 +1249,12 @@ function populateReportSelects() {
     
     if (memberSelect) {
         memberSelect.innerHTML = '<option value="">Selecione um Membro</option>' + 
-            state.people.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            state.people.map(p => `<option value="${p.id}">${escapeHTML(p.name)}</option>`).join('');
     }
         
     if (eventSelect) {
         eventSelect.innerHTML = '<option value="">Selecione um Evento</option>' + 
-            state.events.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+            state.events.map(e => `<option value="${e.id}">${escapeHTML(e.name)}</option>`).join('');
     }
 };
 
@@ -1298,9 +1322,11 @@ const updateNotificationUI = () => {
     list.innerHTML = state.notifications.map(n => `
         <div class="notification-item ${n.is_read ? '' : 'unread'} ${n.related_id ? 'clickable' : ''}" 
              ${n.related_id ? `data-related-id="${n.related_id}" data-related-type="${n.related_type}"` : ''}>
-            <h5>${n.title}</h5>
-            <p>${n.message}</p>
-            <span class="time">${new Date(n.created_at).toLocaleString('pt-BR')}</span>
+            <div class="notif-content-wrapper">
+                <span class="notif-title">${escapeHTML(n.title)}</span>
+                <span class="notif-msg">${escapeHTML(n.message)}</span>
+                <span class="notif-time">${new Date(n.created_at).toLocaleString('pt-BR')}</span>
+            </div>
         </div>
     `).join('');
 };
@@ -1368,8 +1394,8 @@ const renderLogs = () => {
         return `
             <tr class="animate-fade-in">
                 <td><small>${date}</small></td>
-                <td><strong>${log.username}</strong></td>
-                <td><span class="log-badge ${actionClass}">${log.action}</span></td>
+                <td><strong>${escapeHTML(log.username)}</strong></td>
+                <td><span class="log-badge ${actionClass}">${escapeHTML(log.action)}</span></td>
                 <td>
                     <div style="font-size: 0.85rem;">IP: ${log.ip_address}</div>
                     <div style="font-size: 0.75rem; color: var(--text-dim);">${log.os} | ${log.browser}</div>
@@ -1410,13 +1436,16 @@ async function fetchEventsData() {
     }
 };
 
+
 const renderEvents = () => {
     const list = document.getElementById('events-list');
+    if (!list) return;
+    
     list.innerHTML = state.events.map(event => {
         return `
             <div class="glass-card event-card animate-fade-in" style="padding: 1.5rem; margin-bottom: 1rem; cursor: pointer;" onclick="openEventDetail(${event.id})">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
-                    <h4 style="margin: 0; color: var(--accent-color);">${event.name}</h4>
+                    <h4 style="margin: 0; color: var(--accent-color);">${escapeHTML(event.name)}</h4>
                     ${state.role === 'admin' ? `<button class="btn-text" onclick="event.stopPropagation(); deleteEvent(${event.id})" style="padding: 0; min-height: auto; display: flex; align-items: center; justify-content: center; color: var(--text-dim); transition: color 0.2s;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="18" height="18" fill="currentColor">
                             <path d="M262.2 48C248.9 48 236.9 56.3 232.2 68.8L216 112L120 112C106.7 112 96 122.7 96 136C96 149.3 106.7 160 120 160L520 160C533.3 160 544 149.3 544 136C544 122.7 533.3 112 520 112L424 112L407.8 68.8C403.1 56.3 391.2 48 377.8 48L262.2 48zM128 208L128 512C128 547.3 156.7 576 192 576L448 576C483.3 576 512 547.3 512 512L512 208L464 208L464 512C464 520.8 456.8 528 448 528L192 528C183.2 528 176 520.8 176 512L176 208L128 208zM288 280C288 266.7 277.3 256 264 256C250.7 256 240 266.7 240 280L240 456C240 469.3 250.7 480 264 480C277.3 480 288 469.3 288 456L280zM400 280C400 266.7 389.3 256 376 256C362.7 256 352 266.7 352 280L352 456C352 469.3 362.7 480 376 480C389.3 480 400 469.3 400 456L400 280z"/>
@@ -1431,12 +1460,11 @@ const renderEvents = () => {
                     </span>
                     ${Object.entries(event.unit_counts || {}).map(([unit, count]) => `
                         <span style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: var(--text-dim); padding: 2px 8px; border-radius: 4px; font-size: 0.7rem;">
-                            ${unit}: ${count}
+                            ${escapeHTML(unit)}: ${count}
                         </span>
                     `).join('')}
                 </div>
-
-                <p class="event-desc" style="font-size: 0.9rem; margin-top: 10px;">${event.description || 'Sem descrição'}</p>
+                <p class="event-desc" style="font-size: 0.9rem; margin-top: 10px;">${escapeHTML(event.description || 'Sem descrição')}</p>
                 <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--accent-color); font-weight: 500;">
                     Clique para ver detalhamento →
                 </div>
@@ -1541,7 +1569,7 @@ let renderEventDetailGrid = (participants, payments) => {
     let html = '';
     filteredParticipants.forEach(p => {
         const personPayments = paymentsMap.get(p.id) || [];
-        let rowHtml = `<td><strong>${p.name}</strong> <br> <small>${p.unit || '-'}</small></td>`;
+        let rowHtml = `<td><strong>${escapeHTML(p.name)}</strong> <br> <small>${escapeHTML(p.unit || '-')}</small></td>`;
         let totalPaid = 0;
 
         if (isUnico) {
@@ -2219,7 +2247,7 @@ function renderOutflows() {
         return `
             <tr>
                 <td>${date}</td>
-                <td><span class="unit-tag" style="background: rgba(229, 9, 20, 0.1); color: var(--outflow-color);">${out.category}</span></td>
+                <td><span class="unit-tag" style="background: rgba(229, 9, 20, 0.1); color: var(--outflow-color);">${escapeHTML(out.category)}</span></td>
                 <td style="color: var(--error-color); font-weight: 600;">- ${amount}</td>
                 <td>${receiptHtml}</td>
                 <td>
@@ -2319,7 +2347,7 @@ function renderDashboard() {
 
     filteredPeople.forEach(person => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td><strong>${person.name}</strong></td>`;
+        tr.innerHTML = `<td><strong>${escapeHTML(person.name)}</strong></td>`;
         
         let personTotal = 0;
 
@@ -2435,10 +2463,10 @@ function renderPeople() {
     processedPeople.forEach(person => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><strong>${person.name.toUpperCase()}</strong></td>
-            <td><span class="badge-user">${person.username || '-'}</span></td>
-            <td><span class="unit-tag">${person.unit || 'S/U'}</span></td>
-            <td>${person.responsible || '-'}</td>
+            <td><strong>${escapeHTML(person.name.toUpperCase())}</strong></td>
+            <td><span class="badge-user">${escapeHTML(person.username) || '-'}</span></td>
+            <td><span class="unit-tag">${escapeHTML(person.unit) || 'S/U'}</span></td>
+            <td>${escapeHTML(person.responsible) || '-'}</td>
             <td></td> <!-- CPF column cleared as requested -->
             <td>
                 <button class="btn-text" onclick="editPerson(${person.id})">
@@ -3506,7 +3534,7 @@ function renderSales() {
 
         return `
             <tr>
-                <td><strong>${sale.event_name}</strong></td>
+                <td><strong>${escapeHTML(sale.event_name)}</strong></td>
                 <td>${date}</td>
                 <td style="color: var(--outflow-color); font-weight: 600;">+ ${amount}</td>
                 <td>${receiptHtml}</td>
@@ -3659,7 +3687,7 @@ async function renderMessages() {
             
             const label = document.createElement('label');
             label.htmlFor = `msg-user-${p.u_id}`;
-            label.textContent = p.name;
+            label.textContent = p.name; // textContent is inherently safe
             label.style.cssText = 'margin: 0; cursor: pointer; font-size: 0.9rem; flex-grow: 1; user-select: none;';
             
             // Permitir clicar na linha toda
