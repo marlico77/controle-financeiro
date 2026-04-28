@@ -252,13 +252,18 @@
                                 </svg>
                                 <span class="notification-badge" id="notification-badge">0</span>
                             </div>
-                            <div class="notification-dropdown" id="notification-dropdown" style="display: none;">
+                            <div class="notification-dropdown" id="notification-dropdown">
                                 <div class="dropdown-header">
                                     <h4>Notificações</h4>
-                                    <button id="mark-all-read" class="btn-text">Marcar todas como lidas</button>
+                                    <button id="mark-all-read" class="btn-text" style="color: var(--accent-color); font-weight: 700; font-size: 0.85rem;">Marcar todas lidas</button>
                                 </div>
                                 <div id="notification-list" class="notification-list">
-                                    <!-- Notifications will be injected here -->
+                                    <div class="notification-empty">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#ddd" viewBox="0 0 16 16">
+                                            <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917z"/>
+                                        </svg>
+                                        <span>Não há novas notificações</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1461,15 +1466,6 @@
         </div>
     </div>
 
-    <!-- Notification Modal -->
-    <div id="notification-modal" class="modal" style="display: none; z-index: 10001;">
-        <div class="modal-content" style="max-width: 450px; text-align: center; padding: 2.5rem; border-radius: 24px; border: 1px solid rgba(229, 9, 20, 0.2);">
-            <div id="notif-icon" style="font-size: 3.5rem; margin-bottom: 1rem; filter: drop-shadow(0 0 10px rgba(229, 9, 20, 0.3));">🔔</div>
-            <h2 id="notif-title" style="color: var(--accent-color); margin-bottom: 1.2rem; font-size: 1.8rem; font-weight: 800;">Título da Mensagem</h2>
-            <p id="notif-content" style="color: var(--text-dim); line-height: 1.6; margin-bottom: 2.5rem; font-size: 1.1rem;">Conteúdo da mensagem...</p>
-            <button id="close-notif-btn" class="btn-primary" style="width: 100%; padding: 1.2rem; font-weight: 700; border-radius: 50px;">Entendido</button>
-        </div>
-    </div>
 
     <script src="app.js"></script>
     <!-- Notification Modal (For priority alerts) -->

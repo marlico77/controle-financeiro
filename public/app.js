@@ -730,7 +730,6 @@ const initMessageForm = () => {
         }
     };
 };
-initMessageForm();
 
 // Global Modal Closing Logic
 closeButtons.forEach(btn => {
@@ -764,18 +763,34 @@ if (sidebarToggle) {
 
 // --- Notifications Logic ---
 const initializeNotifications = () => {
-    const trigger = document.getElementById('notification-trigger');
-    const dropdown = document.getElementById('notification-dropdown');
-    const markReadBtn = document.getElementById('mark-all-read');
-
-    if (trigger) {
-        trigger.onclick = (e) => {
+    // Usar delegação de eventos global para máxima resiliência (Senior approach)
+    window.onclick = (e) => {
+        const trigger = e.target.closest('#notification-trigger');
+        const dropdown = document.getElementById('notification-dropdown');
+        
+        if (trigger) {
+            e.preventDefault();
             e.stopPropagation();
-            const isVisible = dropdown.style.display === 'block';
-            dropdown.style.display = isVisible ? 'none' : 'block';
-        };
-    }
+            if (dropdown) {
+                const isActive = dropdown.classList.contains('active');
+                
+                // Fechar outros menus se houver
+                dropdown.classList.toggle('active', !isActive);
+                dropdown.style.display = !isActive ? 'block' : 'none'; // Fallback display
+                
+                if (!isActive) fetchNotifications();
+            }
+            return;
+        }
 
+        // Fechar ao clicar fora
+        if (dropdown && dropdown.classList.contains('active') && !e.target.closest('#notification-dropdown')) {
+            dropdown.classList.remove('active');
+            dropdown.style.display = 'none';
+        }
+    };
+
+    const markReadBtn = document.getElementById('mark-all-read');
     if (markReadBtn) {
         markReadBtn.onclick = async (e) => {
             e.stopPropagation();
@@ -787,10 +802,6 @@ const initializeNotifications = () => {
             }
         };
     }
-
-    document.addEventListener('click', () => {
-        if (dropdown) dropdown.style.display = 'none';
-    });
 
     const list = document.getElementById('notification-list');
     if (list) {
@@ -970,7 +981,7 @@ async function loadInitialData() {
                 setTimeout(() => {
                     if (state.role === 'admin') { 
                         const modal = document.getElementById('notification-modal');
-                        const msgEl = document.getElementById('notif-modal-message');
+                        const msgEl = document.getElementById('notif-content'); // Fixed reference to existing ID
                         if (modal && msgEl) {
                             msgEl.innerHTML = `Existem <strong>${pendingPayments.length}</strong> comprovante(s) aguardando sua aprovação no sistema.`;
                             modal.style.display = 'flex';
@@ -1177,7 +1188,7 @@ navLinks.forEach(link => {
     link.addEventListener('click', () => switchTab(link.dataset.target));
 });
 
-const populateReportSelects = () => {
+function populateReportSelects() {
     const memberSelect = document.getElementById('report-member-select');
     const eventSelect = document.getElementById('report-event-select');
     
@@ -1209,7 +1220,7 @@ document.getElementById('back-to-events').onclick = () => {
 // Global session tracker for shown notification modals to avoid annoyance
 const sessionShownModals = new Set();
 
-const fetchNotifications = async () => {
+async function fetchNotifications() {
     try {
         if (!state.token) return;
         
@@ -1283,7 +1294,7 @@ const handleNotificationClick = async (id, type) => {
 
 
 // --- Logs Logic ---
-const fetchLogs = async () => {
+async function fetchLogs() {
     try {
         const logs = await apiFetch('/api/admin/logs');
         state.allLogs = logs; // Store all logs for local filtering
@@ -1355,7 +1366,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 });
 
 // --- Events Logic ---
-const fetchEventsData = async () => {
+async function fetchEventsData() {
     try {
         state.events = await apiFetch('/api/events');
         renderEvents();
@@ -2082,7 +2093,7 @@ const renderBarChart = (monthlyData, canvasId = 'barChart', stateKey = 'bar') =>
     });
 };
 
-const renderOutflows = () => {
+function renderOutflows() {
     const body = document.getElementById('outflows-body');
     if (!body) return;
 
@@ -2166,9 +2177,18 @@ if (outflowForm) {
     };
 }
 
+async function fetchOutflows() {
+    try {
+        state.outflows = await apiFetch('/api/outflows');
+        renderOutflows();
+    } catch (err) {
+        console.error('Error fetching outflows:', err);
+    }
+}
+
 // --- Rendering ---
 
-let renderDashboard = () => {
+function renderDashboard() {
     paymentsBody.innerHTML = '';
     const footer = document.getElementById('payments-footer');
     footer.innerHTML = '';
@@ -2273,7 +2293,7 @@ const setSort = (column) => {
     renderPeople();
 };
 
-let renderPeople = () => {
+function renderPeople() {
     peopleBody.innerHTML = '';
     
     // Global filter logic
@@ -3218,7 +3238,7 @@ if (closeBtn) {
 
 console.log('PWA Status:', { isStandalone, isIOS });
 
-const updatePWAUI = () => {
+function updatePWAUI() {
     // Re-fetch elements to avoid null references if script ran too early
     const androidSection = document.getElementById('android-guide-box');
     const iosSection = document.getElementById('ios-guide-box');
