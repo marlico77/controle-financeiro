@@ -151,38 +151,39 @@ const authenticateToken = (req, res, next) => {
 // --- Sync Members to Users ---
 const syncMemberUsers = async () => {
     try {
-        const peopleResult = await db.query('SELECT id, name FROM people');
-        const people = peopleResult.rows;
+        // Otimização: Busca apenas pessoas que não possuem registro na tabela de usuários
+        const missingUsersResult = await db.query(`
+            SELECT p.id, p.name 
+            FROM people p 
+            LEFT JOIN users u ON p.id = u.person_id 
+            WHERE u.id IS NULL
+        `);
+        const people = missingUsersResult.rows;
         
-        // Generate default hash once
+        if (people.length === 0) return;
+
+        console.log(`[SYNC] Sincronizando ${people.length} novos membros para usuários...`);
         const defaultHash = await bcrypt.hash('tribo@2026', 10);
 
         for (const p of people) {
-            // Generate username: first.last (no accents, lowercase)
-            const nameParts = p.name.trim().split(' ');
+            const nameParts = p.name.trim().split(/\s+/);
             const first = nameParts[0].toLowerCase();
             const last = nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
             
-            let baseUsername = last ? `${first}.${last}` : first;
-            // Remove accents/diacritics
-            baseUsername = baseUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            let baseUsername = (last ? `${first}.${last}` : first);
+            baseUsername = baseUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
             
-            const username = baseUsername;
-            // Check if person already has a user
-            const existing = await db.query('SELECT id FROM users WHERE person_id = $1', [p.id]);
-            if (existing.rows.length === 0) {
-                try {
-                    await db.query(
-                        'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT (username) DO NOTHING',
-                        [username, defaultHash, 'member', p.id]
-                    );
-                } catch (err) {
-                    const fallbackName = `${username}${p.id}`;
-                    await db.query(
-                        'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT DO NOTHING',
-                        [fallbackName, defaultHash, 'member', p.id]
-                    );
-                }
+            try {
+                await db.query(
+                    'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT (username) DO NOTHING',
+                    [baseUsername, defaultHash, 'member', p.id]
+                );
+            } catch (err) {
+                // Fallback para evitar colisão de username
+                await db.query(
+                    'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT DO NOTHING',
+                    [`${baseUsername}${p.id}`, defaultHash, 'member', p.id]
+                );
             }
         }
     } catch (err) {
@@ -218,7 +219,18 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT NOW()
             )
         `);
-        console.log('[DB] Tables verified/created.');
+
+        // --- Performance Indices ---
+        await db.query('CREATE INDEX IF NOT EXISTS idx_payments_year ON payments(year)');
+        await db.query('CREATE INDEX IF NOT EXISTS idx_payments_person_id ON payments(person_id)');
+        await db.query('CREATE INDEX IF NOT EXISTS idx_event_payments_event_id ON event_payments(event_id)');
+        await db.query('CREATE INDEX IF NOT EXISTS idx_event_payments_person_id ON event_payments(person_id)');
+        await db.query('CREATE INDEX IF NOT EXISTS idx_system_logs_created_at ON system_logs(created_at)');
+        await db.query('CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)');
+        await db.query('CREATE INDEX IF NOT EXISTS idx_users_person_id ON users(person_id)');
+        await db.query('CREATE INDEX IF NOT EXISTS idx_people_name ON people(name)');
+
+        console.log('[DB] Tables and Performance Indices verified/created.');
     } catch (err) {
         console.error('[DB] Error initializing tables:', err);
     }
@@ -801,33 +813,53 @@ app.get('/api/events', authenticateToken, async (req, res) => {
 
         if (req.user.role === 'admin' || req.user.role === 'secretário') {
             queryText = `
+                WITH participant_counts AS (
+                    SELECT event_id, COUNT(*) as count 
+                    FROM event_participants 
+                    GROUP BY event_id
+                ),
+                unit_stats AS (
+                    SELECT ep.event_id, jsonb_object_agg(COALESCE(p.unit, 'S/U'), uc.count) as unit_counts
+                    FROM (
+                        SELECT ep.event_id, p.unit, COUNT(*) as count
+                        FROM event_participants ep
+                        JOIN people p ON ep.person_id = p.id
+                        GROUP BY ep.event_id, p.unit
+                    ) uc
+                    GROUP BY ep.event_id
+                )
                 SELECT e.*, 
-                       (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id) as total_participants,
-                       (SELECT jsonb_object_agg(COALESCE(unit, 'S/U'), count) 
-                        FROM (
-                            SELECT p.unit, COUNT(*) as count 
-                            FROM event_participants ep 
-                            JOIN people p ON ep.person_id = p.id 
-                            WHERE ep.event_id = e.id 
-                            GROUP BY p.unit
-                        ) unit_counts) as unit_counts
+                       COALESCE(pc.count, 0) as total_participants,
+                       COALESCE(us.unit_counts, '{}'::jsonb) as unit_counts
                 FROM events e
+                LEFT JOIN participant_counts pc ON e.id = pc.event_id
+                LEFT JOIN unit_stats us ON e.id = us.event_id
                 ORDER BY e.date ASC
             `;
         } else {
             queryText = `
+                WITH participant_counts AS (
+                    SELECT event_id, COUNT(*) as count 
+                    FROM event_participants 
+                    GROUP BY event_id
+                ),
+                unit_stats AS (
+                    SELECT ep.event_id, jsonb_object_agg(COALESCE(p.unit, 'S/U'), uc.count) as unit_counts
+                    FROM (
+                        SELECT ep.event_id, p.unit, COUNT(*) as count
+                        FROM event_participants ep
+                        JOIN people p ON ep.person_id = p.id
+                        GROUP BY ep.event_id, p.unit
+                    ) uc
+                    GROUP BY ep.event_id
+                )
                 SELECT e.*,
-                       (SELECT COUNT(*) FROM event_participants WHERE event_id = e.id) as total_participants,
-                       (SELECT jsonb_object_agg(COALESCE(unit, 'S/U'), count) 
-                        FROM (
-                            SELECT p.unit, COUNT(*) as count 
-                            FROM event_participants ep 
-                            JOIN people p ON ep.person_id = p.id 
-                            WHERE ep.event_id = e.id 
-                            GROUP BY p.unit
-                        ) unit_counts) as unit_counts,
+                       COALESCE(pc.count, 0) as total_participants,
+                       COALESCE(us.unit_counts, '{}'::jsonb) as unit_counts,
                        (ep.person_id IS NOT NULL) as is_participant
                 FROM events e
+                LEFT JOIN participant_counts pc ON e.id = pc.event_id
+                LEFT JOIN unit_stats us ON e.id = us.event_id
                 LEFT JOIN event_participants ep ON e.id = ep.event_id AND ep.person_id = $1
                 WHERE e.status = 'active' OR ep.person_id IS NOT NULL
                 ORDER BY e.date ASC

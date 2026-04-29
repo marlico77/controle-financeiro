@@ -986,7 +986,8 @@ async function loadInitialData() {
         // Carregamento em paralelo para máxima performance
         const promises = [
             apiFetch('/api/people'),
-            apiFetch(`/api/payments?year=${state.currentYear}`)
+            apiFetch(`/api/payments?year=${state.currentYear}`),
+            apiFetch('/api/events')
         ];
 
         if (state.role === 'admin' || state.role === 'secretário') {
@@ -1001,11 +1002,12 @@ async function loadInitialData() {
         
         state.people = results[0];
         state.payments = results[1];
-        state.eventPayments = results[2] || [];
+        state.events = results[2];
+        state.eventPayments = results[3] || [];
         
         if (state.role === 'admin' || state.role === 'secretário') {
-            state.outflows = results[3] || [];
-            state.sales = results[4] || [];
+            state.outflows = results[4] || [];
+            state.sales = results[5] || [];
         } else {
             state.outflows = [];
             state.sales = [];
@@ -1019,6 +1021,7 @@ async function loadInitialData() {
             }
         }
 
+        renderEvents();
         renderDashboard();
         
         if (state.role === 'admin') {
@@ -1041,9 +1044,6 @@ async function loadInitialData() {
         }
         
         updateDashboardStats();
-        
-        // Always fetch events data for reports and global stats
-        await fetchEventsData();
         
         if (state.activeTab === 'logs') fetchLogs();
     } catch (err) {
@@ -1217,13 +1217,13 @@ function switchTab(tabName) {
     if (tabName === 'outflows') renderOutflows();
     if (tabName === 'sales') fetchSales();
     if (tabName === 'logs') fetchLogs();
-    if (target === 'reports') {
+    if (tabName === 'reports') {
         populateReportSelects();
     }
     
     // Feature-specific initializations
-    if (target === 'messages') renderMessages();
-    if (target === 'pwa-install' && typeof updatePWAUI === 'function') {
+    if (tabName === 'messages') renderMessages();
+    if (tabName === 'pwa-install' && typeof updatePWAUI === 'function') {
         updatePWAUI();
     }
     
