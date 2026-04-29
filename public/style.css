@@ -856,7 +856,7 @@ tfoot td {
         pointer-events: auto !important;
     }
 
-    .sidebar-header, .sidebar .nav-footer, .sidebar > div:has(#sidebar-install-btn) {
+    .sidebar-header, .sidebar .nav-footer, .sidebar > div:has(#sidebar-install-btn), #sidebar-toggle {
         display: none !important;
     }
 
@@ -895,23 +895,29 @@ tfoot td {
 
     .nav-links li {
         margin: 0;
-        padding: 0.5rem 0.25rem;
+        padding: 0.6rem 0.4rem; /* Maior área de toque */
         flex-shrink: 0;
         text-align: center;
-        font-size: 0.7rem;
-        display: flex; /* Retirado o !important para permitir o display: none do JS */
-        flex-direction: column !important; /* Ícone estritamente acima do texto */
-        align-items: center !important; /* Alinhamento vertical ao centro */
+        font-size: 0.75rem;
+        display: flex;
+        flex-direction: column !important;
+        align-items: center !important;
         justify-content: center !important;
-        gap: 2px; /* Espaço quase nulo entre ícone e texto */
-        border-radius: 4px;
+        gap: 4px;
+        border-radius: 8px;
         background: transparent;
         color: #888;
         text-transform: none;
-        font-weight: 500;
+        font-weight: 600;
         letter-spacing: -0.2px;
-        min-width: auto; /* Removido o limite mínimo de largura */
-        max-width: 70px; /* Impede que textos longos ocupem muito espaço */
+        min-width: 65px; /* Largura mínima para facilitar o toque */
+        max-width: 85px;
+        transition: all 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .nav-links li * {
+        pointer-events: none; /* Garante que o clique seja registrado no LI */
     }
 
     .nav-links li .icon {

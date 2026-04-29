@@ -1240,7 +1240,14 @@ function switchTab(tabName) {
 }
 
 navLinks.forEach(link => {
-    link.addEventListener('click', () => switchTab(link.dataset.target));
+    const handleNav = (e) => {
+        e.preventDefault();
+        const target = link.dataset.target;
+        console.log('[NAV] Clique/Toque detectado para:', target);
+        switchTab(target);
+    };
+    link.addEventListener('click', handleNav);
+    link.addEventListener('touchstart', handleNav, { passive: false });
 });
 
 function populateReportSelects() {
