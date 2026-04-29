@@ -958,9 +958,9 @@ async function checkAuth() {
                 setStorageItem('activeTab', 'dashboard', !!localStorage.getItem('token'));
             }
 
-            switchTab(state.activeTab, true);
             resetInactivityTimer(); // Start timer after auth verification
-            loadInitialData();
+            await loadInitialData();
+            switchTab(state.activeTab, true);
 
             // Mensagens e Notificações (em segundo plano para não travar o login)
             setTimeout(() => {
