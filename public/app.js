@@ -958,7 +958,7 @@ async function checkAuth() {
                 setStorageItem('activeTab', 'dashboard', !!localStorage.getItem('token'));
             }
 
-            switchTab(state.activeTab);
+            switchTab(state.activeTab, true);
             resetInactivityTimer(); // Start timer after auth verification
             loadInitialData();
 
@@ -1176,8 +1176,8 @@ if (confirmForceLoginBtn) {
 }
 
 // --- Navigation ---
-function switchTab(tabName) {
-    if (state.activeTab === tabName) return;
+function switchTab(tabName, force = false) {
+    if (!force && state.activeTab === tabName) return;
     state.activeTab = tabName;
     setStorageItem('activeTab', tabName, !!localStorage.getItem('token'));
     
@@ -1240,14 +1240,13 @@ function switchTab(tabName) {
 }
 
 navLinks.forEach(link => {
-    const handleNav = (e) => {
-        e.preventDefault();
+    link.onclick = (e) => {
         const target = link.dataset.target;
-        console.log('[NAV] Clique/Toque detectado para:', target);
-        switchTab(target);
+        if (target) {
+            console.log('[NAV] Mudando para aba:', target);
+            switchTab(target);
+        }
     };
-    link.addEventListener('click', handleNav);
-    link.addEventListener('touchstart', handleNav, { passive: false });
 });
 
 function populateReportSelects() {
