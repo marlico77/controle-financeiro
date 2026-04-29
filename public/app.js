@@ -998,7 +998,10 @@ async function loadInitialData() {
             promises.push(apiFetch(`/api/event-payments?person_id=${state.personId}`));
         }
 
-        const results = await Promise.all(promises);
+        const results = await Promise.all(promises.map(p => p.catch(err => {
+            console.error('[API ERROR] Falha ao carregar recurso:', err);
+            return []; // Retorna lista vazia em caso de erro para não quebrar o dashboard
+        })));
         
         state.people = results[0];
         state.payments = results[1];

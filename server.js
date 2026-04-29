@@ -819,14 +819,14 @@ app.get('/api/events', authenticateToken, async (req, res) => {
                     GROUP BY event_id
                 ),
                 unit_stats AS (
-                    SELECT ep.event_id, jsonb_object_agg(COALESCE(p.unit, 'S/U'), uc.count) as unit_counts
+                    SELECT uc.event_id, jsonb_object_agg(COALESCE(uc.unit, 'S/U'), uc.count) as unit_counts
                     FROM (
                         SELECT ep.event_id, p.unit, COUNT(*) as count
                         FROM event_participants ep
                         JOIN people p ON ep.person_id = p.id
                         GROUP BY ep.event_id, p.unit
                     ) uc
-                    GROUP BY ep.event_id
+                    GROUP BY uc.event_id
                 )
                 SELECT e.*, 
                        COALESCE(pc.count, 0) as total_participants,
@@ -844,14 +844,14 @@ app.get('/api/events', authenticateToken, async (req, res) => {
                     GROUP BY event_id
                 ),
                 unit_stats AS (
-                    SELECT ep.event_id, jsonb_object_agg(COALESCE(p.unit, 'S/U'), uc.count) as unit_counts
+                    SELECT uc.event_id, jsonb_object_agg(COALESCE(uc.unit, 'S/U'), uc.count) as unit_counts
                     FROM (
                         SELECT ep.event_id, p.unit, COUNT(*) as count
                         FROM event_participants ep
                         JOIN people p ON ep.person_id = p.id
                         GROUP BY ep.event_id, p.unit
                     ) uc
-                    GROUP BY ep.event_id
+                    GROUP BY uc.event_id
                 )
                 SELECT e.*,
                        COALESCE(pc.count, 0) as total_participants,
@@ -861,7 +861,6 @@ app.get('/api/events', authenticateToken, async (req, res) => {
                 LEFT JOIN participant_counts pc ON e.id = pc.event_id
                 LEFT JOIN unit_stats us ON e.id = us.event_id
                 LEFT JOIN event_participants ep ON e.id = ep.event_id AND ep.person_id = $1
-                WHERE e.status = 'active' OR ep.person_id IS NOT NULL
                 ORDER BY e.date ASC
             `;
             params = [req.user.personId];
