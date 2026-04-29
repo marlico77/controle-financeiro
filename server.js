@@ -1477,19 +1477,19 @@ app.post('/api/notifications/send', authenticateToken, async (req, res) => {
 
 // --- Automated Reminders Logic (CRON) ---
 
-const sendPaymentReminders = async (message) => {
+const sendPaymentReminders = async () => {
     try {
         const currentMonth = new Date().getMonth() + 1;
         const currentYear = new Date().getFullYear();
 
-        // 1. Find users with UNPAID fees for current month
+        // 1. Encontrar usuários vinculados a pessoas que NÃO possuem pagamento aprovado este mês
         const unpaidUsers = await db.query(`
             SELECT u.id, u.username, p.name 
             FROM users u
             JOIN people p ON u.person_id = p.id
-            WHERE u.id NOT IN (
-                SELECT user_id FROM fees 
-                WHERE month = $1 AND year = $2 AND status = 'paid'
+            WHERE p.id NOT IN (
+                SELECT person_id FROM payments 
+                WHERE month = $1 AND year = $2 AND status = 'approved'
             )
         `, [currentMonth, currentYear]);
 
@@ -1499,19 +1499,21 @@ const sendPaymentReminders = async (message) => {
             const title = 'Lembrete de Mensalidade';
             const content = `Olá ${user.name || user.username}, lembramos que a mensalidade deste mês ainda está pendente. Regularize para nos ajudar a manter o clube!`;
             
-            // Save to DB
+            // Salvar no Banco de Dados
             await db.query(`
                 INSERT INTO notifications (user_id, title, message, type)
                 VALUES ($1, $2, $3, 'automated_reminder')
             `, [user.id, title, content]);
 
-            // Send Push
+            // Enviar Push (Notificação para Celular)
             const pushResult = await db.query('SELECT subscription_data FROM push_subscriptions WHERE user_id = $1', [user.id]);
             const payload = JSON.stringify({ title, body: content });
 
             pushResult.rows.forEach(sub => {
                 webPush.sendNotification(JSON.parse(sub.subscription_data), payload).catch(err => {
-                    if (err.statusCode === 410) db.query('DELETE FROM push_subscriptions WHERE subscription_data = $1', [sub.subscription_data]);
+                    if (err.statusCode === 410) {
+                        db.query('DELETE FROM push_subscriptions WHERE subscription_data = $1', [sub.subscription_data]);
+                    }
                 });
             });
         }
@@ -1540,15 +1542,17 @@ cron.schedule('0 9 * * *', async () => {
     // 5th Working Day Logic
     if (day >= 5 && day <= 10) {
         const result = await db.query(`
-            WITH RECURSIVE work_days AS (
-                SELECT date_trunc('month', CURRENT_DATE)::date AS d, 1 AS count
-                WHERE EXTRACT(DOW FROM date_trunc('month', CURRENT_DATE)) BETWEEN 1 AND 5
+            WITH RECURSIVE days AS (
+                SELECT date_trunc('month', CURRENT_DATE)::date AS d
                 UNION ALL
-                SELECT (d + 1)::date, CASE WHEN EXTRACT(DOW FROM (d + 1)) BETWEEN 1 AND 5 THEN count + 1 ELSE count END
-                FROM work_days
-                WHERE count < 5 AND d < date_trunc('month', CURRENT_DATE) + interval '15 days'
+                SELECT (d + 1)::date FROM days WHERE d < date_trunc('month', CURRENT_DATE) + interval '10 days'
+            ),
+            work_days AS (
+                SELECT d, row_number() OVER (ORDER BY d) as count
+                FROM days
+                WHERE EXTRACT(DOW FROM d) BETWEEN 1 AND 5
             )
-            SELECT d FROM work_days WHERE count = 5 ORDER BY d DESC LIMIT 1
+            SELECT d FROM work_days WHERE count = 5
         `);
         
         const fifthWorkingDay = new Date(result.rows[0].d).getDate();
