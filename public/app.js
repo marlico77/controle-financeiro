@@ -692,8 +692,8 @@ const initMessageForm = () => {
         searchInput.oninput = (e) => {
             const term = e.target.value.toLowerCase();
             document.querySelectorAll('#members-checkbox-container .checkbox-item').forEach(item => {
-                const name = item.querySelector('label').textContent.toLowerCase();
-                item.style.display = name.includes(term) ? 'flex' : 'none';
+                const search = item.getAttribute('data-search') || '';
+                item.style.display = search.includes(term) ? 'flex' : 'none';
             });
         };
     }
@@ -1560,8 +1560,6 @@ const openEventDetail = async (eventId, preserveUI = false) => {
 let renderEventDetailGrid = (participants, payments) => {
     const body = document.getElementById('event-detail-body');
     const searchTerm = document.getElementById('ev-detail-search')?.value.toLowerCase() || '';
-    
-    const filteredParticipants = participants.filter(p => p.name.toLowerCase().includes(searchTerm));
     const isUnico = state.currentEvent.payment_type === 'unico';
 
     // O(n) optimization: Group payments by person_id
@@ -1571,6 +1569,37 @@ let renderEventDetailGrid = (participants, payments) => {
         if (!paymentsMap.has(key)) paymentsMap.set(key, []);
         paymentsMap.get(key).push(pay);
     });
+
+    const processedParticipants = participants.map(p => {
+        const personPayments = paymentsMap.get(p.id) || [];
+        let totalPaid = 0;
+        let statusText = 'PENDENTE';
+
+        if (isUnico) {
+            const approvedPayments = personPayments.filter(pay => pay.status === 'approved');
+            totalPaid = approvedPayments.reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
+            const displayPayment = personPayments.find(pay => pay.receipt_content || pay.receipt_path) || personPayments[personPayments.length - 1];
+            if (displayPayment) {
+                statusText = displayPayment.status === 'approved' ? 'PAGO' : displayPayment.status === 'pending' ? 'PENDENTE' : 'RECUSADO';
+            }
+        } else {
+            personPayments.forEach(pay => {
+                if (parseInt(pay.year) === parseInt(state.eventDetailYear) && pay.status === 'approved') {
+                    totalPaid += parseFloat(pay.amount);
+                }
+            });
+            // For multi-month, if they have at least one payment, we could say "PAGO" in the search text
+            const hasAnyPayment = personPayments.some(pay => pay.status === 'approved');
+            if (hasAnyPayment) statusText += " PAGO";
+        }
+
+        const totalStr = `R$ ${totalPaid.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        const searchText = `${p.name} ${p.unit || ''} ${statusText} ${totalStr}`.toLowerCase();
+        
+        return { ...p, totalPaid, statusText, searchText };
+    });
+
+    const filteredParticipants = processedParticipants.filter(p => p.searchText.includes(searchTerm));
 
     // To avoid JSON.stringify in loops, we'll store payments in a temporary window object
     window._tempEventPayments = payments;
@@ -1694,12 +1723,15 @@ const renderEventParticipantsChecklist = () => {
         ${units.map(u => `<option value="${u}">Unidade: ${u}</option>`).join('')}
     `;
 
-    list.innerHTML = state.people.map(p => `
-        <div class="checklist-item" data-name="${p.name.toLowerCase()}" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0; font-size: 0.9rem;">
-            <input type="checkbox" class="participant-check" data-id="${p.id}" data-unit="${p.unit || ''}">
-            <label>${p.name} <small style="color: var(--text-dim)">(${p.unit || 'Sem Unidade'})</small></label>
-        </div>
-    `).join('');
+    list.innerHTML = state.people.map(p => {
+        const searchText = `${p.name} ${p.unit || ''}`.toLowerCase();
+        return `
+            <div class="checklist-item" data-search="${searchText}" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0; font-size: 0.9rem;">
+                <input type="checkbox" class="participant-check" data-id="${p.id}" data-unit="${p.unit || ''}">
+                <label>${p.name} <small style="color: var(--text-dim)">(${p.unit || 'Sem Unidade'})</small></label>
+            </div>
+        `;
+    }).join('');
 };
 
 const openAddParticipantsModal = () => {
@@ -1717,15 +1749,18 @@ const openAddParticipantsModal = () => {
         </div>
     `).join('');
     if (list) {
-        list.innerHTML = available.map(p => `
-            <div class="checklist-item" data-name="${p.name.toLowerCase()}" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border-color);">
-                <input type="checkbox" class="new-participant-check" data-id="${p.id}" id="check-${p.id}" style="width: 18px; height: 18px;">
-                <label for="check-${p.id}" style="cursor: pointer; flex: 1;">
-                    ${p.name} <br>
-                    <small style="color: var(--text-dim); font-size: 0.8rem;">${p.unit || 'Sem Unidade'}</small>
-                </label>
-            </div>
-        `).join('');
+        list.innerHTML = available.map(p => {
+            const searchText = `${p.name} ${p.unit || ''}`.toLowerCase();
+            return `
+                <div class="checklist-item" data-search="${searchText}" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border-color);">
+                    <input type="checkbox" class="new-participant-check" data-id="${p.id}" id="check-${p.id}" style="width: 18px; height: 18px;">
+                    <label for="check-${p.id}" style="cursor: pointer; flex: 1;">
+                        ${p.name} <br>
+                        <small style="color: var(--text-dim); font-size: 0.8rem;">${p.unit || 'Sem Unidade'}</small>
+                    </label>
+                </div>
+            `;
+        }).join('');
         
         if (available.length === 0) {
             list.innerHTML = '<p style="text-align: center; color: var(--text-dim); padding: 2rem;">Todos os membros já estão participando deste evento.</p>';
@@ -1773,8 +1808,8 @@ if (evMemberSearch) {
         const term = e.target.value.toLowerCase();
         const items = document.querySelectorAll('.checklist-item');
         items.forEach(item => {
-            const name = item.getAttribute('data-name');
-            item.style.display = name.includes(term) ? 'flex' : 'none';
+            const search = item.getAttribute('data-search') || '';
+            item.style.display = search.includes(term) ? 'flex' : 'none';
         });
     };
 }
@@ -2339,17 +2374,44 @@ function renderDashboard() {
     updateDashboardStats();
     
     const searchTerm = document.getElementById('mens-search')?.value.toLowerCase() || '';
-    const filteredPeople = state.people.filter(p => p.name.toLowerCase().includes(searchTerm));
     
-    const monthlyTotals = new Array(12).fill(0);
-    let grandTotal = 0;
-
     // O(n) optimization: Group payments by person_id and month
     const paymentsMap = new Map();
     state.payments.forEach(p => {
         const key = `${p.person_id}-${p.month}`;
         paymentsMap.set(key, p);
     });
+
+    const processedPeople = state.people.map(person => {
+        let personTotal = 0;
+        let hasPaid = false;
+        let hasPending = false;
+
+        for (let m = 1; m <= 12; m++) {
+            const payment = paymentsMap.get(`${person.id}-${m}`);
+            if (payment) {
+                if (payment.status === 'approved') {
+                    personTotal += parseFloat(payment.amount || 0);
+                    hasPaid = true;
+                } else if (payment.status === 'pending') {
+                    hasPending = true;
+                }
+            } else {
+                hasPending = true;
+            }
+        }
+
+        const statusText = (hasPaid ? 'PAGO ' : '') + (hasPending ? 'PENDENTE' : '');
+        const totalStr = `R$ ${personTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        const searchText = `${person.name} ${person.unit || ''} ${statusText} ${totalStr}`.toLowerCase();
+
+        return { ...person, personTotal, searchText };
+    });
+
+    const filteredPeople = processedPeople.filter(p => p.searchText.includes(searchTerm));
+    
+    const monthlyTotals = new Array(12).fill(0);
+    let grandTotal = 0;
 
     // Document fragment for better DOM performance
     const fragment = document.createDocumentFragment();
@@ -3151,7 +3213,8 @@ yearSelect.addEventListener('change', (e) => {
             const query = e.target.value.toLowerCase();
             const items = document.querySelectorAll('#add-participants-list .checklist-item');
             items.forEach(item => {
-                item.style.display = item.dataset.name.includes(query) ? 'flex' : 'none';
+                const search = item.dataset.search || '';
+                item.style.display = search.includes(query) ? 'flex' : 'none';
             });
         };
     }
@@ -3684,8 +3747,10 @@ async function renderMessages() {
 
         container.innerHTML = '';
         targets.forEach(p => {
+            const searchText = `${p.name} ${p.unit || ''}`.toLowerCase();
             const item = document.createElement('div');
             item.className = 'checkbox-item';
+            item.setAttribute('data-search', searchText);
             item.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-bottom: 1px solid rgba(0,0,0,0.03); cursor: pointer;';
             
             const checkbox = document.createElement('input');
@@ -3696,14 +3761,13 @@ async function renderMessages() {
             
             const label = document.createElement('label');
             label.htmlFor = `msg-user-${p.u_id}`;
-            label.textContent = p.name; // textContent is inherently safe
+            label.innerHTML = `${escapeHTML(p.name)} <br> <small style="color: var(--text-dim)">${escapeHTML(p.unit || 'Sem Unidade')}</small>`;
             label.style.cssText = 'margin: 0; cursor: pointer; font-size: 0.9rem; flex-grow: 1; user-select: none;';
             
             // Permitir clicar na linha toda
             item.onclick = (e) => {
                 if (e.target !== checkbox && e.target !== label) {
                     checkbox.checked = !checkbox.checked;
-                    // Trigger change if needed, but here we just need the state
                 }
             };
 
