@@ -1557,70 +1557,47 @@ const openEventDetail = async (eventId, preserveUI = false) => {
     }
 };
 
-let renderEventDetailGrid = (participants, payments) => {
+const renderEventDetailGrid = (participants, payments) => {
     const body = document.getElementById('event-detail-body');
+    if (!body) return;
+
     const searchTerm = document.getElementById('ev-detail-search')?.value.toLowerCase() || '';
-    const isUnico = state.currentEvent.payment_type === 'unico';
+    const event = state.currentEvent;
+    if (!event) return;
 
-    // O(n) optimization: Group payments by person_id
-    const paymentsMap = new Map();
+    const isUnico = event.payment_type === 'unico';
+
+    // Group payments by person_id
+    const paymentsByPerson = {};
     payments.forEach(pay => {
-        const key = pay.person_id;
-        if (!paymentsMap.has(key)) paymentsMap.set(key, []);
-        paymentsMap.get(key).push(pay);
+        const pid = String(pay.person_id);
+        if (!paymentsByPerson[pid]) paymentsByPerson[pid] = [];
+        paymentsByPerson[pid].push(pay);
     });
 
-    const processedParticipants = participants.map(p => {
-        const personPayments = paymentsMap.get(p.id) || [];
-        let totalPaid = 0;
-        let statusText = 'PENDENTE';
-
-        if (isUnico) {
-            const approvedPayments = personPayments.filter(pay => pay.status === 'approved');
-            totalPaid = approvedPayments.reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
-            const displayPayment = personPayments.find(pay => pay.receipt_content || pay.receipt_path) || personPayments[personPayments.length - 1];
-            if (displayPayment) {
-                statusText = displayPayment.status === 'approved' ? 'PAGO' : displayPayment.status === 'pending' ? 'PENDENTE' : 'RECUSADO';
-            }
-        } else {
-            personPayments.forEach(pay => {
-                if (parseInt(pay.year) === parseInt(state.eventDetailYear) && pay.status === 'approved') {
-                    totalPaid += parseFloat(pay.amount);
-                }
-            });
-            // For multi-month, if they have at least one payment, we could say "PAGO" in the search text
-            const hasAnyPayment = personPayments.some(pay => pay.status === 'approved');
-            if (hasAnyPayment) statusText += " PAGO";
-        }
-
-        const totalStr = `R$ ${totalPaid.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        const searchText = `${p.name} ${p.unit || ''} ${statusText} ${totalStr}`.toLowerCase();
+    const rows = [];
+    participants.forEach(p => {
+        const pId = String(p.id);
+        const personPayments = paymentsByPerson[pId] || [];
         
-        return { ...p, totalPaid, statusText, searchText };
-    });
-
-    const filteredParticipants = processedParticipants.filter(p => p.searchText.includes(searchTerm));
-
-    // To avoid JSON.stringify in loops, we'll store payments in a temporary window object
-    window._tempEventPayments = payments;
-
-    let html = '';
-    filteredParticipants.forEach(p => {
-        const personPayments = paymentsMap.get(p.id) || [];
-        let rowHtml = `<td><strong>${escapeHTML(p.name)}</strong> <br> <small>${escapeHTML(p.unit || '-')}</small></td>`;
         let totalPaid = 0;
+        personPayments.forEach(pay => {
+            if (pay.status === 'approved') totalPaid += parseFloat(pay.amount || 0);
+        });
+        
+        const totalStr = `R$ ${totalPaid.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        const searchText = `${p.name} ${p.unit || ''} ${totalStr}`.toLowerCase();
+
+        if (searchTerm && !searchText.includes(searchTerm)) return;
+
+        let rowHtml = `<td><strong>${escapeHTML(p.name)}</strong> <br> <small>${escapeHTML(p.unit || '-')}</small></td>`;
 
         if (isUnico) {
-            const approvedPayments = personPayments.filter(pay => pay.status === 'approved');
-            totalPaid = approvedPayments.reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
-            
-            const displayPayment = personPayments.find(pay => pay.receipt_content || pay.receipt_path) || personPayments[personPayments.length - 1];
-
+            const displayPayment = personPayments[personPayments.length - 1];
             if (displayPayment) {
-                const statusLabel = displayPayment.status === 'approved' ? 'PAGO' : displayPayment.status === 'pending' ? 'PENDENTE' : 'RECUSADO';
-                const payIndex = payments.indexOf(displayPayment);
+                const statusLabel = displayPayment.status === 'approved' ? 'PAGO' : (displayPayment.status === 'rejected' ? 'RECUSADO' : 'PENDENTE');
                 rowHtml += `
-                    <td class="clickable-cell" style="text-align: center;" onclick="openEventPaymentModalFromGridIndex(${p.id}, null, ${payIndex})">
+                    <td class="clickable-cell" style="text-align: center;" onclick="openEventPaymentModalFromGridIndex(${p.id}, null, ${payments.indexOf(displayPayment)})">
                         <span class="grid-status-label status-${displayPayment.status}">${statusLabel}</span>
                     </td>
                 `;
@@ -1632,21 +1609,18 @@ let renderEventDetailGrid = (participants, payments) => {
                 `;
             }
         } else {
-            // Pre-index by month for O(1) month lookup
-            const monthMap = new Map();
+            const monthMap = {};
             personPayments.forEach(pay => {
-                if (parseInt(pay.year) === parseInt(state.eventDetailYear)) monthMap.set(pay.month, pay);
+                if (pay.month) monthMap[Number(pay.month)] = pay;
             });
 
             for (let m = 1; m <= 12; m++) {
-                const payment = monthMap.get(m);
-                if (payment) {
-                    const statusLabel = payment.status === 'approved' ? 'PAGO' : payment.status === 'pending' ? 'PENDENTE' : 'RECUSADO';
-                    if (payment.status === 'approved') totalPaid += parseFloat(payment.amount);
-                    const payIndex = payments.indexOf(payment);
+                const pay = monthMap[m];
+                if (pay) {
+                    const statusLabel = pay.status === 'approved' ? 'PAGO' : (pay.status === 'rejected' ? 'RECUSADO' : 'PENDENTE');
                     rowHtml += `
-                        <td class="clickable-cell" onclick="openEventPaymentModalFromGridIndex(${p.id}, ${m}, ${payIndex})">
-                            <span class="grid-status-label status-${payment.status}">${statusLabel}</span>
+                        <td class="clickable-cell" onclick="openEventPaymentModalFromGridIndex(${p.id}, ${m}, ${payments.indexOf(pay)})">
+                            <span class="grid-status-label status-${pay.status}">${statusLabel}</span>
                         </td>
                     `;
                 } else {
@@ -1658,12 +1632,12 @@ let renderEventDetailGrid = (participants, payments) => {
                 }
             }
         }
-        
-        rowHtml += `<td class="total-column">R$ ${totalPaid.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>`;
-        html += `<tr>${rowHtml}</tr>`;
+
+        rowHtml += `<td class="total-column">${totalStr}</td>`;
+        rows.push(`<tr>${rowHtml}</tr>`);
     });
 
-    body.innerHTML = html || `<tr><td colspan="${isUnico ? 3 : 14}" style="text-align: center; padding: 2rem; color: var(--text-dim);">Nenhum participante encontrado.</td></tr>`;
+    body.innerHTML = rows.join('') || `<tr><td colspan="${isUnico ? 3 : 14}" style="text-align: center; padding: 2rem; color: var(--text-dim);">Nenhum participante encontrado.</td></tr>`;
 };
 
 // New helper to avoid JSON.stringify in HTML attributes
