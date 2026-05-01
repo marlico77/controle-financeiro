@@ -9,6 +9,8 @@ const removeStorageItem = (key) => {
     sessionStorage.removeItem(key);
 };
 
+const getToken = () => state.token || getStorageItem('token');
+
 // --- Security Helpers ---
 const escapeHTML = (str) => {
     if (!str) return '';
@@ -1558,6 +1560,7 @@ const openEventDetail = async (eventId, preserveUI = false) => {
 };
 
 const renderEventDetailGrid = (participants, payments) => {
+    window._tempEventPayments = payments;
     const body = document.getElementById('event-detail-body');
     if (!body) return;
 
@@ -1846,7 +1849,7 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
         if (payment.receipt_path) {
             receiptContainer.style.display = 'block';
             const filename = payment.receipt_path.split(/[\\/]/).pop();
-            document.getElementById('ep-view-receipt-btn').href = `/api/files/receipt/${filename}?token=${localStorage.getItem('token')}`;
+            document.getElementById('ep-view-receipt-btn').href = `/api/files/receipt/${filename}?token=${getToken()}`;
         }
 
         if (payment.status === 'approved') {
@@ -2259,7 +2262,7 @@ function renderOutflows() {
         let receiptHtml = '-';
         if (out.receipt_path) {
             const filename = out.receipt_path.split(/[\\/]/).pop();
-            receiptHtml = `<a href="/api/files/receipt/${filename}?token=${state.token}" target="_blank" class="btn-text btn-small">Ver Recibo</a>`;
+            receiptHtml = `<a href="/api/files/receipt/${filename}?token=${getToken()}" target="_blank" class="btn-text btn-small">Ver Recibo</a>`;
         }
 
         return `
@@ -2596,17 +2599,11 @@ const openPaymentModal = (person, month, payment = null) => {
             receiptContainer.style.display = 'block';
             // Handle both Windows (\) and Linux (/) separators
             const filename = payment.receipt_path.split(/[\\/]/).pop();
-            const securePath = `/api/files/receipt/${filename}?token=${localStorage.getItem('token')}`;
+            const securePath = `/api/files/receipt/${filename}?token=${getToken()}`;
             document.getElementById('view-receipt-btn').href = securePath;
         }
 
         if (state.role === 'admin' || state.role === 'secretário') {
-            const navOutflows = document.getElementById('nav-outflows');
-            if (navOutflows) navOutflows.style.display = 'flex';
-            
-            // navSales selection removed as it is now handled globally or via ID if needed elsewhere.
-            if (navItems.sales) navItems.sales.style.display = isAdmin ? 'flex' : 'none';
-            
             deleteBtn.style.display = 'block';
             deleteBtn.onclick = () => deletePayment(payment.id);
             if (payment.status === 'pending') {
@@ -3575,7 +3572,7 @@ function renderSales() {
         let receiptHtml = '-';
         if (sale.receipt_path) {
             const filename = sale.receipt_path.split(/[\\/]/).pop();
-            receiptHtml = `<a href="/api/files/receipt/${filename}?token=${state.token}" target="_blank" class="btn-text btn-small">Ver Comprovante</a>`;
+            receiptHtml = `<a href="/api/files/receipt/${filename}?token=${getToken()}" target="_blank" class="btn-text btn-small">Ver Comprovante</a>`;
         }
 
         return `
