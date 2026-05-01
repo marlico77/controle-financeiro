@@ -1,32 +1,35 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const multer = require('multer');
-const path = require('path');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const xlsx = require('xlsx');
-const sharp = require('sharp');
-const db = require('./database');
-const UAParser = require('ua-parser-js');
-const webPush = require('web-push');
-const cron = require('node-cron');
-const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config(); // Carrega variáveis de ambiente do arquivo .env
+const express = require('express'); // Framework web para Node.js
+const cors = require('cors'); // Middleware para permitir requisições de diferentes domínios
+const multer = require('multer'); // Middleware para manipulação de upload de arquivos
+const path = require('path'); // Módulo nativo para manipulação de caminhos de arquivos
+const jwt = require('jsonwebtoken'); // Biblioteca para geração e validação de tokens JWT
+const bcrypt = require('bcryptjs'); // Biblioteca para criptografia de senhas
+const xlsx = require('xlsx'); // Biblioteca para leitura e escrita de arquivos Excel
+const sharp = require('sharp'); // Biblioteca de alto desempenho para processamento de imagens
+const db = require('./database'); // Importa a configuração do banco de dados (Pool do Postgres)
+const UAParser = require('ua-parser-js'); // Analisador de User-Agent (detecta navegador/dispositivo)
+const webPush = require('web-push'); // Biblioteca para envio de notificações push
+const cron = require('node-cron'); // Agendador de tarefas (não usado explicitamente mas carregado)
+const { createClient } = require('@supabase/supabase-js'); // Cliente para integração com Supabase Storage
 
+// Inicializa o cliente do Supabase para armazenamento de arquivos em nuvem
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-const SECRET = process.env.JWT_SECRET;
+const app = express(); // Instancia a aplicação Express
+const PORT = process.env.PORT || 3000; // Define a porta do servidor
+const SECRET = process.env.JWT_SECRET; // Segredo para assinatura dos tokens JWT
 
-// --- Image Compression Helper ---
+// --- Função Auxiliar: Compressão de Imagens ---
+// Reduz o tamanho de comprovantes enviados para economizar espaço e banda
 const compressReceipt = async (file) => {
     if (!file) return null;
     
-    // Only compress images
+    // Processa apenas arquivos que sejam imagens
     if (file.mimetype.startsWith('image/')) {
         try {
             console.log(`[COMPRESS] Otimizando imagem: ${file.originalname} (${(file.size / 1024).toFixed(1)} KB)`);
+            // Redimensiona para max 1200px, converte para JPEG com 80% de qualidade
             const buffer = await sharp(file.buffer)
                 .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
                 .jpeg({ quality: 80, progressive: true })
@@ -34,7 +37,7 @@ const compressReceipt = async (file) => {
             console.log(`[COMPRESS] Sucesso: ${(buffer.length / 1024).toFixed(1)} KB`);
             return {
                 buffer,
-                mimetype: 'image/jpeg' // We convert all to JPEG for better compression
+                mimetype: 'image/jpeg' 
             };
         } catch (err) {
             console.error('[COMPRESS] Erro ao comprimir imagem, usando original:', err);
@@ -42,24 +45,25 @@ const compressReceipt = async (file) => {
         }
     }
     
-    // Return original for PDFs and other files
+    // Se for PDF ou outro formato, retorna o arquivo original sem alteração
     return { buffer: file.buffer, mimetype: file.mimetype };
 };
 
 console.log(`[SERVER] Started on PORT ${PORT} - ENV: ${process.env.NODE_ENV || 'development'}`);
 
-
+// Validação de segurança crítica em produção
 if (!SECRET && process.env.NODE_ENV === 'production') {
     console.error('FATAL: JWT_SECRET environment variable is missing!');
     process.exit(1);
 }
 const JWT_SECRET = SECRET || 'dev-secret-only';
 
-app.use(cors());
-app.use(express.json());
-app.use(express.static('public'));
+// Configurações de Middleware do Express
+app.use(cors()); // Habilita CORS
+app.use(express.json()); // Habilita parsing de JSON no corpo das requisições
+app.use(express.static('public')); // Serve os arquivos estáticos da pasta 'public' (frontend)
 
-// --- Web Push Configuration ---
+// --- Configuração de Web Push (Notificações Push) ---
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BPdV8b0gIcNWcgEfsVoyNMXrfBa-MFC4rMeqhDKC2PbN5O1Erq6aCo-E_4ev6SCgsalWP5WqpeZVcK95WV_GIhQ';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'bfjF8hipfmuLyvm6CJJZMHTnHIzGvHPTkm_gENlNubo';
 
@@ -69,25 +73,27 @@ webPush.setVapidDetails(
     VAPID_PRIVATE_KEY
 );
 
-// Explicit root route for robustness
+// Rota raiz: serve o index.html principal
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Multer Config: Using MemoryStorage to store files in the database instead of disk
+// Configuração do Multer: Usa MemoryStorage para processar arquivos em memória antes de salvar
 const storage = multer.memoryStorage();
 const upload = multer({ 
     storage,
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+    limits: { fileSize: 10 * 1024 * 1024 } // Limite de 10MB por arquivo
 });
 
-// --- System Logs Helper ---
+// --- Auxiliar: Logs de Auditoria do Sistema ---
+// Registra ações críticas (login, exclusão, etc) com detalhes do dispositivo e IP
 const logAction = async (req, action, details = {}) => {
     try {
         const ua = req.headers['user-agent'];
         const parser = new UAParser(ua);
         const result = parser.getResult();
         
+        // Obtém o IP do cliente (considerando proxies como Cloudflare/Render)
         let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
         if (ip === '::1') ip = '127.0.0.1';
         if (ip.startsWith('::ffff:')) ip = ip.split(':').pop();
@@ -95,6 +101,7 @@ const logAction = async (req, action, details = {}) => {
         const userId = req.user ? req.user.id : (details.userId || null);
         const username = req.user ? req.user.username : (details.username || 'guest');
 
+        // Insere o log na tabela system_logs
         await db.query(`
             INSERT INTO system_logs 
             (user_id, username, action, details, ip_address, user_agent, device_type, os, browser) 
@@ -115,9 +122,10 @@ const logAction = async (req, action, details = {}) => {
     }
 };
 
-// --- Log Cleanup Policy (24h) ---
+// --- Política de Limpeza de Logs (Retenção de 24h) ---
 const cleanupLogs = async () => {
     try {
+        // Remove logs com mais de 1 dia para evitar inchaço do banco de dados
         const result = await db.query("DELETE FROM system_logs WHERE created_at < NOW() - INTERVAL '1 day'");
         if (result.rowCount > 0) {
             console.log(`[CLEANUP] ${result.rowCount} logs antigos removidos.`);
@@ -127,12 +135,13 @@ const cleanupLogs = async () => {
     }
 };
 
-// Executa limpeza a cada hora
+// Agenda a limpeza de logs para rodar a cada hora
 setInterval(cleanupLogs, 60 * 60 * 1000);
 
-// Middleware: Auth
+// Middleware de Autenticação: Valida o token JWT em cada requisição protegida
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
+    // Aceita token via Header ou via Query Param (útil para links de imagens/arquivos)
     const token = (authHeader && authHeader.split(' ')[1]) || req.query.token;
 
     if (!token) return res.status(401).json({ error: 'Token ausente' });
@@ -143,15 +152,16 @@ const authenticateToken = (req, res, next) => {
             console.warn(`[AUTH] Falha (${reason}): ${err.message} | URL: ${req.originalUrl}`);
             return res.status(401).json({ error: 'Sessão inválida', reason: err.message });
         }
+        // Se válido, anexa os dados do usuário (ID, Role) ao objeto req
         req.user = decoded;
         next();
     });
 };
 
-// --- Sync Members to Users ---
+// --- Sincronização: Criar Usuários para Novos Membros ---
 const syncMemberUsers = async () => {
     try {
-        // Otimização: Busca apenas pessoas que não possuem registro na tabela de usuários
+        // Busca pessoas cadastradas que ainda não possuem uma conta de usuário vinculada
         const missingUsersResult = await db.query(`
             SELECT p.id, p.name 
             FROM people p 
@@ -163,23 +173,26 @@ const syncMemberUsers = async () => {
         if (people.length === 0) return;
 
         console.log(`[SYNC] Sincronizando ${people.length} novos membros para usuários...`);
-        const defaultHash = await bcrypt.hash('tribo@2026', 10);
+        const defaultHash = await bcrypt.hash('tribo@2026', 10); // Senha padrão para novos acessos
 
         for (const p of people) {
+            // Gera um username automático baseado em "nome.sobrenome"
             const nameParts = p.name.trim().split(/\s+/);
             const first = nameParts[0].toLowerCase();
             const last = nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
             
             let baseUsername = (last ? `${first}.${last}` : first);
+            // Normaliza para remover acentos e caracteres especiais
             baseUsername = baseUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
             
             try {
+                // Tenta inserir o usuário; se o username já existir, não faz nada (DO NOTHING)
                 await db.query(
                     'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT (username) DO NOTHING',
                     [baseUsername, defaultHash, 'member', p.id]
                 );
             } catch (err) {
-                // Fallback para evitar colisão de username
+                // Fallback: Se colidir username, anexa o ID da pessoa para garantir unicidade
                 await db.query(
                     'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT DO NOTHING',
                     [`${baseUsername}${p.id}`, defaultHash, 'member', p.id]
@@ -190,9 +203,11 @@ const syncMemberUsers = async () => {
         console.error('Error syncing members:', err);
     }
 };
-// --- Init Database Tables ---
+
+// --- Inicialização do Banco de Dados ---
 const initDB = async () => {
     try {
+        // Cria tabelas necessárias se elas ainda não existirem (Garante resiliência em deploys)
         await db.query(`
             CREATE TABLE IF NOT EXISTS outflows (
                 id SERIAL PRIMARY KEY,
@@ -220,7 +235,8 @@ const initDB = async () => {
             )
         `);
 
-        // --- Performance Indices ---
+        // --- Criação de Índices de Performance ---
+        // Essencial para manter o sistema rápido com o crescimento dos dados
         await db.query('CREATE INDEX IF NOT EXISTS idx_payments_year ON payments(year)');
         await db.query('CREATE INDEX IF NOT EXISTS idx_payments_person_id ON payments(person_id)');
         await db.query('CREATE INDEX IF NOT EXISTS idx_event_payments_event_id ON event_payments(event_id)');
@@ -235,13 +251,18 @@ const initDB = async () => {
         console.error('[DB] Error initializing tables:', err);
     }
 };
+
+// Executa inicialização e sincronização ao subir o servidor
 initDB();
 syncMemberUsers();
 
-// --- AUTH API ---
+// --- API de Autenticação ---
+
+// Rota de Login: Valida credenciais e gera token JWT
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
   try {
+    // Busca usuário pelo username (ignora maiúsculas/minúsculas)
     const result = await db.query(`
         SELECT u.*, p.name 
         FROM users u 
@@ -250,6 +271,7 @@ app.post('/api/login', async (req, res) => {
     `, [username]);
     const user = result.rows[0];
 
+    // Verifica se usuário existe e se a senha criptografada coincide
     if (!user || !bcrypt.compareSync(password, user.password_hash)) {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
@@ -260,6 +282,7 @@ app.post('/api/login', async (req, res) => {
     const finalRole = role || 'member';
     const personId = person_id || null;
     
+    // Gera o token JWT com expiração de 24 horas
     const token = jwt.sign({ 
       id: userId, 
       username: dbUsername, 
@@ -269,9 +292,10 @@ app.post('/api/login', async (req, res) => {
 
     console.log(`Login Successful: ${dbUsername} as ${finalRole} ${force ? '[FORCED]' : ''}`);
     
-    // Log success
+    // Registra o sucesso do login no log de auditoria
     logAction(req, 'LOGIN_SUCCESS', { username: dbUsername, userId, force: !!force });
 
+    // Retorna dados essenciais para o frontend
     res.json({ 
       token, 
       role: finalRole, 
@@ -287,6 +311,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Obtém o status atual do usuário (permissões e se precisa mudar senha)
 app.get('/api/auth/status', authenticateToken, async (req, res) => {
     try {
         const result = await db.query(`
@@ -310,6 +335,7 @@ app.get('/api/auth/status', authenticateToken, async (req, res) => {
     }
 });
 
+// Redefinição de senha perdida (Exige Usuário + CPF cadastrado)
 app.post('/api/auth/reset-lost-password', async (req, res) => {
     const { username, cpf, newPassword } = req.body || {};
     
@@ -317,13 +343,14 @@ app.post('/api/auth/reset-lost-password', async (req, res) => {
         return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
     }
 
-    // Complexity check
+    // Validação de complexidade: min 5 chars, 1 maiúscula, 1 número e 1 especial
     const complexityRegex = /^(?=.*[0-9])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{5,}$/;
     if (!complexityRegex.test(newPassword)) {
         return res.status(400).json({ error: 'A senha deve ter no mínimo 5 caracteres, incluindo 1 letra maiúscula, 1 número e 1 caractere especial.' });
     }
 
     try {
+        // Valida se os dados coincidem no banco
         const result = await db.query(`
             SELECT u.id 
             FROM users u
@@ -339,6 +366,7 @@ app.post('/api/auth/reset-lost-password', async (req, res) => {
         const salt = bcrypt.genSaltSync(10);
         const hash = bcrypt.hashSync(newPassword, salt);
         
+        // Atualiza a senha e remove a obrigatoriedade de troca
         await db.query('UPDATE users SET password_hash = $1, must_change_password = FALSE WHERE id = $2', [hash, user.id]);
         
         res.json({ success: true, message: 'Senha redefinida com sucesso' });
@@ -348,6 +376,7 @@ app.post('/api/auth/reset-lost-password', async (req, res) => {
     }
 });
 
+// Troca de senha solicitada pelo sistema (no primeiro acesso)
 app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
     const { newPassword } = req.body || {};
     
@@ -373,7 +402,9 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
     }
 });
 
-// --- NOTIFICATIONS API ---
+// --- API de Notificações Internas ---
+
+// Cria uma notificação no banco para um usuário específico
 const createNotification = async (userId, title, message, type = 'info', relatedId = null, relatedType = null) => {
     try {
         await db.query('INSERT INTO notifications (user_id, title, message, type, related_id, related_type) VALUES ($1, $2, $3, $4, $5, $6)', 
@@ -388,6 +419,7 @@ const monthNames = [
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ];
 
+// Busca as 20 notificações mais recentes do usuário logado
 app.get('/api/notifications', authenticateToken, async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20', [req.user.id]);
@@ -397,6 +429,7 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
     }
 });
 
+// Marca todas as notificações de um usuário como lidas
 app.patch('/api/notifications/read-all', authenticateToken, async (req, res) => {
     try {
         await db.query('UPDATE notifications SET is_read = TRUE WHERE user_id = $1', [req.user.id]);
@@ -406,9 +439,12 @@ app.patch('/api/notifications/read-all', authenticateToken, async (req, res) => 
     }
 });
 
-// --- PEOPLE API ---
+// --- API de Membros (People) ---
+
+// Lista todos os membros cadastrados
 app.get('/api/people', authenticateToken, async (req, res) => {
   try {
+    // Administradores e Secretários podem ver todos os membros e seus dados de usuário vinculados
     if (req.user.role === 'admin' || req.user.role === 'secretário') {
       const result = await db.query(`
         SELECT p.*, u.username, u.role, u.id as u_id
@@ -419,7 +455,7 @@ app.get('/api/people', authenticateToken, async (req, res) => {
       return res.json(result.rows);
     }
     
-    // Member access: Only their own data
+    // Usuários comuns (membros) só podem ver seus próprios dados
     if (!req.user.personId) return res.json([]);
     const result = await db.query('SELECT * FROM people WHERE id = $1', [req.user.personId]);
     res.json(result.rows);
@@ -428,10 +464,12 @@ app.get('/api/people', authenticateToken, async (req, res) => {
   }
 });
 
+// Cadastra um novo membro (Apenas Admin/Secretário)
 app.post('/api/people', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
   
   let { name, responsible, birth_date, cpf, unit, username, password, role } = req.body || {};
+  // Valida se o nome tem pelo menos duas partes (Nome e Sobrenome)
   if (!name || name.trim().split(/\s+/).length < 2) {
       return res.status(400).json({ error: 'O nome deve conter pelo menos Nome e Sobrenome.' });
   }
@@ -439,10 +477,11 @@ app.post('/api/people', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'A unidade é obrigatória.' });
   }
 
-  const client = await db.pool.connect();
+  const client = await db.pool.connect(); // Obtém um cliente do pool para transação
   try {
-      await client.query('BEGIN');
+      await client.query('BEGIN'); // Inicia transação SQL
       
+      // Insere na tabela 'people'
       const result = await client.query(
         'INSERT INTO people (name, responsible, birth_date, cpf, unit) VALUES ($1, $2, $3, $4, $5) RETURNING id', 
         [name, responsible || null, birth_date || null, cpf || null, unit || null]
@@ -451,45 +490,46 @@ app.post('/api/people', authenticateToken, async (req, res) => {
       const personId = result.rows[0].id;
 
       let finalUsernameUsed = '';
-      // Handle user creation
+      // Se for Admin cadastrando, cria automaticamente a conta de usuário
       if (req.user.role === 'admin') {
-          // Generate default username if not provided
           const nameParts = name.trim().split(/\s+/);
           const first = nameParts[0].toLowerCase();
           const last = nameParts[nameParts.length - 1].toLowerCase();
           const baseUsername = `${first}.${last}`;
 
-          // If a username is provided manually, use it. Otherwise generate automatically.
+          // Normaliza o username (sem acentos, minúsculo)
           let finalUsername = username || baseUsername;
-          // Ensure no accents and lowercase
           finalUsername = finalUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
           finalUsernameUsed = finalUsername;
 
+          // Apenas o Administrador master pode definir outros admins
           const finalRole = (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) ? role : 'member';
-          const hash = await bcrypt.hash('tribo@2026', 10);
+          const hash = await bcrypt.hash('tribo@2026', 10); // Senha inicial padrão
 
+          // Cria a conta na tabela 'users'
           await client.query(
               'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE)',
               [finalUsername, hash, finalRole, personId]
           );
       }
 
-      await client.query('COMMIT');
-      logAction(req, 'CREATE_PERSON', { id: personId, name, unit });
+      await client.query('COMMIT'); // Finaliza transação com sucesso
+      logAction(req, 'CREATE_PERSON', { id: personId, name, unit }); // Log de auditoria
       res.json({ id: personId, name, username: finalUsernameUsed });
   } catch (err) {
-      await client.query('ROLLBACK');
+      await client.query('ROLLBACK'); // Reverte alterações se houver erro
       console.error('Create Person Error:', err);
       res.status(500).json({ error: 'Erro ao cadastrar membro' });
   } finally {
-      client.release();
+      client.release(); // Libera o cliente de volta para o pool
   }
 });
 
+// Importação em massa de membros via planilha Excel
 app.post('/api/people/import', authenticateToken, upload.single('file'), async (req, res) => {
   if (req.user.role !== 'admin') return res.sendStatus(403);
   
-  // Restriction: Only master admin can import (because it creates users)
+  // Apenas o administrador master pode importar planilhas (por segurança e controle de usuários)
   if (req.user.username.toUpperCase() !== 'ADMINISTRADOR') {
       return res.status(403).json({ error: 'Apenas o administrador master pode importar planilhas.' });
   }
@@ -497,13 +537,14 @@ app.post('/api/people/import', authenticateToken, upload.single('file'), async (
 
   const client = await db.pool.connect();
   try {
-    const workbook = xlsx.read(req.file.buffer);
-    const data = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+    const workbook = xlsx.read(req.file.buffer); // Lê a planilha da memória
+    const data = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]); // Converte primeira aba em JSON
     let count = 0;
     
     await client.query('BEGIN');
     try {
         for (const item of data) {
+            // Busca colunas de forma flexível (case-insensitive)
             const keys = Object.keys(item);
             const nameKey = keys.find(k => k.trim().toUpperCase() === 'NOME');
             const unitKey = keys.find(k => k.trim().toUpperCase() === 'UNIDADE');
@@ -513,7 +554,7 @@ app.post('/api/people/import', authenticateToken, upload.single('file'), async (
             const unit = unitKey ? item[unitKey] : null;
             let birthDate = birthKey ? item[birthKey] : null;
 
-            // Simple date conversion if Excel number
+            // Converte data do formato numérico do Excel para String se necessário
             if (typeof birthDate === 'number') {
                 const date = xlsx.utils.format_cell({ v: birthDate, t: 'd' });
                 birthDate = date;
@@ -529,7 +570,7 @@ app.post('/api/people/import', authenticateToken, upload.single('file'), async (
         }
         await client.query('COMMIT');
         
-        // Trigger user sync to create accounts for new people
+        // Sincroniza usuários em segundo plano para os novos membros importados
         console.log(`[IMPORT] Success. Synching ${count} new members to users...`);
         syncMemberUsers(); 
 
@@ -546,16 +587,21 @@ app.post('/api/people/import', authenticateToken, upload.single('file'), async (
   }
 });
 
+// --- API de Pagamentos de Mensalidades ---
+
+// Busca histórico de pagamentos por ano
 app.get('/api/payments', authenticateToken, async (req, res) => {
   const { year } = req.query;
   const targetYear = parseInt(year) || new Date().getFullYear();
 
   try {
+    // Admin vê todos os pagamentos do ano selecionado
     if (req.user.role === 'admin') {
       const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason FROM payments WHERE year = $1', [targetYear]);
       return res.json(result.rows);
     }
 
+    // Membro vê apenas os seus próprios pagamentos
     if (!req.user.personId) return res.json([]);
     const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason FROM payments WHERE person_id = $1 AND year = $2', [req.user.personId, targetYear]);
     res.json(result.rows);
@@ -564,6 +610,7 @@ app.get('/api/payments', authenticateToken, async (req, res) => {
   }
 });
 
+// Busca detalhes de um pagamento específico
 app.get('/api/payments/detail/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
@@ -575,6 +622,7 @@ app.get('/api/payments/detail/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// Registra novo pagamento (com suporte a múltiplos meses em um único envio)
 app.post('/api/payments', authenticateToken, upload.single('receipt'), async (req, res) => {
   const { person_id, month, year, amount, months } = req.body;
   
@@ -582,12 +630,13 @@ app.post('/api/payments', authenticateToken, upload.single('receipt'), async (re
     return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
   }
 
+  // Se 'months' for enviado, trata como pagamento em lote. Senão, mês único.
   const monthList = months ? JSON.parse(months) : [month];
   const amountPerMonth = (parseFloat(amount) / monthList.length).toFixed(2);
   const status = req.user.role === 'admin' ? 'approved' : 'pending';
 
   try {
-    // Process Receipt (only once for all months)
+    // Processa e comprime o comprovante apenas uma vez para o lote todo
     const compressed = await compressReceipt(req.file);
     const receipt_content = compressed ? compressed.buffer : null;
     const receipt_mime = compressed ? compressed.mimetype : null;
@@ -595,6 +644,7 @@ app.post('/api/payments', authenticateToken, upload.single('receipt'), async (re
     const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
 
     let isUploadedToStorage = false;
+    // Tenta fazer upload para o Supabase Storage (Nuvem)
     if (req.file && compressed) {
         console.log(`[STORAGE] Multi-month upload to Supabase: ${receipt_filename}`);
         const { error } = await supabase.storage
@@ -608,25 +658,28 @@ app.post('/api/payments', authenticateToken, upload.single('receipt'), async (re
         else console.error('[STORAGE] Error in multi-month upload:', error);
     }
 
+    // Se subiu para nuvem, não guarda o binário no banco de dados para economizar espaço
     const finalDBContent = isUploadedToStorage ? null : receipt_content;
     const results = [];
 
-    // Common data for logs and notifications
     const personResult = await db.query("SELECT name FROM people WHERE id = $1", [person_id]);
     const personName = personResult.rows[0]?.name || 'Membro';
     const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
 
+    // Itera sobre cada mês do lote para salvar individualmente
     for (const m of monthList) {
         const existingResult = await db.query('SELECT id FROM payments WHERE person_id = $1 AND month = $2 AND year = $3', [person_id, m, year]);
         const existing = existingResult.rows[0];
 
         if (existing) {
+            // Se já existe um registro para o mês, atualiza-o (correção de comprovante ou reenvio)
             await db.query(`
                 UPDATE payments 
                 SET amount = $1, receipt_path = $2, receipt_content = $3, receipt_mime = $4, status = $5, rejection_reason = NULL 
                 WHERE id = $6
             `, [amountPerMonth, receipt_path, finalDBContent, receipt_mime, status, existing.id]);
             
+            // Notifica administradores se for um novo envio de membro
             if (status === 'pending') {
                 for (const admin of adminsResult.rows) {
                     await createNotification(admin.id, 'Novo Comprovante', `O membro ${personName} atualizou um comprovante para o mês de ${monthNames[m-1]}.`, 'info', existing.id, 'monthly');
@@ -634,6 +687,7 @@ app.post('/api/payments', authenticateToken, upload.single('receipt'), async (re
             }
             results.push({ id: existing.id, updated: true });
         } else {
+            // Se não existe, cria um novo registro de pagamento
             const insertResult = await db.query(`
                 INSERT INTO payments (person_id, month, year, amount, receipt_path, receipt_content, receipt_mime, status) 
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
@@ -659,7 +713,7 @@ app.post('/api/payments', authenticateToken, upload.single('receipt'), async (re
   }
 });
 
-// Approval Endpoints
+// Aprova um pagamento pendente (Admin)
 app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403);
     
@@ -670,7 +724,7 @@ app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
 
         await db.query('UPDATE payments SET status = \'approved\', rejection_reason = NULL WHERE id = $1', [req.params.id]);
         
-        // Notify Member
+        // Notifica o membro que seu pagamento foi aprovado
         const userResult = await db.query('SELECT id FROM users WHERE person_id = $1', [payment.person_id]);
         const userForMember = userResult.rows[0];
         if (userForMember) {
@@ -684,6 +738,7 @@ app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
     }
 });
 
+// Rejeita um pagamento pendente com motivo (Admin/Secretário)
 app.post('/api/payments/:id/reject', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { reason } = req.body || {};
@@ -695,7 +750,7 @@ app.post('/api/payments/:id/reject', authenticateToken, async (req, res) => {
 
         await db.query('UPDATE payments SET status = \'rejected\', rejection_reason = $1 WHERE id = $2', [reason || 'Comprovante inválido', req.params.id]);
         
-        // Notify Member
+        // Notifica o membro sobre a rejeição e o motivo
         const userResult = await db.query('SELECT id FROM users WHERE person_id = $1', [payment.person_id]);
         const userForMember = userResult.rows[0];
         if (userForMember) {
@@ -708,7 +763,7 @@ app.post('/api/payments/:id/reject', authenticateToken, async (req, res) => {
     }
 });
 
-// Delete payment
+// Exclui um registro de pagamento definitivamente (Admin)
 app.delete('/api/payments/:id', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.sendStatus(403);
   try {
@@ -719,20 +774,22 @@ app.delete('/api/payments/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Update person
+// Atualiza dados cadastrais de um membro (Admin ou o próprio usuário)
 app.put('/api/people/:id', authenticateToken, async (req, res) => {
   try {
     let { name, responsible, birth_date, cpf, unit, username, password, role } = req.body || {};
+    // Normaliza username para evitar erros de digitação e acentuação
     if (username) username = username.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const { id } = req.params;
     
+    // Verifica permissão: Admin pode tudo, usuário só pode editar a si mesmo
     if (req.user.role !== 'admin' && parseInt(id) !== req.user.personId) {
         return res.sendStatus(403);
     }
 
     if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
 
-    // Update people table
+    // Atualiza tabela people
     const updateResult = await db.query('UPDATE people SET name = $1, responsible = $2, birth_date = $3, cpf = $4, unit = $5 WHERE id = $6', 
       [name, responsible || null, birth_date || null, cpf || null, unit || null, id]);
     
@@ -740,22 +797,22 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Membro não encontrado' });
     }
 
-    // Update user credentials - ALLOW all admins except for targeting master admin
+    // Se for Admin alterando credenciais de acesso
     if (req.user.role === 'admin' && username) {
         const userCheck = await db.query('SELECT id, username FROM users WHERE person_id = $1', [id]);
         const existingUser = userCheck.rows[0];
         
         if (existingUser) {
-            // Protection: Sub-admins cannot edit the master admin
+            // Proteção especial: Sub-administradores não podem editar o Administrador Master
             if (existingUser.username.toUpperCase() === 'ADMINISTRADOR' && req.user.username.toUpperCase() !== 'ADMINISTRADOR') {
                 console.warn(`[AUTH] Tentativa de sub-admin (${req.user.username}) editar o admin master.`);
-                // We just skip the user update part for safety
             } else {
                 if (password) {
+                    // Criptografa a nova senha se fornecida
                     const salt = bcrypt.genSaltSync(10);
                     const hash = bcrypt.hashSync(password, salt);
                     
-                    // Master can change role
+                    // Apenas Admin Master pode alterar o nível de acesso (Role)
                     if (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) {
                         await db.query('UPDATE users SET username = $1, password_hash = $2, role = $3, must_change_password = TRUE WHERE id = $4', 
                           [username, hash, role, existingUser.id]);
@@ -764,7 +821,7 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
                           [username, hash, existingUser.id]);
                     }
                 } else {
-                    // Master can change role even without password change
+                    // Atualização apenas de username ou role sem alterar a senha
                     if (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) {
                         await db.query('UPDATE users SET username = $1, role = $2 WHERE id = $3', [username, role, existingUser.id]);
                     } else {
@@ -783,15 +840,14 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Delete person
+// Exclui um membro do sistema (Apenas Administrador Master)
 app.delete('/api/people/:id', authenticateToken, async (req, res) => {
-  // ONLY master admin can delete accounts/people
   if (req.user.username.toUpperCase() !== 'ADMINISTRADOR') {
       return res.status(403).json({ error: 'Apenas o administrador master pode excluir registros.' });
   }
 
   try {
-    // Extra protection: ensure we don't delete the person linked to the admin user
+    // Proteção: Impede a exclusão da conta do Administrador Master
     const targetUser = await db.query('SELECT username FROM users WHERE person_id = $1', [req.params.id]);
     if (targetUser.rows[0] && targetUser.rows[0].username.toUpperCase() === 'ADMINISTRADOR') {
         return res.status(403).json({ error: 'O usuário administrador master não pode ser excluído.' });
@@ -805,12 +861,15 @@ app.delete('/api/people/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// --- EVENTS API ---
+// --- API de Eventos ---
+
+// Lista todos os eventos e estatísticas de participação
 app.get('/api/events', authenticateToken, async (req, res) => {
     try {
         let queryText = '';
         let params = [];
 
+        // Admin e Secretário veem estatísticas detalhadas por unidade
         if (req.user.role === 'admin' || req.user.role === 'secretário') {
             queryText = `
                 WITH participant_counts AS (
@@ -837,6 +896,7 @@ app.get('/api/events', authenticateToken, async (req, res) => {
                 ORDER BY e.date ASC
             `;
         } else {
+            // Membro vê apenas se está inscrito ou não no evento
             queryText = `
                 WITH participant_counts AS (
                     SELECT event_id, COUNT(*) as count 
@@ -874,16 +934,18 @@ app.get('/api/events', authenticateToken, async (req, res) => {
     }
 });
 
+// Cria um novo evento e associa participantes iniciais
 app.post('/api/events', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { name, description, date, payment_type, participant_ids } = req.body || {};
     if (!name) return res.status(400).json({ error: 'Nome do evento é obrigatório' });
     
     try {
-        await db.query('BEGIN');
+        await db.query('BEGIN'); // Transação para garantir criação atômica
         const eventResult = await db.query('INSERT INTO events (name, description, date, payment_type) VALUES ($1, $2, $3, $4) RETURNING id', [name, description || null, date || null, payment_type || 'parcelado']);
         const eventId = eventResult.rows[0].id;
 
+        // Se houver lista de IDs, insere na tabela de participantes
         if (participant_ids && Array.isArray(participant_ids)) {
             for (const pid of participant_ids) {
                 await db.query('INSERT INTO event_participants (event_id, person_id) VALUES ($1, $2)', [eventId, pid]);
@@ -897,6 +959,7 @@ app.post('/api/events', authenticateToken, async (req, res) => {
     }
 });
 
+// Adiciona múltiplos participantes a um evento existente (Admin)
 app.post('/api/events/:id/participants', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403);
     const { participant_ids } = req.body || {};
@@ -909,6 +972,7 @@ app.post('/api/events/:id/participants', authenticateToken, async (req, res) => 
     try {
         await db.query('BEGIN');
         for (const pid of participant_ids) {
+            // ON CONFLICT DO NOTHING evita duplicatas se o membro já estiver inscrito
             await db.query('INSERT INTO event_participants (event_id, person_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [eventId, pid]);
         }
         await db.query('COMMIT');
@@ -921,6 +985,7 @@ app.post('/api/events/:id/participants', authenticateToken, async (req, res) => 
 });
 
 
+// Busca detalhes completos de um evento (dados, participantes e pagamentos)
 app.get('/api/events/:id/details', authenticateToken, async (req, res) => {
     const { id } = req.params;
     try {
@@ -928,6 +993,7 @@ app.get('/api/events/:id/details', authenticateToken, async (req, res) => {
         const event = eventResult.rows[0];
         if (!event) return res.status(404).json({ error: 'Evento não encontrado' });
 
+        // Membros só podem ver detalhes de eventos em que estão inscritos
         if (req.user.role !== 'admin' && req.user.role !== 'secretário') {
             const participantResult = await db.query('SELECT 1 FROM event_participants WHERE event_id = $1 AND person_id = $2', [id, req.user.personId]);
             if (participantResult.rows.length === 0) return res.sendStatus(403);
@@ -935,6 +1001,7 @@ app.get('/api/events/:id/details', authenticateToken, async (req, res) => {
 
         let participants, payments;
         if (req.user.role === 'admin' || req.user.role === 'secretário') {
+            // Admin vê todos os inscritos e todos os pagamentos realizados para este evento
             const pResult = await db.query(`
                 SELECT p.id, p.name, p.unit 
                 FROM people p
@@ -946,6 +1013,7 @@ app.get('/api/events/:id/details', authenticateToken, async (req, res) => {
             const payResult = await db.query('SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, rejection_reason FROM event_payments WHERE event_id = $1', [id]);
             payments = payResult.rows;
         } else {
+            // Membro vê apenas seus próprios dados e pagamentos vinculados ao evento
             const pResult = await db.query(`
                 SELECT p.id, p.name, p.unit 
                 FROM people p
@@ -964,6 +1032,7 @@ app.get('/api/events/:id/details', authenticateToken, async (req, res) => {
     }
 });
 
+// Exclui um evento definitivamente (Admin)
 app.delete('/api/events/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
@@ -974,7 +1043,9 @@ app.delete('/api/events/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// --- EVENT PAYMENTS API ---
+// --- API de Pagamentos de Eventos ---
+
+// Lista pagamentos de eventos com filtros opcionais
 app.get('/api/event-payments', authenticateToken, async (req, res) => {
     const { event_id, month, year } = req.query;
     try {
@@ -992,6 +1063,7 @@ app.get('/api/event-payments', authenticateToken, async (req, res) => {
             return res.json(result.rows);
         }
         
+        // Membro vê apenas os seus próprios pagamentos de eventos
         if (!req.user.personId) return res.json([]);
         let sql = 'SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, rejection_reason FROM event_payments WHERE person_id = $1';
         let params = [req.user.personId];
@@ -1006,6 +1078,7 @@ app.get('/api/event-payments', authenticateToken, async (req, res) => {
     }
 });
 
+// Busca detalhes de um pagamento de evento específico
 app.get('/api/event-payments/detail/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
@@ -1017,16 +1090,18 @@ app.get('/api/event-payments/detail/:id', authenticateToken, async (req, res) =>
     }
 });
 
+// Registra novo pagamento para um evento (Membro envia comprovante)
 app.post('/api/event-payments', authenticateToken, upload.single('receipt'), async (req, res) => {
     const { person_id, event_id, amount, month, year } = req.body || {};
     
+    // Processa e comprime a imagem do comprovante
     const compressed = await compressReceipt(req.file);
     const receipt_content = compressed ? compressed.buffer : null;
     const receipt_mime = compressed ? compressed.mimetype : null;
     const receipt_filename = req.file ? `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
     const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
     
-    // Authorization
+    // Define quem é o dono do pagamento (Admin pode escolher o membro)
     const effectivePersonId = req.user.role === 'admin' ? (person_id || req.user.personId) : req.user.personId;
 
     if (!effectivePersonId) return res.status(400).json({ error: 'Membro não identificado.' });
@@ -1037,7 +1112,7 @@ app.post('/api/event-payments', authenticateToken, upload.single('receipt'), asy
         const status = req.user.role === 'admin' ? 'approved' : 'pending';
 
         let isUploadedToStorage = false;
-        // Upload to Supabase Storage if file exists
+        // Upload para nuvem (Supabase) para persistência segura
         if (req.file && compressed) {
             console.log(`[STORAGE] Upload Event Receipt: ${receipt_filename}`);
             const { error } = await supabase.storage
@@ -1051,6 +1126,7 @@ app.post('/api/event-payments', authenticateToken, upload.single('receipt'), asy
 
         const finalDBContent = isUploadedToStorage ? null : receipt_content;
 
+        // Verifica se é pagamento parcelado (mês/ano) ou pagamento único (valores nulos)
         const existingSql = (month && year)
             ? 'SELECT id FROM event_payments WHERE person_id = $1 AND event_id = $2 AND month = $3 AND year = $4'
             : 'SELECT id FROM event_payments WHERE person_id = $1 AND event_id = $2 AND month IS NULL';
@@ -1063,12 +1139,14 @@ app.post('/api/event-payments', authenticateToken, upload.single('receipt'), asy
         const existing = existingResult.rows[0];
 
         if (existing) {
+            // Atualiza pagamento existente (reenvio de comprovante)
             await db.query(`
                 UPDATE event_payments 
                 SET amount = $1, receipt_path = COALESCE($2, receipt_path), receipt_content = COALESCE($3, receipt_content), receipt_mime = COALESCE($4, receipt_mime), status = $5, rejection_reason = NULL 
                 WHERE id = $6
             `, [amount, receipt_path, finalDBContent, receipt_mime, status, existing.id]);
             
+            // Notifica administradores sobre a atualização
             if (status === 'pending') {
                 const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
                 const personResult = await db.query("SELECT name FROM people WHERE id = $1", [effectivePersonId]);
@@ -1081,6 +1159,7 @@ app.post('/api/event-payments', authenticateToken, upload.single('receipt'), asy
             }
             res.json({ id: existing.id, updated: true, status });
         } else {
+            // Cria um novo registro de pagamento de evento
             const insertSql = `
                 INSERT INTO event_payments (person_id, event_id, amount, month, year, receipt_path, receipt_content, receipt_mime, status) 
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
@@ -1108,7 +1187,9 @@ app.post('/api/event-payments', authenticateToken, upload.single('receipt'), asy
     }
 });
 
-// --- SALES API ---
+// --- API de Vendas Extras (Cantina/Bazar) ---
+
+// Busca histórico de vendas
 app.get('/api/sales', authenticateToken, async (req, res) => {
     const { year } = req.query;
     try {
@@ -1126,6 +1207,7 @@ app.get('/api/sales', authenticateToken, async (req, res) => {
     }
 });
 
+// Registra uma nova venda
 app.post('/api/sales', authenticateToken, upload.single('receipt'), async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { event_name, amount, date, description } = req.body || {};
@@ -1142,6 +1224,7 @@ app.post('/api/sales', authenticateToken, upload.single('receipt'), async (req, 
         const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
 
         let isUploadedToStorage = false;
+        // Upload para o Supabase Storage se houver arquivo
         if (req.file && compressed) {
             const { error } = await supabase.storage
                 .from('receipts')
@@ -1167,6 +1250,7 @@ app.post('/api/sales', authenticateToken, upload.single('receipt'), async (req, 
     }
 });
 
+// Exclui uma venda (Admin)
 app.delete('/api/sales/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
@@ -1178,16 +1262,20 @@ app.delete('/api/sales/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// Approval Endpoints
+// --- Aprovação de Pagamentos de Eventos ---
+
+// Aprova pagamento de evento (Admin)
 app.post('/api/event-payments/:id/approve', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
+        // Busca dados do pagamento para notificação
         const paymentResult = await db.query('SELECT ep.*, e.name as event_name FROM event_payments ep JOIN events e ON ep.event_id = e.id WHERE ep.id = $1', [req.params.id]);
         const payment = paymentResult.rows[0];
         if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
 
         await db.query('UPDATE event_payments SET status = \'approved\', rejection_reason = NULL WHERE id = $1', [req.params.id]);
         
+        // Notifica o membro
         const userResult = await db.query('SELECT id FROM users WHERE person_id = $1', [payment.person_id]);
         const userForMember = userResult.rows[0];
         if (userForMember) {
@@ -1199,6 +1287,7 @@ app.post('/api/event-payments/:id/approve', authenticateToken, async (req, res) 
     }
 });
 
+// Rejeita pagamento de evento (Admin/Secretário)
 app.post('/api/event-payments/:id/reject', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { reason } = req.body || {};
@@ -1209,6 +1298,7 @@ app.post('/api/event-payments/:id/reject', authenticateToken, async (req, res) =
 
         await db.query('UPDATE event_payments SET status = \'rejected\', rejection_reason = $1 WHERE id = $2', [reason || 'Inválido', req.params.id]);
         
+        // Notifica o membro sobre a rejeição
         const userResult = await db.query('SELECT id FROM users WHERE person_id = $1', [payment.person_id]);
         const userForMember = userResult.rows[0];
         if (userForMember) {
@@ -1220,6 +1310,7 @@ app.post('/api/event-payments/:id/reject', authenticateToken, async (req, res) =
     }
 });
 
+// Exclui pagamento de evento (Admin)
 app.delete('/api/event-payments/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
@@ -1230,7 +1321,9 @@ app.delete('/api/event-payments/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// --- OUTFLOWS (SAÍDAS) API ---
+// --- API de Saídas (Despesas) ---
+
+// Lista todas as despesas (Apenas Admin/Secretário)
 app.get('/api/outflows', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     try {
@@ -1241,6 +1334,7 @@ app.get('/api/outflows', authenticateToken, async (req, res) => {
     }
 });
 
+// Registra uma nova despesa
 app.post('/api/outflows', authenticateToken, upload.single('receipt'), async (req, res) => {
     try {
         if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
@@ -1257,7 +1351,7 @@ app.post('/api/outflows', authenticateToken, upload.single('receipt'), async (re
         const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
 
         let isUploadedToStorage = false;
-        // Upload to Supabase Storage if file exists
+        // Upload para nuvem se houver comprovante de despesa
         if (req.file && compressed) {
             console.log(`[STORAGE] Upload Outflow Receipt: ${receipt_filename}`);
             const { error } = await supabase.storage
@@ -1284,6 +1378,7 @@ app.post('/api/outflows', authenticateToken, upload.single('receipt'), async (re
     }
 });
 
+// Exclui uma despesa (Admin/Secretário)
 app.delete('/api/outflows/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     try {
@@ -1295,18 +1390,21 @@ app.delete('/api/outflows/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// Middleware global de tratamento de erros
 app.use((err, req, res, next) => {
   console.error('SERVER ERROR:', err);
   res.status(500).json({ error: 'Erro interno no servidor: ' + err.message });
 });
 
-// --- SECURE FILE ACCESS ---
+// --- ACESSO SEGURO A ARQUIVOS ---
+// Serve comprovantes validando permissões de acesso
 app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
     const { filename } = req.params;
+    // Normaliza caminho para busca no banco
     const fullRelativePath = path.join('uploads', filename).replace(/\\/g, '/');
 
     try {
-        // Try to fetch from Supabase Storage first
+        // 1. Tenta baixar do Supabase Storage (Nuvem) primeiro
         const { data, error } = await supabase.storage
             .from('receipts')
             .download(filename);
@@ -1321,17 +1419,19 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
 
         console.log(`[STORAGE] Arquivo não no Supabase, tentando banco de dados: ${filename}`);
         
-        // Try monthly payments
+        // 2. Busca o conteúdo binário no banco de dados se não estiver na nuvem
+        
+        // Tenta em mensalidades
         let result = await db.query('SELECT person_id, receipt_content, receipt_mime FROM payments WHERE receipt_path = $1', [fullRelativePath]);
         let payment = result.rows[0];
         
-        // Try event payments
+        // Tenta em pagamentos de eventos
         if (!payment) {
             result = await db.query('SELECT person_id, receipt_content, receipt_mime FROM event_payments WHERE receipt_path = $1', [fullRelativePath]);
             payment = result.rows[0];
         }
 
-        // Try outflows (Admin only access implied by general rule below)
+        // Tenta em saídas/despesas
         let isOutflow = false;
         if (!payment) {
             result = await db.query('SELECT receipt_content, receipt_mime FROM outflows WHERE receipt_path = $1', [fullRelativePath]);
@@ -1343,12 +1443,13 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Arquivo não encontrado no registro' });
         }
 
-        // Authorization: Admin or Owner (Outflows are admin only)
+        // Validação de segurança: Admin pode ver tudo, membro só o próprio comprovante
         if (req.user.role !== 'admin' && !isOutflow && req.user.personId !== payment.person_id) {
             console.warn(`[SECURITY] Acesso negado ao arquivo ${filename} para o usuário ${req.user.username}`);
             return res.sendStatus(403);
         }
         
+        // Saídas são restritas a Admin e Secretário
         if (isOutflow && req.user.role !== 'admin' && req.user.role !== 'secretário') {
             return res.sendStatus(403);
         }
@@ -1357,6 +1458,7 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Conteúdo do arquivo não encontrado no banco de dados' });
         }
         
+        // Envia o binário com o MIME-type correto (JPG, PDF, etc)
         res.set('Content-Type', payment.receipt_mime || 'application/octet-stream');
         res.send(payment.receipt_content);
     } catch (err) {
@@ -1364,9 +1466,9 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
     }
 });
 
-// --- SYSTEM LOGS API ---
+// --- API DE LOGS DE SISTEMA ---
 app.get('/api/admin/logs', authenticateToken, async (req, res) => {
-    // Only master admin can see logs
+    // Apenas o Administrador Master tem acesso aos logs brutos de auditoria
     if (req.user.role !== 'admin' || req.user.username.toUpperCase() !== 'ADMINISTRADOR') {
         console.warn(`[SECURITY] Tentativa de acesso não autorizado aos logs por ${req.user.username}`);
         return res.sendStatus(403);
@@ -1379,12 +1481,14 @@ app.get('/api/admin/logs', authenticateToken, async (req, res) => {
     }
 });
 
-// --- Notification Routes ---
+// --- Rotas de Notificação Push (Web Push) ---
 
+// Fornece a chave pública VAPID para o frontend se inscrever
 app.get('/api/notifications/vapid-public-key', (req, res) => {
     res.json({ publicKey: VAPID_PUBLIC_KEY });
 });
 
+// Salva a inscrição do navegador para receber notificações push
 app.post('/api/notifications/subscribe', authenticateToken, async (req, res) => {
     const { subscription } = req.body;
     if (!subscription) return res.status(400).json({ error: 'Inscrição ausente' });
@@ -1402,6 +1506,7 @@ app.post('/api/notifications/subscribe', authenticateToken, async (req, res) => 
     }
 });
 
+// Busca notificações não lidas (Badge do sino)
 app.get('/api/notifications/unread', authenticateToken, async (req, res) => {
     try {
         const result = await db.query(`
@@ -1416,6 +1521,7 @@ app.get('/api/notifications/unread', authenticateToken, async (req, res) => {
     }
 });
 
+// Marca notificação específica como lida
 app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
     try {
         await db.query('UPDATE notifications SET is_read = true WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)', [req.params.id, req.user.id]);
@@ -1425,30 +1531,31 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
     }
 });
 
+// Envia notificação manual para usuários (Broadcast ou Individual)
 app.post('/api/notifications/send', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403).json({ error: 'Acesso negado' });
     
     const { userId, userIds, title, content } = req.body;
     
-    // Normalize to an array of IDs
+    // Normaliza para um array de IDs
     let targetIds = [];
     if (userIds && Array.isArray(userIds)) {
         targetIds = userIds;
     } else if (userId) {
         targetIds = [userId];
     } else {
-        // null means ALL members
+        // null significa transmissão para TODOS os membros
         targetIds = [null];
     }
 
     try {
-        // 1. Save to DB for internal modal
+        // 1. Salva no banco para o modal interno do sistema
         const result = await db.query(`
             INSERT INTO notifications (user_id, title, message, type)
             SELECT unnest($1::int[]), $2, $3, 'manual' RETURNING id
         `, [targetIds, title, content]);
 
-        // 2. Try to send push notification
+        // 2. Busca inscrições de push para enviar notificação nativa ao celular/desktop
         const pushResult = await db.query(`
             SELECT subscription_data FROM push_subscriptions 
             WHERE ($1::int[] IS NULL OR user_id = ANY($1::int[]))
@@ -1457,12 +1564,13 @@ app.post('/api/notifications/send', authenticateToken, async (req, res) => {
 
         const payload = JSON.stringify({ title, body: content });
 
+        // Envia via Web Push Protocol
         pushResult.rows.forEach(sub => {
             const subscription = JSON.parse(sub.subscription_data);
             webPush.sendNotification(subscription, payload).catch(err => {
                 console.error('[PUSH] Erro no envio individual:', err.statusCode);
+                // Se a inscrição expirou (410/404), remove do banco para não tentar mais
                 if (err.statusCode === 410 || err.statusCode === 404) {
-                    // Subscription expired, remove it
                     db.query('DELETE FROM push_subscriptions WHERE subscription_data = $1', [sub.subscription_data]);
                 }
             });
@@ -1475,14 +1583,15 @@ app.post('/api/notifications/send', authenticateToken, async (req, res) => {
     }
 });
 
-// --- Automated Reminders Logic (CRON) ---
+// --- Lógica de Lembretes Automáticos (CRON) ---
 
+// Envia lembretes para quem ainda não pagou a mensalidade do mês atual
 const sendPaymentReminders = async () => {
     try {
         const currentMonth = new Date().getMonth() + 1;
         const currentYear = new Date().getFullYear();
 
-        // 1. Encontrar usuários vinculados a pessoas que NÃO possuem pagamento aprovado este mês
+        // Busca usuários que NÃO possuem pagamento aprovado este mês
         const unpaidUsers = await db.query(`
             SELECT u.id, u.username, p.name 
             FROM users u
@@ -1499,13 +1608,13 @@ const sendPaymentReminders = async () => {
             const title = 'Lembrete de Mensalidade';
             const content = `Olá ${user.name || user.username}, lembramos que a mensalidade deste mês ainda está pendente. Regularize para nos ajudar a manter o clube!`;
             
-            // Salvar no Banco de Dados
+            // Salva no banco
             await db.query(`
                 INSERT INTO notifications (user_id, title, message, type)
                 VALUES ($1, $2, $3, 'automated_reminder')
             `, [user.id, title, content]);
 
-            // Enviar Push (Notificação para Celular)
+            // Envia Push (Notificação para Celular)
             const pushResult = await db.query('SELECT subscription_data FROM push_subscriptions WHERE user_id = $1', [user.id]);
             const payload = JSON.stringify({ title, body: content });
 
@@ -1522,24 +1631,23 @@ const sendPaymentReminders = async () => {
     }
 };
 
-// CRON JOB: Every day at 09:00 (Check for day 5 and 20)
+// Agendamento CRON: Roda todos os dias às 09:00 (Verifica dias 5 e 20)
 cron.schedule('0 9 * * *', async () => {
     const today = new Date();
     const day = today.getDate();
-    const dayOfWeek = today.getDay(); // 0: Sun, 6: Sat
+    const dayOfWeek = today.getDay(); // 0: Dom, 6: Sáb
     
-    // Day 20 Logic
+    // Lógica do Dia 20 (Vencimento secundário)
     if (day === 20) {
-        if (dayOfWeek === 6) { // Saturday
+        if (dayOfWeek === 6) { // Se for Sábado, aguarda o pôr do sol (Sabbath)
             console.log('[CRON] Dia 20 é Sábado. Agendando para o pôr do sol (19:00).');
-            // We schedule a one-time execution for today at 19:00
             setTimeout(() => sendPaymentReminders(), (19 - 9) * 60 * 60 * 1000);
         } else {
             sendPaymentReminders();
         }
     }
 
-    // 5th Working Day Logic
+    // Lógica do 5º Dia Útil (Vencimento principal)
     if (day >= 5 && day <= 10) {
         const result = await db.query(`
             WITH RECURSIVE days AS (
@@ -1563,13 +1671,14 @@ cron.schedule('0 9 * * *', async () => {
     }
 });
 
+// Inicialização do Servidor HTTP
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
     
-    // Initial cleanup on startup
+    // Executa limpeza inicial de logs ao subir
     cleanupLogs();
     
-    // Log system startup
+    // Registra a inicialização do sistema no log de auditoria
     const mockReq = { 
         headers: { 'user-agent': 'Server System Process' },
         socket: { remoteAddress: '127.0.0.1' }
