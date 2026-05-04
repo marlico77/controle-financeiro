@@ -1132,6 +1132,14 @@ async function loadInitialData() {
                         if (modal && msgEl) {
                             msgEl.innerHTML = `Existem <strong>${pendingPayments.length}</strong> comprovante(s) aguardando sua aprovação no sistema.`;
                             modal.style.display = 'flex';
+                            
+                            // Adiciona o comportamento de fechar para o botão Entendido neste contexto
+                            const closeBtn = document.getElementById('close-notif-btn');
+                            if (closeBtn) {
+                                closeBtn.onclick = () => {
+                                    modal.style.display = 'none';
+                                };
+                            }
                         }
                     }
                 }, 1500);
