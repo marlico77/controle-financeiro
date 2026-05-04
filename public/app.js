@@ -860,29 +860,31 @@ if (sidebarToggle) {
 
 // --- Lógica de Notificações do Sistema ---
 const initializeNotifications = () => {
-    // Uso de delegação de eventos global no window para maior robustez (Abordagem Senior corrigida)
-    window.addEventListener('click', (e) => {
-        const trigger = e.target.closest('#notification-trigger'); // Botão do sino
-        const dropdown = document.getElementById('notification-dropdown'); // Menu de notificações
-        
-        if (trigger) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (dropdown) {
-                const isActive = dropdown.classList.contains('active');
-                
-                // Alterna a visibilidade do dropdown
-                dropdown.classList.toggle('active', !isActive);
-                dropdown.style.display = !isActive ? 'block' : 'none'; // Fallback visual
-                
-                // Se estiver abrindo, busca as notificações mais recentes no servidor
-                if (!isActive) fetchNotifications();
-            }
-            return;
-        }
+    const trigger = document.getElementById('notification-trigger');
+    const dropdown = document.getElementById('notification-dropdown');
 
-        // Fecha o menu de notificações se clicar em qualquer lugar fora dele
-        if (dropdown && dropdown.classList.contains('active') && !e.target.closest('#notification-dropdown')) {
+    if (!trigger || !dropdown) return;
+
+    // Toggle dropdown ao clicar no sininho
+    trigger.addEventListener('click', (e) => {
+        // Se o clique foi dentro do dropdown (ex: clicou em uma mensagem), ignora o toggle de abrir/fechar
+        if (e.target.closest('#notification-dropdown')) return;
+
+        e.preventDefault();
+        e.stopPropagation(); // Evita que o evento suba para o document e feche imediatamente
+        
+        const isActive = dropdown.classList.contains('active');
+        
+        // Alterna a visibilidade
+        dropdown.classList.toggle('active', !isActive);
+        dropdown.style.display = !isActive ? 'block' : 'none';
+        
+        if (!isActive) fetchNotifications();
+    });
+
+    // Fecha o menu se clicar em qualquer outro lugar da página
+    document.addEventListener('click', (e) => {
+        if (dropdown.classList.contains('active') && !e.target.closest('#notification-trigger')) {
             dropdown.classList.remove('active');
             dropdown.style.display = 'none';
         }
