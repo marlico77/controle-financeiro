@@ -58,6 +58,7 @@ if (!SECRET && process.env.NODE_ENV === 'production') {
 }
 const JWT_SECRET = SECRET || 'dev-secret-only';
 
+
 // Configurações de Middleware do Express
 app.use(cors()); // Habilita CORS
 app.use(express.json()); // Habilita parsing de JSON no corpo das requisições
