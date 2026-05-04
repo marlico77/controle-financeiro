@@ -860,8 +860,8 @@ if (sidebarToggle) {
 
 // --- Lógica de Notificações do Sistema ---
 const initializeNotifications = () => {
-    // Uso de delegação de eventos global no window para maior robustez (Abordagem Senior)
-    window.onclick = (e) => {
+    // Uso de delegação de eventos global no window para maior robustez (Abordagem Senior corrigida)
+    window.addEventListener('click', (e) => {
         const trigger = e.target.closest('#notification-trigger'); // Botão do sino
         const dropdown = document.getElementById('notification-dropdown'); // Menu de notificações
         
@@ -886,7 +886,7 @@ const initializeNotifications = () => {
             dropdown.classList.remove('active');
             dropdown.style.display = 'none';
         }
-    };
+    });
 
     // Botão para marcar todas as notificações como lidas
     const markReadBtn = document.getElementById('mark-all-read');
