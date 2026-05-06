@@ -863,37 +863,44 @@ const initializeNotifications = () => {
     if (window._notificationsInitialized) return;
     window._notificationsInitialized = true;
 
-    // Uso de Delegação de Eventos (Event Delegation) no document para evitar problemas de DOM dinâmico
+    // Elementos de gatilho (Desktop e Mobile)
+    const desktopTrigger = document.getElementById('notification-trigger');
+    const mobileTrigger = document.getElementById('mobile-notification-trigger');
+
+    // Função centralizada para alternar a visibilidade do menu
+    const toggleDropdown = (e) => {
+        const dropdown = document.getElementById('notification-dropdown');
+        if (!dropdown) return;
+
+        e.preventDefault();
+        e.stopPropagation(); // Impede que o evento chegue no document (que fecharia o menu)
+
+        const isActive = dropdown.classList.contains('active');
+        
+        dropdown.classList.toggle('active', !isActive);
+        dropdown.style.display = !isActive ? 'block' : 'none';
+        
+        if (!isActive && typeof fetchNotifications === 'function') {
+            fetchNotifications();
+        }
+    };
+
+    // Vincula o evento diretamente aos ícones para evitar conflitos de delegação (Event Bubbling)
+    if (desktopTrigger) desktopTrigger.addEventListener('click', toggleDropdown);
+    if (mobileTrigger) mobileTrigger.addEventListener('click', toggleDropdown);
+
+    // Delegação no document apenas para FECHAR o menu ao clicar fora
     document.addEventListener('click', (e) => {
         const dropdown = document.getElementById('notification-dropdown');
         if (!dropdown) return;
 
-        // 1. Se clicou DENTRO do menu de notificações (dropdown), ignoramos para não fechar acidentalmente
-        if (e.target.closest('#notification-dropdown')) {
-            return;
-        }
+        // Se clicou dentro do próprio dropdown, não faz nada
+        if (e.target.closest('#notification-dropdown')) return;
 
-        // 2. Se clicou no sininho (trigger)
-        const trigger = e.target.closest('#notification-trigger');
-        if (trigger) {
-            e.preventDefault();
-            e.stopPropagation(); // Impede que outros cliques capturem esse evento
-            
-            const isActive = dropdown.classList.contains('active');
-            
-            dropdown.classList.toggle('active', !isActive);
-            dropdown.style.display = !isActive ? 'block' : 'none';
-            
-            if (!isActive && typeof fetchNotifications === 'function') {
-                fetchNotifications();
-            }
-        } 
-        // 3. Se clicou fora do sininho E fora do dropdown, fechamos o menu
-        else {
-            if (dropdown.classList.contains('active')) {
-                dropdown.classList.remove('active');
-                dropdown.style.display = 'none';
-            }
+        // Se clicou fora, fecha se estiver aberto
+        if (dropdown.classList.contains('active')) {
+            dropdown.classList.remove('active');
+            dropdown.style.display = 'none';
         }
     });
 
@@ -1488,7 +1495,10 @@ const handleNotificationClick = async (id, type) => {
     
     // Fecha o menu de notificações automaticamente ao clicar
     const dropdown = document.getElementById('notification-dropdown');
-    if (dropdown) dropdown.style.display = 'none';
+    if (dropdown) {
+        dropdown.classList.remove('active');
+        dropdown.style.display = 'none';
+    }
     
     try {
         // Se for notificação de mensalidade, abre o modal de mensalidade correspondente
