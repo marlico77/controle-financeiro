@@ -137,11 +137,11 @@ const calculateAge = (birthDate) => {
 // Formata uma data ISO (AAAA-MM-DD) para o padrão brasileiro (DD/MM/AAAA)
 const formatDate = (dateString) => {
     if (!dateString) return '-'; // Retorna traço se não houver data
-    
+
     // Remove a parte de hora se houver (YYYY-MM-DDTHH:mm:ss...)
     const cleanDate = dateString.split('T')[0];
     const parts = cleanDate.split('-'); // Divide por hífens
-    
+
     if (parts.length !== 3) return dateString; // Se não estiver no padrão esperado, retorna o original
     return `${parts[2]}/${parts[1]}/${parts[0]}`; // Remonta no formato dia/mês/ano
 };
@@ -200,10 +200,10 @@ async function showAlert(message, title = 'Aviso', icon = '⚠️') {
 
         // SVG de sucesso (círculo com check)
         const successSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="60" height="60" fill="var(--accent-color)"><path d="M320 576C178.6 576 64 461.4 64 320C64 178.6 178.6 64 320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576zM438 209.7C427.3 201.9 412.3 204.3 404.5 215L285.1 379.2L233 327.1C223.6 317.7 208.4 317.7 199.1 327.1C189.8 336.5 189.7 351.7 199.1 361L271.1 433C276.1 438 282.9 440.5 289.9 440C296.9 439.5 303.3 435.9 307.4 430.2L443.3 243.2C451.1 232.5 448.7 217.5 438 209.7z"/></svg>`;
-        
+
         titleEl.textContent = title; // Define título
         messageEl.innerHTML = message; // Define mensagem (suporta HTML)
-        
+
         // Ajusta cores e ícones conforme o tipo (Sucesso, Erro ou Geral)
         if (title === 'Sucesso') {
             iconEl.innerHTML = successSvg;
@@ -235,12 +235,12 @@ async function generateGeneralReport() {
         const currentYear = parseInt(state.currentYear || new Date().getFullYear()); // Ano de referência
         const payments = state.payments || []; // Lista de pagamentos do estado
         const people = state.people || []; // Lista de pessoas
-        
+
         // Filtra apenas pagamentos aprovados do ano selecionado
         const approvedPayments = payments.filter(p => p.status === 'approved' && p.year === currentYear);
         // Soma o total arrecadado
         const totalCash = approvedPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-        
+
         // Agrupa arrecadação por unidade
         const byUnit = {};
         people.forEach(p => {
@@ -262,7 +262,7 @@ async function generateGeneralReport() {
             <div class="report-summary-box">
                 <div>
                     <span class="label">Arrecadação Total no Ano</span>
-                    <span class="value">R$ ${totalCash.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                    <span class="value">R$ ${totalCash.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div>
                     <span class="label">Total de Membros</span>
@@ -276,10 +276,10 @@ async function generateGeneralReport() {
                         <tr><th>Unidade</th><th>Valor Arrecadado (Ano)</th></tr>
                     </thead>
                     <tbody>
-                        ${Object.entries(byUnit).sort((a,b) => b[1] - a[1]).map(([unit, val]) => `
+                        ${Object.entries(byUnit).sort((a, b) => b[1] - a[1]).map(([unit, val]) => `
                             <tr>
                                 <td><strong>${unit}</strong></td>
-                                <td>R$ ${val.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                                <td>R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -307,7 +307,7 @@ async function generateMemberReport() {
         console.log('[REPORT] Gerando Relatório de Membro...');
         const memberId = document.getElementById('report-member-select').value; // Obtém o ID do membro selecionado no menu suspenso
         if (!memberId) return showStatus('Selecione um membro primeiro.', 'info'); // Verifica se um membro foi escolhido
-        
+
         const people = state.people || []; // Lista de pessoas no estado global
         const member = people.find(p => p.id == memberId); // Procura o objeto do membro pelo ID
         if (!member) return showStatus('Membro não encontrado.', 'error'); // Caso não encontre, exibe erro
@@ -330,7 +330,7 @@ async function generateMemberReport() {
             <div class="report-summary-box">
                 <div>
                     <span class="label">Total Pago (${currentYear})</span>
-                    <span class="value">R$ ${totalPaid.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                    <span class="value">R$ ${totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div>
                     <span class="label">CPF</span>
@@ -345,17 +345,17 @@ async function generateMemberReport() {
                     </thead>
                     <tbody>
                         ${months.map((m, idx) => {
-                            // Para cada mês, verifica se existe um registro de pagamento
-                            const pay = payments.find(p => p.month === idx + 1);
-                            return `
+            // Para cada mês, verifica se existe um registro de pagamento
+            const pay = payments.find(p => p.month === idx + 1);
+            return `
                                 <tr>
                                     <td>${m}</td>
                                     <td>${pay ? (pay.status === 'approved' ? 'PAGO' : pay.status === 'pending' ? 'PENDENTE' : 'RECUSADO') : 'NÃO REALIZADO'}</td>
-                                    <td>${pay ? 'R$ ' + parseFloat(pay.amount || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
+                                    <td>${pay ? 'R$ ' + parseFloat(pay.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '-'}</td>
                                     <td>${pay && pay.updated_at ? new Date(pay.updated_at).toLocaleDateString('pt-BR') : '-'}</td>
                                 </tr>
                             `;
-                        }).join('')}
+        }).join('')}
                     </tbody>
                 </table>
             </div>
@@ -380,16 +380,16 @@ async function generateEventReport() {
     const eventId = document.getElementById('report-event-select').value; // ID do evento selecionado
     const filterType = document.getElementById('report-event-filter').value; // Tipo de filtro (por unidade ou lista completa)
     if (!eventId) return showStatus('Selecione um evento primeiro.', 'info');
-    
+
     try {
         // Busca os detalhes completos do evento via API
         const data = await apiFetch(`/api/events/${eventId}/details`);
         const { event, participants, payments } = data; // Desestrutura a resposta
-        
+
         // Calcula o total arrecadado no evento (apenas pagamentos aprovados)
         let totalArrecadado = (payments || []).filter(p => p.status === 'approved').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
         let contentHtml = '';
-        
+
         // Se o filtro for por unidade, agrupa as estatísticas
         if (filterType === 'unit') {
             const byUnit = {};
@@ -411,7 +411,7 @@ async function generateEventReport() {
                         </thead>
                         <tbody>
                             ${Object.entries(byUnit).map(([unit, stats]) => `
-                                <tr><td>${unit}</td><td>${stats.count}</td><td>R$ ${stats.paid.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td></tr>
+                                <tr><td>${unit}</td><td>${stats.count}</td><td>R$ ${stats.paid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>
                             `).join('')}
                         </tbody>
                     </table>
@@ -428,10 +428,10 @@ async function generateEventReport() {
                         </thead>
                         <tbody>
                             ${(participants || []).map(p => {
-                                // Calcula quanto este membro específico já pagou para o evento
-                                const amount = (payments || []).filter(pay => pay.person_id === p.id && pay.status === 'approved').reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
-                                return `<tr><td>${p.name}</td><td>${p.unit || '-'}</td><td>${amount > 0 ? 'PARTICIPANDO' : 'PENDENTE'}</td><td>R$ ${amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td></tr>`;
-                            }).join('')}
+                // Calcula quanto este membro específico já pagou para o evento
+                const amount = (payments || []).filter(pay => pay.person_id === p.id && pay.status === 'approved').reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
+                return `<tr><td>${p.name}</td><td>${p.unit || '-'}</td><td>${amount > 0 ? 'PARTICIPANDO' : 'PENDENTE'}</td><td>R$ ${amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`;
+            }).join('')}
                         </tbody>
                     </table>
                 </div>
@@ -446,7 +446,7 @@ async function generateEventReport() {
                 <p style="margin: 5px 0 0 0;">Evento: <strong>${event.name}</strong> | Data: ${event.date ? new Date(event.date + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}</p>
             </div>
             <div class="report-summary-box">
-                <div><span class="label">Total Arrecadado</span><span class="value">R$ ${totalArrecadado.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
+                <div><span class="label">Total Arrecadado</span><span class="value">R$ ${totalArrecadado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
                 <div><span class="label">Total Participantes</span><span class="value">${(participants || []).length}</span></div>
             </div>
             ${contentHtml}
@@ -563,7 +563,7 @@ function confirmGenerateReport() {
     const type = typeSelect.value;
     const selectorModal = document.getElementById('report-selector-modal');
     if (selectorModal) selectorModal.style.display = 'none'; // Fecha o seletor antes de gerar
-    
+
     // Encaminha para a função correta baseado na escolha
     if (type === 'general') generateGeneralReport();
     else if (type === 'member') generateMemberReport();
@@ -586,7 +586,7 @@ window.toggleReportFields = toggleReportFields;
 // Inicializa os ouvintes de eventos (listeners) para botões de relatórios e autorizações
 const initGeneratorListeners = () => {
     console.log('[INIT] Inicializando listeners de relatórios e autorizações');
-    
+
     const typeSelect = document.getElementById('report-type-select');
     if (typeSelect) typeSelect.onchange = toggleReportFields; // Monitora mudança no tipo de relatório
 
@@ -670,7 +670,7 @@ async function apiFetch(url, options = {}) {
         ...options,
         headers
     });
-    
+
     let data = {};
     try {
         const text = await res.text();
@@ -757,7 +757,7 @@ const closeButtons = document.querySelectorAll('.close-modal');       // Botões
 const initMessageForm = () => {
     const form = document.getElementById('send-msg-form'); // Formulário de envio
     if (!form) return;
-    
+
     // Lógica da barra de pesquisa de membros para envio de mensagem
     const searchInput = document.getElementById('msg-search');
     if (searchInput) {
@@ -784,28 +784,28 @@ const initMessageForm = () => {
             });
         };
     }
-    
+
     // Tratamento do envio do formulário de mensagem
     form.onsubmit = async (e) => {
         e.preventDefault(); // Impede o recarregamento da página
         e.stopPropagation();
-        
+
         const selectAllChecked = document.getElementById('msg-select-all').checked;
         let selectedIds = [];
-        
+
         if (selectAllChecked) {
             selectedIds = null; // Se marcado "Todos", o backend entende o valor null como destino global
         } else {
             // Coleta os IDs apenas dos membros que foram marcados manualmente
             const checkboxes = document.querySelectorAll('#members-checkbox-container input[type="checkbox"]:checked');
             selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-            
+
             if (selectedIds.length === 0) {
                 showAlert('Por favor, selecione pelo menos um membro ou marque "Todos os Membros".', 'Aviso');
                 return;
             }
         }
-        
+
         const title = document.getElementById('msg-title').value; // Título da notificação
         const content = document.getElementById('msg-content').value; // Conteúdo da mensagem
 
@@ -869,7 +869,7 @@ const initializeNotifications = () => {
     window._notificationsInitialized = true;
 
     // Elementos de gatilho (Desktop e Mobile)
-    const desktopTrigger = document.getElementById('notification-trigger');
+    const desktopBell = document.querySelector('#notification-trigger .notification-bell');
     const mobileTrigger = document.getElementById('mobile-notification-trigger');
 
     // Função centralizada para alternar a visibilidade do menu
@@ -881,17 +881,17 @@ const initializeNotifications = () => {
         e.stopPropagation(); // Impede que o evento chegue no document (que fecharia o menu)
 
         const isActive = dropdown.classList.contains('active');
-        
+
         dropdown.classList.toggle('active', !isActive);
         dropdown.style.display = !isActive ? 'block' : 'none';
-        
+
         if (!isActive && typeof fetchNotifications === 'function') {
             fetchNotifications();
         }
     };
 
     // Vincula o evento diretamente aos ícones para evitar conflitos de delegação (Event Bubbling)
-    if (desktopTrigger) desktopTrigger.addEventListener('click', toggleDropdown);
+    if (desktopBell) desktopBell.addEventListener('click', toggleDropdown);
     if (mobileTrigger) mobileTrigger.addEventListener('click', toggleDropdown);
 
     // Delegação no document apenas para FECHAR o menu ao clicar fora
@@ -940,7 +940,7 @@ const initializeNotifications = () => {
 
     // Inicia a busca automática (polling) de notificações a cada 30 segundos
     fetchNotifications();
-    setInterval(fetchNotifications, 30000); 
+    setInterval(fetchNotifications, 30000);
 }
 
 // --- Funções de Autenticação e Controle de Sessão ---
@@ -948,13 +948,13 @@ const initializeNotifications = () => {
 async function checkAuth() {
     const splash = document.getElementById('splash-screen'); // Tela de carregamento (splash)
     const token = getStorageItem('token'); // Busca o token salvo
-    
+
     // Otimização de UI: Se houver token, oculta o login e mostra o splash imediatamente
     if (token) {
         loginSection.style.display = 'none';
-        mainSection.style.display = 'none'; 
+        mainSection.style.display = 'none';
         if (splash) splash.style.display = 'flex';
-        
+
         state.token = token;
         state.role = state.role || getStorageItem('role');
         state.personId = state.personId || getStorageItem('personId');
@@ -962,21 +962,21 @@ async function checkAuth() {
         try {
             // Verifica a validade do token com o servidor para garantir segurança real
             const status = await apiFetch('/api/auth/status');
-            
+
             // Atualiza o estado global com os dados confirmados pelo servidor
             state.role = status.role;
             state.username = status.username;
             state.name = status.name;
-            
+
             // Salva novamente nos storages para garantir persistência correta (Local vs Sessão)
             const isPersistent = !!localStorage.getItem('token');
             setStorageItem('role', status.role, isPersistent);
             setStorageItem('username', status.username, isPersistent);
             setStorageItem('name', status.name, isPersistent);
-            
+
             // Exibe o nome do usuário no cabeçalho
             document.getElementById('user-name-display').textContent = status.name || 'Usuário';
-            
+
             // Se for necessário trocar a senha (primeiro acesso), bloqueia o dashboard e abre o modal
             if (status.mustChangePassword) {
                 loginSection.style.display = 'none';
@@ -993,7 +993,7 @@ async function checkAuth() {
                 splash.classList.add('fade-out');
                 setTimeout(() => splash.style.display = 'none', 500);
             }
-            
+
             // --- Lógica de Visibilidade de Abas baseada em Nível de Acesso (Roles) ---
             const isAdmin = state.role === 'admin';
             const isSecretary = state.role === 'secretário';
@@ -1021,15 +1021,15 @@ async function checkAuth() {
                 if (navItems.sales) navItems.sales.style.display = 'none';
                 if (navItems.messages) navItems.messages.style.display = 'none';
                 if (navItems.logs) navItems.logs.style.display = 'none';
-                
+
                 // Ajusta os cartões de estatísticas no Dashboard para membros comuns
                 const cards = document.querySelectorAll('.stat-card');
                 if (cards[1]) cards[1].style.display = 'none'; // Esconde caixa atual
                 if (cards[2]) cards[2].style.display = 'none'; // Esconde inadimplência
-                
+
                 const statLabels = document.querySelectorAll('.stat-label');
                 if (statLabels[0]) statLabels[0].textContent = 'Total Pago (Ano)';
-                
+
                 document.getElementById('page-title').textContent = 'Meu Status de Mensalidade';
             } else {
                 // Acesso para Administradores e Secretários
@@ -1039,7 +1039,7 @@ async function checkAuth() {
                 if (navItems.outflows) navItems.outflows.style.display = 'flex';
                 if (navItems.sales) navItems.sales.style.display = isAdmin ? 'flex' : 'none';
                 if (navItems.messages) navItems.messages.style.display = 'flex';
-                
+
                 // Logs visíveis apenas para o usuário mestre (ADMINISTRADOR)
                 if (navItems.logs) navItems.logs.style.display = isMaster ? 'flex' : 'none';
 
@@ -1054,7 +1054,7 @@ async function checkAuth() {
                 state.activeTab = 'dashboard';
                 setStorageItem('activeTab', 'dashboard', !!localStorage.getItem('token'));
             }
-            
+
             // Bloqueia abas administrativas para membros comuns
             if (state.role === 'member' && (state.activeTab === 'people' || state.activeTab === 'reports' || state.activeTab === 'outflows' || state.activeTab === 'sales')) {
                 state.activeTab = 'dashboard';
@@ -1062,7 +1062,7 @@ async function checkAuth() {
             }
 
             // Inicia o cronômetro de inatividade após confirmar a autenticação
-            resetInactivityTimer(); 
+            resetInactivityTimer();
             // Carrega os dados iniciais do banco
             await loadInitialData();
             // Muda para a aba ativa (salva na sessão anterior)
@@ -1113,13 +1113,13 @@ async function loadInitialData() {
             console.error('[API ERROR] Falha ao carregar recurso:', err);
             return []; // Retorna lista vazia para não travar o carregamento do restante
         })));
-        
+
         // Distribui os resultados nos estados globais
         state.people = results[0];
         state.payments = results[1];
         state.events = results[2];
         state.eventPayments = results[3] || [];
-        
+
         if (state.role === 'admin' || state.role === 'secretário') {
             state.outflows = results[4] || [];
             state.sales = results[5] || [];
@@ -1139,21 +1139,21 @@ async function loadInitialData() {
         // Renderiza os componentes visuais principais
         renderEvents();
         renderDashboard();
-        
+
         if (state.role === 'admin') {
             renderPeople();
-            
+
             // Alerta visual imediato para o Admin se houver pagamentos aguardando aprovação
             const pendingPayments = state.payments.filter(p => p.status === 'pending');
             if (pendingPayments.length > 0) {
                 setTimeout(() => {
-                    if (state.role === 'admin') { 
+                    if (state.role === 'admin') {
                         const modal = document.getElementById('notification-modal');
-                        const msgEl = document.getElementById('notif-content'); 
+                        const msgEl = document.getElementById('notif-content');
                         if (modal && msgEl) {
                             msgEl.innerHTML = `Existem <strong>${pendingPayments.length}</strong> comprovante(s) aguardando sua aprovação no sistema.`;
                             modal.style.display = 'flex';
-                            
+
                             // Adiciona o comportamento de fechar para o botão Entendido neste contexto
                             const closeBtn = document.getElementById('close-notif-btn');
                             if (closeBtn) {
@@ -1166,10 +1166,10 @@ async function loadInitialData() {
                 }, 1500);
             }
         }
-        
+
         // Atualiza os números (cards) do dashboard
         updateDashboardStats();
-        
+
         // Se estiver na aba de logs, carrega os logs do sistema
         if (state.activeTab === 'logs') fetchLogs();
     } catch (err) {
@@ -1191,7 +1191,7 @@ loginForm.addEventListener('submit', async (e) => {
             submitBtn.disabled = true;
             submitBtn.textContent = 'Acessando...';
         }
-        
+
         // Limpa estados residuais de sessões anteriores por segurança
         state.people = [];
         state.payments = [];
@@ -1222,14 +1222,14 @@ loginForm.addEventListener('submit', async (e) => {
             setStorageItem('username', data.username, rememberMe);
             setStorageItem('name', data.name || data.username, rememberMe);
             setStorageItem('personId', data.personId || '', rememberMe);
-            
+
             // Atualiza o estado global da aplicação
             state.token = data.token;
             state.role = data.role;
             state.username = data.username;
             state.name = data.name || data.username;
             state.personId = data.personId;
-            
+
             document.getElementById('user-name-display').textContent = state.name;
 
             // Se for o primeiro acesso, obriga a troca de senha. Caso contrário, entra no dashboard.
@@ -1256,7 +1256,7 @@ loginForm.addEventListener('submit', async (e) => {
 // Trata casos onde o servidor retorna erro de autorização (401/403)
 function handleUnauthorized(originUrl = '') {
     console.log(`[AUTH] Tratando acesso não autorizado: ${originUrl}`);
-    
+
     // Remove o token para forçar re-autenticação
     removeStorageItem('token');
     removeStorageItem('role');
@@ -1265,12 +1265,12 @@ function handleUnauthorized(originUrl = '') {
     removeStorageItem('personId');
     state.token = null;
     state.role = null;
-    
+
     // Redireciona visualmente para a tela de login
     const loginSection = document.getElementById('login-section');
     const mainSection = document.getElementById('main-section');
     const loginError = document.getElementById('login-error');
-    
+
     if (loginSection && mainSection) {
         loginSection.style.display = 'flex';
         mainSection.style.display = 'none';
@@ -1315,9 +1315,9 @@ const confirmForceLoginBtn = document.getElementById('confirm-force-login');
 if (confirmForceLoginBtn) {
     confirmForceLoginBtn.onclick = () => {
         // Re-dispara o evento de submit do formulário com o parâmetro 'force' ativado
-        loginForm.dispatchEvent(new CustomEvent('submit', { 
+        loginForm.dispatchEvent(new CustomEvent('submit', {
             detail: { force: true },
-            cancelable: true 
+            cancelable: true
         }));
         document.getElementById('session-modal').style.display = 'none';
     };
@@ -1329,7 +1329,7 @@ function switchTab(tabName, force = false) {
     if (!force && state.activeTab === tabName) return;
     state.activeTab = tabName;
     setStorageItem('activeTab', tabName, !!localStorage.getItem('token')); // Salva aba atual
-    
+
     // Atualiza classes CSS nos links do menu
     navLinks.forEach(l => {
         l.classList.toggle('active', l.dataset.target === tabName);
@@ -1373,18 +1373,18 @@ function switchTab(tabName, force = false) {
     if (tabName === 'reports') {
         populateReportSelects();
     }
-    
+
     // Inicializações de funcionalidades específicas
     if (tabName === 'messages') renderMessages();
     if (tabName === 'pwa-install' && typeof updatePWAUI === 'function') {
         updatePWAUI();
     }
-    
+
     // Auxiliar para barras de rolagem fixas (melhora UX em tabelas longas)
     if (typeof initStickyScrollbars === 'function') {
         setTimeout(initStickyScrollbars, 200);
     }
-    
+
     // No mobile, fecha a barra lateral automaticamente ao clicar em uma aba
     const sidebar = document.querySelector('.sidebar');
     if (window.innerWidth <= 768 && sidebar.classList.contains('active')) {
@@ -1407,16 +1407,16 @@ navLinks.forEach(link => {
 function populateReportSelects() {
     const memberSelect = document.getElementById('report-member-select');
     const eventSelect = document.getElementById('report-event-select');
-    
+
     // Preenche lista de membros
     if (memberSelect) {
-        memberSelect.innerHTML = '<option value="">Selecione um Membro</option>' + 
+        memberSelect.innerHTML = '<option value="">Selecione um Membro</option>' +
             state.people.map(p => `<option value="${p.id}">${escapeHTML(p.name)}</option>`).join('');
     }
-        
+
     // Preenche lista de eventos
     if (eventSelect) {
-        eventSelect.innerHTML = '<option value="">Selecione um Evento</option>' + 
+        eventSelect.innerHTML = '<option value="">Selecione um Evento</option>' +
             state.events.map(e => `<option value="${e.id}">${escapeHTML(e.name)}</option>`).join('');
     }
 };
@@ -1427,7 +1427,7 @@ document.getElementById('back-to-events').onclick = () => {
     const detailView = document.getElementById('events-detail-view'); // Detalhes de um evento
     if (masterView) masterView.style.display = 'block';
     if (detailView) detailView.style.display = 'none';
-    
+
     // Ajusta visibilidade de botões administrativos
     const isAdmin = state.role === 'admin';
     if (isAdmin) {
@@ -1445,7 +1445,7 @@ const sessionShownModals = new Set();
 async function fetchNotifications() {
     try {
         if (!state.token) return; // Não busca se não estiver logado
-        
+
         // Busca as últimas 20 notificações para a lista de UI
         state.notifications = await apiFetch('/api/notifications');
         updateNotificationUI(); // Atualiza a interface visual do sino
@@ -1502,14 +1502,14 @@ const updateNotificationUI = () => {
 // Trata o clique em uma notificação para levar o Admin direto ao registro relevante
 const handleNotificationClick = async (id, type) => {
     if (state.role !== 'admin') return; // Apenas admins podem navegar via notificação
-    
+
     // Fecha o menu de notificações automaticamente ao clicar
     const dropdown = document.getElementById('notification-dropdown');
     if (dropdown) {
         dropdown.classList.remove('active');
         dropdown.style.display = 'none';
     }
-    
+
     try {
         // Se for notificação de mensalidade, abre o modal de mensalidade correspondente
         if (type === 'monthly') {
@@ -1565,7 +1565,7 @@ const renderLogs = () => {
     body.innerHTML = filteredLogs.map(log => {
         const date = new Date(log.created_at).toLocaleString('pt-BR');
         const details = JSON.stringify(log.details, null, 2); // Converte detalhes em JSON formatado
-        
+
         // Define a cor do badge conforme o tipo de ação (sucesso, erro, perigo)
         let actionClass = 'log-action-info';
         if (log.action.includes('FAILED') || log.action.includes('DELETE')) actionClass = 'log-action-danger';
@@ -1624,7 +1624,7 @@ async function fetchEventsData() {
 const renderEvents = () => {
     const list = document.getElementById('events-list');
     if (!list) return;
-    
+
     // Gera o HTML para cada cartão de evento
     list.innerHTML = state.events.map(event => {
         return `
@@ -1673,19 +1673,19 @@ const openEventDetail = async (eventId, preserveUI = false) => {
         state.currentEvent = data.event;
         state.currentEventParticipants = data.participants || [];
         state.currentEventPayments = data.payments || [];
-        
+
         // Sincroniza o ano de exibição com o ano da data do evento
         if (data.event.date) {
             state.eventDetailYear = new Date(data.event.date).getFullYear();
         }
-        
+
         // Se preserveUI for false, faz a transição de telas no Dashboard
         if (!preserveUI) {
             const masterView = document.getElementById('events-master-view'); // Lista
             const detailView = document.getElementById('events-detail-view'); // Detalhe
             if (masterView) masterView.style.display = 'none';
             if (detailView) detailView.style.display = 'block';
-            
+
             // Alterna botões de ação do topo
             if (state.role === 'admin' || state.role === 'secretário') {
                 const addEventBtn = document.getElementById('add-event-btn');
@@ -1697,10 +1697,10 @@ const openEventDetail = async (eventId, preserveUI = false) => {
             // Garante que a tabela detalhada membro a membro comece escondida
             const detailContainer = document.getElementById('event-details-table-container');
             if (detailContainer) detailContainer.style.display = 'none';
-            
+
             const toggleBtn = document.getElementById('toggle-event-details');
             if (toggleBtn) toggleBtn.textContent = 'Ver Detalhamento Membro a Membro ↓';
-            
+
             // Limpa o campo de busca
             const evSearch = document.getElementById('ev-detail-search');
             if (evSearch) evSearch.value = '';
@@ -1709,7 +1709,7 @@ const openEventDetail = async (eventId, preserveUI = false) => {
         // Define o título do evento no cabeçalho dos detalhes
         const titleElem = document.getElementById('detail-event-title');
         if (titleElem) titleElem.textContent = data.event.name;
-        
+
         // Ajusta os cabeçalhos da tabela conforme o tipo de pagamento (único ou parcelado/por meses)
         const tableHead = document.querySelector('#event-detail-table thead');
         if (data.event.payment_type === 'unico') {
@@ -1740,7 +1740,7 @@ const openEventDetail = async (eventId, preserveUI = false) => {
 };
 
 // Renderiza a grade membro a membro de pagamentos de um evento
-const renderEventDetailGrid = (participants, payments) => {
+let renderEventDetailGrid = (participants, payments) => {
     window._tempEventPayments = payments; // Cache temporário para facilitar busca por index
     const body = document.getElementById('event-detail-body');
     if (!body) return;
@@ -1764,14 +1764,14 @@ const renderEventDetailGrid = (participants, payments) => {
     participants.forEach(p => {
         const pId = String(p.id);
         const personPayments = paymentsByPerson[pId] || [];
-        
+
         let totalPaid = 0;
         // Soma apenas os pagamentos aprovados para o total da linha
         personPayments.forEach(pay => {
             if (pay.status === 'approved') totalPaid += parseFloat(pay.amount || 0);
         });
-        
-        const totalStr = `R$ ${totalPaid.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+
+        const totalStr = `R$ ${totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
         const searchText = `${p.name} ${p.unit || ''} ${totalStr}`.toLowerCase();
 
         // Aplica o filtro de busca se houver um termo
@@ -1840,7 +1840,7 @@ window.openEventPaymentModalFromGridIndex = (personId, month, paymentIndex = -1)
 
     // Recupera o pagamento do cache pelo index se ele existir
     const payment = paymentIndex >= 0 ? window._tempEventPayments[paymentIndex] : null;
-    
+
     if (!state.currentEvent) return;
 
     // Preenche os campos do modal com as informações do evento e da célula clicada
@@ -1852,7 +1852,7 @@ window.openEventPaymentModalFromGridIndex = (personId, month, paymentIndex = -1)
     if (epMonth) epMonth.value = month || "";
     const epYear = document.getElementById('ep-year');
     if (epYear) epYear.value = month ? state.eventDetailYear : "";
-    
+
     // Armazena temporariamente o ID da pessoa para quem o pagamento será registrado (útil para Admin)
     state.tempPaymentPersonId = personId;
 
@@ -1875,7 +1875,7 @@ const openEventPaymentModalFromGrid = (personId, month, payment = null) => {
     if (epMonth) epMonth.value = month || "";
     const epYear = document.getElementById('ep-year');
     if (epYear) epYear.value = month ? state.eventDetailYear : "";
-    
+
     state.tempPaymentPersonId = personId;
 
     openEventPaymentModal(state.currentEvent.id, state.currentEvent.name, payment);
@@ -1885,7 +1885,7 @@ const openEventPaymentModalFromGrid = (personId, month, payment = null) => {
 const renderEventParticipantsChecklist = () => {
     const list = document.getElementById('event-participants-list');
     const unitFilter = document.getElementById('ev-unit-filter');
-    
+
     // Extrai as unidades únicas de todos os membros
     const units = [...new Set(state.people.map(p => p.unit).filter(u => u))].sort();
     unitFilter.innerHTML = `
@@ -1912,7 +1912,7 @@ const openAddParticipantsModal = () => {
     const existingIds = state.currentEventParticipants.map(p => p.id); // Quem já está no evento
     // Filtra membros que ainda não estão participando
     const available = state.people.filter(p => !existingIds.includes(p.id));
-    
+
     if (list) {
         list.innerHTML = available.map(p => {
             const searchText = `${p.name} ${p.unit || ''}`.toLowerCase();
@@ -1926,13 +1926,13 @@ const openAddParticipantsModal = () => {
                 </div>
             `;
         }).join('');
-        
+
         // Se não houver ninguém disponível para adicionar
         if (available.length === 0) {
             list.innerHTML = '<p style="text-align: center; color: var(--text-dim); padding: 2rem;">Todos os membros já estão participando deste evento.</p>';
         }
     }
-    
+
     const modal = document.getElementById('event-participants-modal');
     if (modal) modal.style.display = 'flex';
 };
@@ -1941,19 +1941,19 @@ const openAddParticipantsModal = () => {
 const saveNewParticipants = async () => {
     const checks = document.querySelectorAll('.new-participant-check:checked');
     const ids = Array.from(checks).map(c => parseInt(c.dataset.id));
-    
+
     if (ids.length === 0) {
         showStatus('Selecione pelo menos um membro.', 'info');
         return;
     }
-    
+
     try {
         // Envia a lista de IDs para o backend
         await apiFetch(`/api/events/${state.currentEvent.id}/participants`, {
             method: 'POST',
             body: JSON.stringify({ participant_ids: ids })
         });
-        
+
         showStatus('Membros adicionados com sucesso!', 'success');
         const modal = document.getElementById('event-participants-modal');
         if (modal) modal.style.display = 'none';
@@ -1992,7 +1992,7 @@ if (evUnitFilter) {
         const val = e.target.value;
         if (!val) return;
         const checks = document.querySelectorAll('.participant-check');
-        
+
         if (val === "ALL") {
             checks.forEach(c => c.checked = true);
         } else {
@@ -2012,7 +2012,7 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
     if (epEventName) epEventName.textContent = eventName;
     const epModalTitle = document.getElementById('ep-modal-title');
     if (epModalTitle) epModalTitle.textContent = payment ? 'Visualizar Pagamento' : 'Enviar Comprovante';
-    
+
     // Mapeamento dos elementos de interface do modal
     const saveBtn = document.getElementById('ep-save-btn');
     const deleteBtn = document.getElementById('ep-delete-btn');
@@ -2066,12 +2066,12 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
         } else if (payment.status === 'pending') {
             // Se estiver pendente, permite atualizar o comprovante
             saveBtn.textContent = 'Atualizar Comprovante';
-            
+
             // Ações extras exclusivas para Administrador/Secretário em pagamentos pendentes
             if (state.role === 'admin' || state.role === 'secretário') {
                 saveBtn.style.display = 'none'; // Esconde botão padrão de salvar do usuário
                 adminActions.style.display = 'flex'; // Mostra Aprovar/Reprovar
-                
+
                 document.getElementById('ep-approve-btn').onclick = () => approveEventPayment(payment.id);
                 document.getElementById('ep-reject-trigger-btn').onclick = () => {
                     adminActions.style.display = 'none';
@@ -2096,7 +2096,7 @@ const deleteEventPayment = async (id) => {
             await apiFetch(`/api/event-payments/${id}`, { method: 'DELETE' });
             eventPaymentModal.style.display = 'none';
             showStatus('Pagamento removido com sucesso!');
-            
+
             // Recarrega os dados do evento para atualizar a grade na tela
             const activeEventId = document.getElementById('ep-event-id').value;
             if (activeEventId) openEventDetail(parseInt(activeEventId), true);
@@ -2126,7 +2126,7 @@ const approveEventPayment = async (id) => {
 // Recusa um pagamento de evento informando um motivo
 const rejectEventPayment = async (id, reason) => {
     try {
-        await apiFetch(`/api/event-payments/${id}/reject`, { 
+        await apiFetch(`/api/event-payments/${id}/reject`, {
             method: 'POST',
             body: JSON.stringify({ reason })
         });
@@ -2155,21 +2155,21 @@ const updateDashboardStats = () => {
     let desbravadoresTotal = 0; // Total arrecadado da unidade Desbravadores
     let eventosTotal = 0; // Total vindo de eventos
     let outrosTotal = 0; // Outras arrecadações
-    
+
     const monthlyData = new Array(12).fill(0); // Dados para o gráfico de barras mensal
-    
+
     // Processa todas as Mensalidades aprovadas
     state.payments.forEach(p => {
         if (p.status !== 'approved') return;
-        
+
         const amount = parseFloat(p.amount);
         totalCash += amount;
         monthlyData[p.month - 1] += amount;
-        
+
         // Atribui o valor à unidade correta do membro
         const person = state.people.find(pers => pers.id === p.person_id);
         const unit = (person?.unit || '').toUpperCase();
-        
+
         if (unit.includes('DIREÇÃO') || unit.includes('DIRECAO')) {
             direcaoTotal += amount;
         } else if (unit.includes('DESBRAVADOR')) {
@@ -2186,7 +2186,7 @@ const updateDashboardStats = () => {
             const amount = parseFloat(p.amount);
             totalCash += amount;
             eventosTotal += amount;
-            
+
             // Distribui o valor do evento conforme a unidade do membro que pagou
             const person = state.people.find(pers => parseInt(pers.id) === parseInt(p.person_id));
             const unit = (person?.unit || '').toUpperCase();
@@ -2213,7 +2213,7 @@ const updateDashboardStats = () => {
             const amount = parseFloat(s.amount);
             totalSales += amount;
             totalCash += amount; // Soma ao saldo geral
-            
+
             // Filtra e soma ao gráfico se a venda for do ano atual
             const saleDate = new Date(s.date + 'T12:00:00');
             if (saleDate.getFullYear() === parseInt(state.currentYear)) {
@@ -2235,22 +2235,22 @@ const updateDashboardStats = () => {
     // Atualiza os elementos visuais do Dashboard (se for Admin/Secretário)
     if (state.role === 'admin' || state.role === 'secretário') {
         const totalCashElem = document.getElementById('stat-total-cash');
-        if (totalCashElem) totalCashElem.textContent = `R$ ${totalCash.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        
+        if (totalCashElem) totalCashElem.textContent = `R$ ${totalCash.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
         const direcaoStat = document.getElementById('stat-direcao');
         const desbravaStat = document.getElementById('stat-desbravadores');
         const eventosStat = document.getElementById('stat-eventos');
         const outflowsStat = document.getElementById('stat-total-outflows');
         const outflowsCard = document.getElementById('stat-outflows-card');
-        
+
         // Exibe os valores formatados nos respectivos cards
-        if (direcaoStat) direcaoStat.textContent = `R$ ${direcaoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        if (desbravaStat) desbravaStat.textContent = `R$ ${desbravadoresTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        if (eventosStat) eventosStat.textContent = `R$ ${eventosTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        
-        if (outflowsStat) outflowsStat.textContent = `R$ ${totalOutflows.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        if (direcaoStat) direcaoStat.textContent = `R$ ${direcaoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        if (desbravaStat) desbravaStat.textContent = `R$ ${desbravadoresTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        if (eventosStat) eventosStat.textContent = `R$ ${eventosTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
+        if (outflowsStat) outflowsStat.textContent = `R$ ${totalOutflows.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
         if (outflowsCard) outflowsCard.style.display = 'block';
-        
+
         // Preparação para gráficos: Categorização de fontes de renda
         let mensalidadesPuro = 0;
         state.payments.forEach(p => {
@@ -2259,21 +2259,21 @@ const updateDashboardStats = () => {
 
         // Renderiza o gráfico de pizza principal comparando fontes de renda e despesas
         renderPieChart(
-            ['Mensalidades', 'Eventos', 'Despesas', 'Vendas'], 
+            ['Mensalidades', 'Eventos', 'Despesas', 'Vendas'],
             [mensalidadesPuro, eventosTotal, totalOutflows, totalSales],
-            ['#e50914', '#111111', '#8b0000', '#228b22'] 
+            ['#e50914', '#111111', '#8b0000', '#228b22']
         );
     } else {
         // Estatísticas simplificadas para membros comuns (não Admin)
         const paidMonths = state.payments.length;
         const pendingMonths = 12 - paidMonths;
         const totalCashElem = document.getElementById('stat-total-cash');
-        if (totalCashElem) totalCashElem.textContent = `R$ ${totalCash.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        
+        if (totalCashElem) totalCashElem.textContent = `R$ ${totalCash.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
         // Gráfico de pizza mostrando progresso pessoal de pagamentos do ano
         renderPieChart(['Meses Pagos', 'Pendentes'], [paidMonths, pendingMonths], ['#e50914', '#111111']);
     }
-    
+
     // Gráfico de barras mensal (Receita por mês)
     renderBarChart(monthlyData);
 };
@@ -2315,9 +2315,9 @@ const renderEventDashboard = (participants, payments) => {
     const direcaoStat = document.getElementById('ev-stat-direcao');
     const desbravaStat = document.getElementById('ev-stat-desbrava');
 
-    if (totalStat) totalStat.textContent = `R$ ${evTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-    if (direcaoStat) direcaoStat.textContent = `R$ ${evDirecao.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-    if (desbravaStat) desbravaStat.textContent = `R$ ${evDesbrava.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    if (totalStat) totalStat.textContent = `R$ ${evTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    if (direcaoStat) direcaoStat.textContent = `R$ ${evDirecao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    if (desbravaStat) desbravaStat.textContent = `R$ ${evDesbrava.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
     // Gráfico de pizza do evento (Receita por Unidade)
     renderPieChart(
@@ -2363,9 +2363,9 @@ const renderMensalidadeDashboard = () => {
     });
 
     // Atualiza cards da aba mensalidades
-    document.getElementById('mens-stat-total').textContent = `R$ ${mTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-    document.getElementById('mens-stat-direcao').textContent = `R$ ${mDirecao.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-    document.getElementById('mens-stat-desbrava').textContent = `R$ ${mDesbrava.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    document.getElementById('mens-stat-total').textContent = `R$ ${mTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    document.getElementById('mens-stat-direcao').textContent = `R$ ${mDirecao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    document.getElementById('mens-stat-desbrava').textContent = `R$ ${mDesbrava.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
     // Gráfico de Pizza de Mensalidades
     renderPieChart(
@@ -2385,10 +2385,10 @@ const renderPieChart = (labels, data, colors = ['#e50914', '#1a1a1a', '#e8e6df']
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    
+
     // Se o gráfico já existir, destrói a instância antiga antes de criar a nova
     if (state.charts[stateKey]) state.charts[stateKey].destroy();
-    
+
     state.charts[stateKey] = new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -2404,13 +2404,13 @@ const renderPieChart = (labels, data, colors = ['#e50914', '#1a1a1a', '#e8e6df']
             maintainAspectRatio: false,
             cutout: '80%', // Efeito de rosca fina (estilo Apple/Netflix)
             plugins: {
-                legend: { 
+                legend: {
                     position: 'bottom',
                     labels: { color: '#707070' }
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             let value = context.raw || 0;
                             // Formatação de moeda brasileira nos tooltips
                             return context.label + ': ' + new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -2427,10 +2427,10 @@ const renderBarChart = (monthlyData, canvasId = 'barChart', stateKey = 'bar') =>
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    
+
     // Destrói instância anterior se houver
     if (state.charts[stateKey]) state.charts[stateKey].destroy();
-    
+
     state.charts[stateKey] = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -2450,7 +2450,7 @@ const renderBarChart = (monthlyData, canvasId = 'barChart', stateKey = 'bar') =>
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             let value = context.raw || 0;
                             return 'Receita: ' + new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
                         }
@@ -2462,12 +2462,12 @@ const renderBarChart = (monthlyData, canvasId = 'barChart', stateKey = 'bar') =>
                     ticks: { color: '#707070' },
                     grid: { display: false }
                 },
-                y: { 
+                y: {
                     beginAtZero: true,
                     suggestedMax: 100,
                     ticks: {
                         color: '#707070',
-                        callback: function(value) {
+                        callback: function (value) {
                             return 'R$ ' + value;
                         }
                     },
@@ -2495,7 +2495,7 @@ function renderOutflows() {
     body.innerHTML = state.outflows.map(out => {
         const date = formatDate(out.date);
         const amount = parseFloat(out.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        
+
         let receiptHtml = '-';
         // Cria botão para ver o recibo se o caminho do arquivo existir
         if (out.receipt_path) {
@@ -2540,7 +2540,7 @@ if (outflowForm) {
         formData.append('category', document.getElementById('out-category').value);
         formData.append('date', document.getElementById('out-date').value);
         formData.append('description', document.getElementById('out-desc').value);
-        
+
         const file = document.getElementById('out-receipt').files[0];
         if (file) formData.append('receipt', file);
 
@@ -2590,14 +2590,14 @@ function renderDashboard() {
     paymentsBody.innerHTML = '';
     const footer = document.getElementById('payments-footer');
     footer.innerHTML = '';
-    
+
     // Atualiza estatísticas e gráficos das abas
     renderMensalidadeDashboard();
     updateDashboardStats();
-    
+
     // Termo de busca para filtrar a tabela
     const searchTerm = document.getElementById('mens-search')?.value.toLowerCase() || '';
-    
+
     // Otimização: Cria um mapa de pagamentos por pessoa e mês para acesso instantâneo O(1)
     const paymentsMap = new Map();
     state.payments.forEach(p => {
@@ -2626,7 +2626,7 @@ function renderDashboard() {
         }
 
         const statusText = (hasPaid ? 'PAGO ' : '') + (hasPending ? 'PENDENTE' : '');
-        const totalStr = `R$ ${personTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        const totalStr = `R$ ${personTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
         // String única usada para busca rápida
         const searchText = `${person.name} ${person.unit || ''} ${statusText} ${totalStr}`.toLowerCase();
 
@@ -2635,7 +2635,7 @@ function renderDashboard() {
 
     // Aplica o filtro de busca
     const filteredPeople = processedPeople.filter(p => p.searchText.includes(searchTerm));
-    
+
     const monthlyTotals = new Array(12).fill(0); // Totais acumulados por coluna (mês)
     let grandTotal = 0; // Total geral acumulado de todas as mensalidades filtradas
 
@@ -2645,7 +2645,7 @@ function renderDashboard() {
     filteredPeople.forEach(person => {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td><strong>${escapeHTML(person.name)}</strong></td>`;
-        
+
         let personTotal = 0;
 
         // Cria as 12 células de meses para cada membro na grade
@@ -2653,21 +2653,21 @@ function renderDashboard() {
             const payment = paymentsMap.get(`${person.id}-${m}`);
             const td = document.createElement('td');
             td.className = 'clickable-cell';
-            
+
             const label = document.createElement('span');
             label.className = 'grid-status-label';
-            
+
             if (payment) {
                 // Adiciona a classe CSS correspondente ao status (pago, pendente, recusado)
                 label.classList.add(`status-${payment.status}`);
-                label.textContent = payment.status === 'approved' ? 'PAGO' : 
-                                   payment.status === 'pending' ? 'PENDENTE' : 'RECUSADO';
-                
+                label.textContent = payment.status === 'approved' ? 'PAGO' :
+                    payment.status === 'pending' ? 'PENDENTE' : 'RECUSADO';
+
                 // Se estiver aprovado, soma aos totais (linha, coluna e geral)
                 if (payment.status === 'approved') {
                     const amount = parseFloat(payment.amount || 0);
                     personTotal += amount;
-                    monthlyTotals[m-1] += amount;
+                    monthlyTotals[m - 1] += amount;
                     grandTotal += amount;
                 }
             } else {
@@ -2675,7 +2675,7 @@ function renderDashboard() {
                 label.classList.add('status-none');
                 label.textContent = 'PENDENTE';
             }
-            
+
             // Ao clicar na célula, abre o modal de pagamento se tiver permissão
             td.onclick = () => {
                 const canEdit = state.role === 'admin' || (state.personId && person.id == state.personId);
@@ -2683,7 +2683,7 @@ function renderDashboard() {
                     openPaymentModal(person, m, payment);
                 }
             };
-            
+
             td.appendChild(label);
             tr.appendChild(td);
         }
@@ -2691,7 +2691,7 @@ function renderDashboard() {
         // Coluna final da linha com o total acumulado do membro no ano
         const totalTd = document.createElement('td');
         totalTd.className = 'total-column';
-        totalTd.textContent = `R$ ${personTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        totalTd.textContent = `R$ ${personTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
         tr.appendChild(totalTd);
 
         fragment.appendChild(tr);
@@ -2703,20 +2703,20 @@ function renderDashboard() {
     // Renderiza o rodapé da tabela com os totais mensais por coluna
     const footerTr = document.createElement('tr');
     footerTr.innerHTML = '<td><strong>TOTAL MENSAL</strong></td>';
-    
+
     monthlyTotals.forEach(total => {
         const td = document.createElement('td');
         td.style.textAlign = 'center';
-        td.innerHTML = `<strong>R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>`;
+        td.innerHTML = `<strong>R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>`;
         footerTr.appendChild(td);
     });
 
     // Célula do canto inferior direito com o total geral arrecadado (considerando os filtros)
     const grandTotalTd = document.createElement('td');
     grandTotalTd.className = 'total-column';
-    grandTotalTd.innerHTML = `<strong>R$ ${grandTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>`;
+    grandTotalTd.innerHTML = `<strong>R$ ${grandTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>`;
     footerTr.appendChild(grandTotalTd);
-    
+
     footer.appendChild(footerTr);
 };
 
@@ -2736,7 +2736,7 @@ const setSort = (column) => {
 // Renderiza a tabela de gerenciamento de membros (aba Membros)
 function renderPeople() {
     peopleBody.innerHTML = '';
-    
+
     // Filtro de busca global (Nome, Usuário, Unidade, CPF, Responsável)
     const searchQuery = document.getElementById('global-search')?.value.toLowerCase() || '';
 
@@ -2749,10 +2749,10 @@ function renderPeople() {
     processedPeople.sort((a, b) => {
         const col = state.peopleSort.column;
         const dir = state.peopleSort.direction === 'asc' ? 1 : -1;
-        
+
         let valA = (a[col] || '').toString();
         let valB = (b[col] || '').toString();
-        
+
         return valA.localeCompare(valB, 'pt-BR', { sensitivity: 'base' }) * dir;
     });
 
@@ -2817,7 +2817,7 @@ const openPaymentModal = (person, month, payment = null) => {
     document.getElementById('p-member-name').textContent = person.name;
     document.getElementById('p-month-name').textContent = months[month - 1];
     document.getElementById('payment-error').textContent = '';
-    
+
     // Mapeia elementos do modal
     const amountInput = document.getElementById('amount');
     const deleteBtn = document.getElementById('delete-payment-btn');
@@ -2842,7 +2842,7 @@ const openPaymentModal = (person, month, payment = null) => {
     const multiSelector = document.getElementById('p-multi-month-selector');
     const singleInfo = document.getElementById('p-single-month-info');
     const multiWrapper = multiToggle.parentElement.parentElement;
-    
+
     multiToggle.checked = false;
     multiSelector.style.display = 'none';
     singleInfo.style.display = 'block';
@@ -2866,7 +2866,7 @@ const openPaymentModal = (person, month, payment = null) => {
                 inp.parentElement.classList.add('selected');
             }
         });
-        
+
         // Exibe o botão de visualizar comprovante se o arquivo existir
         if (payment.receipt_path) {
             receiptContainer.style.display = 'block';
@@ -2906,7 +2906,7 @@ const openPaymentModal = (person, month, payment = null) => {
         amountInput.value = '20.00'; // Valor padrão da mensalidade
         saveBtn.textContent = 'Salvar Pagamento';
         document.getElementById('receipt').value = '';
-        
+
         // Exibe o switch de multi-meses apenas para novos registros
         multiToggle.parentElement.parentElement.style.display = 'block';
     }
@@ -2946,7 +2946,7 @@ const approvePayment = async (id) => {
 // Envia requisição para recusar um pagamento com justificativa
 const rejectPayment = async (id, reason) => {
     try {
-        await apiFetch(`/api/payments/${id}/reject`, { 
+        await apiFetch(`/api/payments/${id}/reject`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ reason })
@@ -2977,7 +2977,7 @@ document.getElementById('add-person-btn').onclick = () => {
     document.getElementById('p-id').value = '';
     document.getElementById('person-form').reset();
     document.getElementById('delete-member-btn').style.display = 'none';
-    
+
     // Controle de exibição da seção de credenciais (apenas Admin pode ver/gerenciar senhas)
     const credentialsSection = document.getElementById('admin-only-credentials');
     if (credentialsSection) {
@@ -2985,7 +2985,7 @@ document.getElementById('add-person-btn').onclick = () => {
         document.getElementById('u-username').value = '';
         document.getElementById('u-password').value = '';
     }
-    
+
     personModal.style.display = 'flex';
 };
 
@@ -3001,14 +3001,14 @@ const editPerson = (id) => {
     document.getElementById('p-unit').value = person.unit || '';
     document.getElementById('p-birth').value = person.birth_date || '';
     document.getElementById('p-cpf').value = formatCPF(person.cpf || '');
-    
+
     // Configura seção de credenciais de login para Admin
     const credentialsSection = document.getElementById('admin-only-credentials');
     if (credentialsSection) {
         credentialsSection.style.display = state.role === 'admin' ? 'block' : 'none';
         document.getElementById('u-username').value = person.username || '';
         document.getElementById('u-password').value = ''; // Nunca exibe a senha atual por segurança
-        
+
         const roleSelect = document.getElementById('u-role');
         if (roleSelect) {
             roleSelect.value = person.role || 'member';
@@ -3017,17 +3017,17 @@ const editPerson = (id) => {
             roleSelect.disabled = !isMaster;
         }
     }
-    
+
     // Calcula automaticamente a idade com base na data de nascimento
     const age = calculateAge(person.birth_date);
     document.getElementById('p-age').value = age;
-    
+
     // Apenas o administrador master tem o poder de excluir membros definitivamente
     const deleteBtn = document.getElementById('delete-member-btn');
     if (deleteBtn) {
         deleteBtn.style.display = (state.username && state.username.toUpperCase() === 'ADMINISTRADOR') ? 'block' : 'none';
     }
-    
+
     personModal.style.display = 'flex';
 };
 window.editPerson = editPerson;
@@ -3141,7 +3141,7 @@ if (forceChangeForm) {
                 method: 'POST',
                 body: JSON.stringify({ newPassword })
             });
-            
+
             document.getElementById('force-change-modal').style.display = 'none';
             checkAuth(); // Verifica novamente o status para carregar o dashboard
         } catch (err) {
@@ -3158,7 +3158,7 @@ document.getElementById('delete-member-btn').onclick = async () => {
             await apiFetch(`/api/people/${id}`, { method: 'DELETE' });
             personModal.style.display = 'none';
             await loadInitialData();
-        } catch(err) { showStatus('Erro ao excluir membro', 'error'); }
+        } catch (err) { showStatus('Erro ao excluir membro', 'error'); }
     }
 };
 
@@ -3187,7 +3187,7 @@ document.getElementById('person-form').onsubmit = async (e) => {
         password: document.getElementById('u-password').value,
         role: document.getElementById('u-role').value
     };
-    
+
     // Validação: Exige pelo menos nome e um sobrenome
     if (!formData.name || formData.name.split(/\s+/).length < 2) {
         showStatus('O nome deve conter pelo menos Nome e Sobrenome.', 'error');
@@ -3238,7 +3238,7 @@ document.getElementById('payment-form').onsubmit = async (e) => {
 
     const formData = new FormData(); // FormData para envio de comprovante (arquivo)
     formData.append('person_id', document.getElementById('p-person-id').value);
-    
+
     // Formata conforme o tipo de envio (único mês ou múltiplos)
     if (isMulti) {
         formData.append('months', JSON.stringify(selectedMonths));
@@ -3248,7 +3248,7 @@ document.getElementById('payment-form').onsubmit = async (e) => {
 
     formData.append('year', state.currentYear);
     formData.append('amount', document.getElementById('amount').value);
-    
+
     const receiptFile = document.getElementById('receipt').files[0];
     if (receiptFile) {
         formData.append('receipt', receiptFile);
@@ -3302,7 +3302,7 @@ if (importInput) {
             // Feedback visual de carregamento
             importBtn.disabled = true;
             importBtn.textContent = 'Importando...';
-            
+
             const res = await fetch('/api/people/import', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${state.token}` },
@@ -3345,7 +3345,7 @@ document.getElementById('event-form').onsubmit = async (e) => {
     e.preventDefault();
     // Coleta IDs de todos os membros selecionados na checklist
     const participantIds = Array.from(document.querySelectorAll('.participant-check:checked')).map(c => c.getAttribute('data-id'));
-    
+
     const formData = {
         name: document.getElementById('event-name').value,
         date: document.getElementById('event-date').value,
@@ -3371,7 +3371,7 @@ document.getElementById('event-payment-form').onsubmit = async (e) => {
     formData.append('month', document.getElementById('ep-month').value);
     formData.append('year', document.getElementById('ep-year').value);
     formData.append('amount', document.getElementById('ep-amount').value);
-    
+
     // Se for Admin pagando por outro membro, injeta o ID correto da pessoa
     if (state.role === 'admin' && state.tempPaymentPersonId) {
         formData.append('person_id', state.tempPaymentPersonId);
@@ -3420,7 +3420,7 @@ if (pBirth) {
         const unitField = document.getElementById('p-unit');
 
         if (ageField) ageField.value = age;
-        
+
         // Sugere Unidade baseada na idade (Padrão: <16 anos = Desbravador)
         if (unitField && age !== '') {
             if (age < 16) {
@@ -3439,92 +3439,92 @@ yearSelect.addEventListener('change', (e) => {
 });
 
 
-    // Toggle de visibilidade da tabela detalhada de Eventos
-    const toggleBtn = document.getElementById('toggle-event-details');
-    if (toggleBtn) {
-        toggleBtn.onclick = () => {
-            const container = document.getElementById('event-details-table-container');
-            if (container.style.display === 'none') {
-                container.style.display = 'block';
-                toggleBtn.textContent = 'Ocultar Detalhamento ↑';
-            } else {
-                container.style.display = 'none';
-                toggleBtn.textContent = 'Ver Detalhamento Membro a Membro ↓';
-            }
-            initStickyScrollbars(); // Reinicializa barras de rolagem fixas se necessário
-        };
-    }
-
-    // Toggle de visibilidade da tabela detalhada de Mensalidades (Dashboard Principal)
-    // Toggle de visibilidade da tabela detalhada de Mensalidades (Dashboard Principal)
-    const toggleMensBtn = document.getElementById('toggle-mens-details');
-    if (toggleMensBtn) {
-        toggleMensBtn.onclick = () => {
-            const container = document.getElementById('mens-details-table-container');
-            if (container.style.display === 'none') {
-                container.style.display = 'block';
-                toggleMensBtn.textContent = 'Ocultar Detalhamento ↑';
-            } else {
-                container.style.display = 'none';
-                toggleMensBtn.textContent = 'Ver Detalhamento Membro a Membro ↓';
-            }
-            initStickyScrollbars(); // Reinicializa barras de rolagem fixas se necessário
-        };
-    }
-    const addPartBtn = document.getElementById('add-participants-btn');
-    if (addPartBtn) addPartBtn.onclick = openAddParticipantsModal;
-    
-    const saveNewPartBtn = document.getElementById('save-new-participants-btn');
-    if (saveNewPartBtn) saveNewPartBtn.onclick = saveNewParticipants;
-
-    // Listeners de busca - Garantem funcionamento imediato ao digitar
-    const initSearchListeners = () => {
-        const mensSearch = document.getElementById('mens-search');
-        if (mensSearch) {
-            mensSearch.addEventListener('input', () => {
-                const container = document.getElementById('mens-details-table-container');
-                // Auto-exibe a tabela ao começar a buscar
-                if (container.style.display === 'none') {
-                    container.style.display = 'block';
-                    document.getElementById('toggle-mens-details').textContent = 'Ocultar Detalhamento ↑';
-                }
-                renderDashboard();
-            });
+// Toggle de visibilidade da tabela detalhada de Eventos
+const toggleBtn = document.getElementById('toggle-event-details');
+if (toggleBtn) {
+    toggleBtn.onclick = () => {
+        const container = document.getElementById('event-details-table-container');
+        if (container.style.display === 'none') {
+            container.style.display = 'block';
+            toggleBtn.textContent = 'Ocultar Detalhamento ↑';
+        } else {
+            container.style.display = 'none';
+            toggleBtn.textContent = 'Ver Detalhamento Membro a Membro ↓';
         }
-
-        const evDetailSearch = document.getElementById('ev-detail-search');
-        if (evDetailSearch) {
-            evDetailSearch.addEventListener('input', () => {
-                const container = document.getElementById('event-details-table-container');
-                // Auto-exibe a tabela de eventos ao buscar
-                if (container.style.display === 'none') {
-                    container.style.display = 'block';
-                    document.getElementById('toggle-event-details').textContent = 'Ocultar Detalhamento ↑';
-                }
-                if (state.currentEventParticipants && state.currentEventPayments) {
-                    renderEventDetailGrid(state.currentEventParticipants, state.currentEventPayments);
-                }
-            });
-        }
+        initStickyScrollbars(); // Reinicializa barras de rolagem fixas se necessário
     };
+}
 
-    // Garante que os listeners de busca sejam ativados em múltiplos estágios de carregamento
-    initSearchListeners();
-    document.addEventListener('DOMContentLoaded', initSearchListeners);
-    
-    // Busca em tempo real no modal de adicionar participantes a eventos
-    const searchNewPartInput = document.getElementById('add-member-search');
-    if (searchNewPartInput) {
-        searchNewPartInput.oninput = (e) => {
-            const query = e.target.value.toLowerCase();
-            const items = document.querySelectorAll('#add-participants-list .checklist-item');
-            items.forEach(item => {
-                const search = item.dataset.search || '';
-                // Filtra visualmente os itens da lista
-                item.style.display = search.includes(query) ? 'flex' : 'none';
-            });
-        };
+// Toggle de visibilidade da tabela detalhada de Mensalidades (Dashboard Principal)
+// Toggle de visibilidade da tabela detalhada de Mensalidades (Dashboard Principal)
+const toggleMensBtn = document.getElementById('toggle-mens-details');
+if (toggleMensBtn) {
+    toggleMensBtn.onclick = () => {
+        const container = document.getElementById('mens-details-table-container');
+        if (container.style.display === 'none') {
+            container.style.display = 'block';
+            toggleMensBtn.textContent = 'Ocultar Detalhamento ↑';
+        } else {
+            container.style.display = 'none';
+            toggleMensBtn.textContent = 'Ver Detalhamento Membro a Membro ↓';
+        }
+        initStickyScrollbars(); // Reinicializa barras de rolagem fixas se necessário
+    };
+}
+const addPartBtn = document.getElementById('add-participants-btn');
+if (addPartBtn) addPartBtn.onclick = openAddParticipantsModal;
+
+const saveNewPartBtn = document.getElementById('save-new-participants-btn');
+if (saveNewPartBtn) saveNewPartBtn.onclick = saveNewParticipants;
+
+// Listeners de busca - Garantem funcionamento imediato ao digitar
+const initSearchListeners = () => {
+    const mensSearch = document.getElementById('mens-search');
+    if (mensSearch) {
+        mensSearch.addEventListener('input', () => {
+            const container = document.getElementById('mens-details-table-container');
+            // Auto-exibe a tabela ao começar a buscar
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                document.getElementById('toggle-mens-details').textContent = 'Ocultar Detalhamento ↑';
+            }
+            renderDashboard();
+        });
     }
+
+    const evDetailSearch = document.getElementById('ev-detail-search');
+    if (evDetailSearch) {
+        evDetailSearch.addEventListener('input', () => {
+            const container = document.getElementById('event-details-table-container');
+            // Auto-exibe a tabela de eventos ao buscar
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                document.getElementById('toggle-event-details').textContent = 'Ocultar Detalhamento ↑';
+            }
+            if (state.currentEventParticipants && state.currentEventPayments) {
+                renderEventDetailGrid(state.currentEventParticipants, state.currentEventPayments);
+            }
+        });
+    }
+};
+
+// Garante que os listeners de busca sejam ativados em múltiplos estágios de carregamento
+initSearchListeners();
+document.addEventListener('DOMContentLoaded', initSearchListeners);
+
+// Busca em tempo real no modal de adicionar participantes a eventos
+const searchNewPartInput = document.getElementById('add-member-search');
+if (searchNewPartInput) {
+    searchNewPartInput.oninput = (e) => {
+        const query = e.target.value.toLowerCase();
+        const items = document.querySelectorAll('#add-participants-list .checklist-item');
+        items.forEach(item => {
+            const search = item.dataset.search || '';
+            // Filtra visualmente os itens da lista
+            item.style.display = search.includes(query) ? 'flex' : 'none';
+        });
+    };
+}
 
 
 // --- Lógica de Barra de Rolagem Horizontal Fixa (Sticky) ---
@@ -3534,7 +3534,7 @@ yearSelect.addEventListener('change', (e) => {
 const initStickyScrollbars = () => {
     // Aplica a lógica em containers de tabela e listas
     const containers = document.querySelectorAll('.table-container, .list-container');
-    
+
     containers.forEach(container => {
         // Evita duplicar a barra flutuante se já foi inicializada
         if (container.dataset.hasStickyScroll) return;
@@ -3599,8 +3599,8 @@ const initStickyScrollbars = () => {
         const checkVisibility = () => {
             const rect = container.getBoundingClientRect();
             const windowHeight = window.innerHeight;
-            const mobileOffset = window.innerWidth <= 768 ? 75 : 10; 
-            
+            const mobileOffset = window.innerWidth <= 768 ? 75 : 10;
+
             const isOverflowing = container.scrollWidth > container.clientWidth;
             const isBottomVisible = rect.bottom <= (windowHeight - mobileOffset);
             const isTopVisible = rect.top < windowHeight;
@@ -3616,7 +3616,7 @@ const initStickyScrollbars = () => {
         observer.observe(container);
         window.addEventListener('scroll', checkVisibility);
         window.addEventListener('resize', updateSize);
-        
+
         // Verificação inicial após um pequeno delay para garantir renderização total
         setTimeout(checkVisibility, 500);
     });
@@ -3682,9 +3682,9 @@ let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault(); // Evita o prompt automático feio do navegador
     deferredPrompt = e; // Salva o evento para disparar quando o usuário clicar no botão de instalação
-    
+
     const isDismissed = sessionStorage.getItem('pwa-dismissed');
-    
+
     // Mostra o banner de instalação personalizado se não for instalado e não tiver sido ignorado
     if (!isStandalone && !isDismissed) {
         showPWABanner();
@@ -3697,7 +3697,7 @@ function showPWABanner() {
     const btn = document.getElementById('pwa-install-btn');
     if (banner) {
         banner.style.display = 'block';
-        
+
         // Ajusta as instruções especificamente para usuários de iOS
         if (isIOS && btn) {
             btn.textContent = 'Como Instalar';
@@ -3706,6 +3706,12 @@ function showPWABanner() {
         }
     }
 }
+
+const installBtn = document.getElementById('pwa-install-btn');
+const closeBtn = document.getElementById('pwa-close-btn');
+const mainInstallBtn = document.getElementById('pwa-fixed-install-btn');
+const menuInstallBtn = document.getElementById('menu-install-btn');
+const pwaInstallCard = document.getElementById('pwa-install-card');
 
 // Lógica do botão de instalação no banner
 if (installBtn) {
@@ -3735,6 +3741,7 @@ if (installBtn) {
 // Fecha o banner de instalação e salva a preferência na sessão
 if (closeBtn) {
     closeBtn.onclick = () => {
+        const pwaBanner = document.getElementById('pwa-install-banner');
         if (pwaBanner) pwaBanner.style.display = 'none';
         sessionStorage.setItem('pwa-dismissed', 'true');
     };
@@ -3758,7 +3765,7 @@ function updatePWAUI() {
         if (pwaBanner) pwaBanner.style.display = 'none';
         if (menuInstallBtn) menuInstallBtn.style.display = 'none';
         if (pwaInstallCard) pwaInstallCard.style.display = 'none';
-        
+
         if (isPageActive) {
             if (installedSection) installedSection.style.display = 'block';
             if (androidSection) androidSection.style.display = 'none';
@@ -3803,7 +3810,7 @@ const handleInstallClick = async (e) => {
     }
 
     const target = (e && e.currentTarget) ? e.currentTarget.getAttribute('data-target') : null;
-    
+
     // Direciona para a página de instruções de instalação
     if (target === 'pwa-install' || (e && e.currentTarget === pwaInstallCard)) {
         if (typeof switchTab === 'function') {
@@ -3891,7 +3898,7 @@ function renderSales() {
     body.innerHTML = state.sales.map(sale => {
         const date = formatDate(sale.date);
         const amount = parseFloat(sale.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        
+
         let receiptHtml = '-';
         if (sale.receipt_path) {
             const filename = sale.receipt_path.split(/[\\/]/).pop();
@@ -3935,7 +3942,7 @@ if (salesForm) {
         formData.append('amount', document.getElementById('sale-amount').value);
         formData.append('date', document.getElementById('sale-date').value);
         formData.append('description', document.getElementById('sale-desc').value);
-        
+
         const file = document.getElementById('sale-receipt').files[0];
         if (file) formData.append('receipt', file);
 
@@ -3991,7 +3998,7 @@ function showNotificationModal(notif) {
 // Solicita permissão para notificações Push (Nativas do Navegador/Celular)
 async function requestPushPermission() {
     if (!('Notification' in window)) return;
-    
+
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
         subscribeToPush();
@@ -4015,7 +4022,7 @@ async function subscribeToPush() {
             method: 'POST',
             body: JSON.stringify({ subscription })
         });
-        
+
         console.log('[PUSH] Inscrito com sucesso!');
     } catch (err) {
         console.error('[PUSH] Erro na inscrição:', err);
@@ -4057,18 +4064,18 @@ async function renderMessages() {
             item.className = 'checkbox-item';
             item.setAttribute('data-search', searchText);
             item.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-bottom: 1px solid rgba(0,0,0,0.03); cursor: pointer;';
-            
+
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.id = `msg-user-${p.u_id}`;
             checkbox.value = p.u_id;
             checkbox.style.cssText = 'width: 18px; height: 18px; cursor: pointer;';
-            
+
             const label = document.createElement('label');
             label.htmlFor = `msg-user-${p.u_id}`;
             label.innerHTML = `${escapeHTML(p.name)} <br> <small style="color: var(--text-dim)">${escapeHTML(p.unit || 'Sem Unidade')}</small>`;
             label.style.cssText = 'margin: 0; cursor: pointer; font-size: 0.9rem; flex-grow: 1; user-select: none;';
-            
+
             // Permite clicar em qualquer lugar do card para marcar o checkbox
             item.onclick = (e) => {
                 if (e.target !== checkbox && e.target !== label) {
@@ -4080,7 +4087,7 @@ async function renderMessages() {
             item.appendChild(label);
             container.appendChild(item);
         });
-            
+
         console.log(`[MESSAGES] Lista de checkboxes populada com ${targets.length} membros.`);
     } catch (err) {
         console.error('Erro ao carregar membros para mensagens:', err);
