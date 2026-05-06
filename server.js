@@ -917,11 +917,11 @@ app.get('/api/events', authenticateToken, async (req, res) => {
                 SELECT e.*,
                        COALESCE(pc.count, 0) as total_participants,
                        COALESCE(us.unit_counts, '{}'::jsonb) as unit_counts,
-                       (ep.person_id IS NOT NULL) as is_participant
+                       TRUE as is_participant
                 FROM events e
                 LEFT JOIN participant_counts pc ON e.id = pc.event_id
                 LEFT JOIN unit_stats us ON e.id = us.event_id
-                LEFT JOIN event_participants ep ON e.id = ep.event_id AND ep.person_id = $1
+                JOIN event_participants ep ON e.id = ep.event_id AND ep.person_id = $1
                 ORDER BY e.date ASC
             `;
             params = [req.user.personId];
