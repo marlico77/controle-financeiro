@@ -278,18 +278,19 @@ app.post('/api/login', async (req, res) => {
     }
 
     const { role, username: dbUsername, person_id, must_change_password, id: userId } = user;
-    const { force } = req.body || {};
+    const { force, rememberMe } = req.body || {};
 
     const finalRole = role || 'member';
     const personId = person_id || null;
     
-    // Gera o token JWT com expiração de 24 horas
+    // Gera o token JWT com expiração baseada na escolha "Lembrar-me"
+    const expiresIn = rememberMe ? '30d' : '24h';
     const token = jwt.sign({ 
       id: userId, 
       username: dbUsername, 
       role: finalRole, 
       personId: personId
-    }, JWT_SECRET, { expiresIn: '24h' });
+    }, JWT_SECRET, { expiresIn });
 
     console.log(`Login Successful: ${dbUsername} as ${finalRole} ${force ? '[FORCED]' : ''}`);
     

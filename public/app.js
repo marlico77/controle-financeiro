@@ -4,8 +4,13 @@ const getStorageItem = (key) => localStorage.getItem(key) || sessionStorage.getI
 
 // Define um item no armazenamento. Se 'persistent' for true, usa LocalStorage, senão usa SessionStorage
 const setStorageItem = (key, value, persistent = true) => {
-    if (persistent) localStorage.setItem(key, value); // Armazenamento permanente (mesmo fechando o navegador)
-    else sessionStorage.setItem(key, value); // Armazenamento temporário (apenas nesta sessão/aba)
+    if (persistent) {
+        localStorage.setItem(key, value); // Armazenamento permanente (mesmo fechando o navegador)
+        sessionStorage.removeItem(key);
+    } else {
+        sessionStorage.setItem(key, value); // Armazenamento temporário (apenas nesta sessão/aba)
+        localStorage.removeItem(key);
+    }
 };
 
 // Remove um item de ambos os tipos de armazenamento (limpeza completa)
@@ -1177,6 +1182,7 @@ loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
+    const rememberMe = document.getElementById('remember-me').checked;
     const submitBtn = loginForm.querySelector('button[type="submit"]');
 
     try {
@@ -1196,7 +1202,7 @@ loginForm.addEventListener('submit', async (e) => {
         const res = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, force: e.detail && e.detail.force })
+            body: JSON.stringify({ username, password, force: e.detail && e.detail.force, rememberMe })
         });
         const data = await res.json();
 
@@ -1209,7 +1215,6 @@ loginForm.addEventListener('submit', async (e) => {
         if (res.ok) {
             // Sucesso no login
             const isForced = data.mustChangePassword;
-            const rememberMe = document.getElementById('remember-me').checked;
 
             // Salva o token e dados básicos nos storages (Local ou Sessão conforme escolha do usuário)
             setStorageItem('token', data.token, rememberMe);
@@ -1254,7 +1259,12 @@ function handleUnauthorized(originUrl = '') {
     
     // Remove o token para forçar re-autenticação
     removeStorageItem('token');
+    removeStorageItem('role');
+    removeStorageItem('username');
+    removeStorageItem('name');
+    removeStorageItem('personId');
     state.token = null;
+    state.role = null;
     
     // Redireciona visualmente para a tela de login
     const loginSection = document.getElementById('login-section');
