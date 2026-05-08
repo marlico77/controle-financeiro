@@ -3410,6 +3410,14 @@ if (pCpf) {
     });
 }
 
+// Máscara em tempo real para o campo de CPF da recuperação de senha
+const recoverCpf = document.getElementById('recover-cpf');
+if (recoverCpf) {
+    recoverCpf.addEventListener('input', (e) => {
+        e.target.value = formatCPF(e.target.value);
+    });
+}
+
 // Lógica de cálculo automático de idade e sugestão de unidade ao preencher data de nascimento
 const pBirth = document.getElementById('p-birth');
 if (pBirth) {
