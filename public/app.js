@@ -1012,17 +1012,20 @@ async function checkAuth() {
                 logs: document.getElementById('nav-logs')
             };
 
-            // Restrição para Usuários Comuns: Esconde abas administrativas
-            if (!isAdmin && !isSecretary) {
+            // Restrição de Abas e Ajustes Visuais por Perfil
+            if (!isAdmin) {
+                // Usuários Comuns e Secretários não veem abas de gestão administrativa geral
                 if (navItems.people) navItems.people.style.display = 'none';
-                if (navItems.reports) navItems.reports.style.display = 'none';
-                if (navItems.authorizations) navItems.authorizations.style.display = 'none';
                 if (navItems.outflows) navItems.outflows.style.display = 'none';
                 if (navItems.sales) navItems.sales.style.display = 'none';
                 if (navItems.messages) navItems.messages.style.display = 'none';
                 if (navItems.logs) navItems.logs.style.display = 'none';
 
-                // Ajusta os cartões de estatísticas no Dashboard para membros comuns
+                // Secretário tem acesso aos relatórios e autorizações; membro comum não
+                if (navItems.reports) navItems.reports.style.display = isSecretary ? 'flex' : 'none';
+                if (navItems.authorizations) navItems.authorizations.style.display = isSecretary ? 'flex' : 'none';
+
+                // Ajusta os cartões de estatísticas no Dashboard para refletir o painel pessoal (membro/secretário)
                 const cards = document.querySelectorAll('.stat-card');
                 if (cards[1]) cards[1].style.display = 'none'; // Esconde caixa atual
                 if (cards[2]) cards[2].style.display = 'none'; // Esconde inadimplência
@@ -1032,18 +1035,18 @@ async function checkAuth() {
 
                 document.getElementById('page-title').textContent = 'Meu Status de Mensalidade';
             } else {
-                // Acesso para Administradores e Secretários
-                if (navItems.people) navItems.people.style.display = isAdmin ? 'flex' : 'none';
+                // Acesso total para Administradores
+                if (navItems.people) navItems.people.style.display = 'flex';
                 if (navItems.reports) navItems.reports.style.display = 'flex';
                 if (navItems.authorizations) navItems.authorizations.style.display = 'flex';
                 if (navItems.outflows) navItems.outflows.style.display = 'flex';
-                if (navItems.sales) navItems.sales.style.display = isAdmin ? 'flex' : 'none';
+                if (navItems.sales) navItems.sales.style.display = 'flex';
                 if (navItems.messages) navItems.messages.style.display = 'flex';
 
                 // Logs visíveis apenas para o usuário mestre (ADMINISTRADOR)
                 if (navItems.logs) navItems.logs.style.display = isMaster ? 'flex' : 'none';
 
-                document.getElementById('page-title').textContent = isAdmin ? 'Dashboard de Mensalidades' : 'Painel Administrativo';
+                document.getElementById('page-title').textContent = 'Dashboard de Mensalidades';
             }
 
             // Garante que a sidebar reflita o estado salvo
@@ -1055,8 +1058,14 @@ async function checkAuth() {
                 setStorageItem('activeTab', 'dashboard', !!localStorage.getItem('token'));
             }
 
-            // Bloqueia abas administrativas para membros comuns
-            if (state.role === 'member' && (state.activeTab === 'people' || state.activeTab === 'reports' || state.activeTab === 'outflows' || state.activeTab === 'sales')) {
+            // Bloqueia abas administrativas gerais para não-admins
+            if (!isAdmin && (state.activeTab === 'people' || state.activeTab === 'outflows' || state.activeTab === 'sales' || state.activeTab === 'messages')) {
+                state.activeTab = 'dashboard';
+                setStorageItem('activeTab', 'dashboard', !!localStorage.getItem('token'));
+            }
+
+            // Bloqueia relatórios e autorizações para membros comuns
+            if (state.role === 'member' && (state.activeTab === 'reports' || state.activeTab === 'authorizations')) {
                 state.activeTab = 'dashboard';
                 setStorageItem('activeTab', 'dashboard', !!localStorage.getItem('token'));
             }
@@ -1098,13 +1107,13 @@ async function loadInitialData() {
             apiFetch('/api/events') // Lista de eventos
         ];
 
-        // Adiciona requisições extras apenas se for admin/secretário
-        if (state.role === 'admin' || state.role === 'secretário') {
+        // Adiciona requisições extras apenas se for admin
+        if (state.role === 'admin') {
             promises.push(apiFetch('/api/event-payments')); // Pagamentos de eventos
             promises.push(apiFetch('/api/outflows')); // Saídas de caixa
             promises.push(apiFetch('/api/sales')); // Vendas (Cantina/Uniformes)
         } else {
-            // Membro comum vê apenas seus próprios pagamentos de eventos
+            // Membro comum e secretário veem apenas seus próprios pagamentos de eventos
             promises.push(apiFetch(`/api/event-payments?person_id=${state.personId}`));
         }
 
@@ -1120,7 +1129,7 @@ async function loadInitialData() {
         state.events = results[2];
         state.eventPayments = results[3] || [];
 
-        if (state.role === 'admin' || state.role === 'secretário') {
+        if (state.role === 'admin') {
             state.outflows = results[4] || [];
             state.sales = results[5] || [];
         } else {
@@ -1128,9 +1137,9 @@ async function loadInitialData() {
             state.sales = [];
         }
 
-        // Atualiza o nome exibido no topo para contas de membros comuns
+        // Atualiza o nome exibido no topo para contas de membros comuns e secretários
         if (state.role !== 'admin' && state.people.length > 0) {
-            const person = state.people[0];
+            const person = state.people.find(p => p.id == state.personId) || state.people[0];
             if (person) {
                 document.getElementById('user-name-display').textContent = person.name;
             }
@@ -1627,15 +1636,18 @@ const renderEvents = () => {
     const list = document.getElementById('events-list');
     if (!list) return;
 
+    // Define quais eventos renderizar: Admin vê todos, membro/secretário vê apenas os que participa
+    const eventsToRender = state.role === 'admin' ? state.events : state.events.filter(e => e.is_participant);
+
     // Gera o HTML para cada cartão de evento
-    list.innerHTML = state.events.map(event => {
+    list.innerHTML = eventsToRender.map(event => {
         return `
             <div class="glass-card event-card animate-fade-in" style="padding: 1.5rem; margin-bottom: 1rem; cursor: pointer;" onclick="openEventDetail(${event.id})">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <h4 style="margin: 0; color: var(--accent-color);">${escapeHTML(event.name)}</h4>
                     ${state.role === 'admin' ? `<button class="btn-text" onclick="event.stopPropagation(); deleteEvent(${event.id})" style="padding: 0; min-height: auto; display: flex; align-items: center; justify-content: center; color: var(--text-dim); transition: color 0.2s;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="18" height="18" fill="currentColor">
-                            <path d="M262.2 48C248.9 48 236.9 56.3 232.2 68.8L216 112L120 112C106.7 112 96 122.7 96 136C96 149.3 106.7 160 120 160L520 160C533.3 160 544 149.3 544 136C544 122.7 533.3 112 520 112L424 112L407.8 68.8C403.1 56.3 391.2 48 377.8 48L262.2 48zM128 208L128 512C128 547.3 156.7 576 192 576L448 576C483.3 576 512 547.3 512 512L512 208L464 208L464 512C464 520.8 456.8 528 448 528L192 528C183.2 528 176 520.8 176 512L176 208L128 208zM288 280C288 266.7 277.3 256 264 256C250.7 256 240 266.7 240 280L240 456C240 469.3 250.7 480 264 480C277.3 480 288 469.3 288 456L280zM400 280C400 266.7 389.3 256 376 256C362.7 256 352 266.7 352 280L352 456C352 469.3 362.7 480 376 480C389.3 480 400 469.3 400 456L400 280z"/>
+                            <path d="M262.2 48C248.9 48 236.9 56.3 232.2 68.8L216 112L120 112C106.7 112 96 122.7 96 136C96 149.3 106.7 160 120 160L520 160C533.3 160 544 149.3 544 136C544 122.7 533.3 112 520 112L424 112L407.8 68.8C403.1 56.3 391.2 48 377.8 48L262.2 48zM128 208L128 512C128 547.3 156.7 576 192 576L448 576C483.3 576 512 547.3 512 512L512 208L464 208L464 512C464 520.8 456.8 528 448 528L192 528C183.2 528 176 520.8 176 512L176 208L128 208zM288 280C288 266.7 277.3 256 264 256C250.7 256 240 266.7 280L240 456C240 469.3 250.7 480 264 480C277.3 480 288 469.3 288 456L280zM400 280C400 266.7 389.3 256 376 256C362.7 256 352 266.7 352 280L352 456C352 469.3 362.7 480 376 480C389.3 480 400 469.3 400 456L400 280z"/>
                         </svg>
                     </button>` : ''}
                 </div>
@@ -1659,8 +1671,8 @@ const renderEvents = () => {
         `;
     }).join('');
 
-    if (state.events.length === 0) {
-        list.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-dim); padding: 3rem;">Nenhum evento cadastrado no momento.</p>';
+    if (eventsToRender.length === 0) {
+        list.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-dim); padding: 3rem;">Nenhum evento cadastrado ou disponível no momento.</p>';
     }
 };
 
@@ -1689,12 +1701,10 @@ const openEventDetail = async (eventId, preserveUI = false) => {
             if (detailView) detailView.style.display = 'block';
 
             // Alterna botões de ação do topo
-            if (state.role === 'admin' || state.role === 'secretário') {
-                const addEventBtn = document.getElementById('add-event-btn');
-                const addPartBtn = document.getElementById('add-participants-btn');
-                if (addEventBtn) addEventBtn.style.display = 'none';
-                if (addPartBtn) addPartBtn.style.display = 'block';
-            }
+            const addEventBtn = document.getElementById('add-event-btn');
+            const addPartBtn = document.getElementById('add-participants-btn');
+            if (addEventBtn) addEventBtn.style.display = 'none';
+            if (addPartBtn) addPartBtn.style.display = state.role === 'admin' ? 'block' : 'none';
 
             // Garante que a tabela detalhada membro a membro comece escondida
             const detailContainer = document.getElementById('event-details-table-container');
@@ -1762,8 +1772,11 @@ let renderEventDetailGrid = (participants, payments) => {
         paymentsByPerson[pid].push(pay);
     });
 
+    // Define quais participantes renderizar: Admin vê todos, membro/secretário vê apenas a si mesmo
+    const participantsToRender = state.role === 'admin' ? participants : participants.filter(p => p.id == state.personId);
+
     const rows = [];
-    participants.forEach(p => {
+    participantsToRender.forEach(p => {
         const pId = String(p.id);
         const personPayments = paymentsByPerson[pId] || [];
 
@@ -2069,8 +2082,8 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
             // Se estiver pendente, permite atualizar o comprovante
             saveBtn.textContent = 'Atualizar Comprovante';
 
-            // Ações extras exclusivas para Administrador/Secretário em pagamentos pendentes
-            if (state.role === 'admin' || state.role === 'secretário') {
+            // Ações extras exclusivas para Administrador em pagamentos pendentes
+            if (state.role === 'admin') {
                 saveBtn.style.display = 'none'; // Esconde botão padrão de salvar do usuário
                 adminActions.style.display = 'flex'; // Mostra Aprovar/Reprovar
 
@@ -2234,8 +2247,8 @@ const updateDashboardStats = () => {
         });
     }
 
-    // Atualiza os elementos visuais do Dashboard (se for Admin/Secretário)
-    if (state.role === 'admin' || state.role === 'secretário') {
+    // Atualiza os elementos visuais do Dashboard (se for Admin)
+    if (state.role === 'admin') {
         const totalCashElem = document.getElementById('stat-total-cash');
         if (totalCashElem) totalCashElem.textContent = `R$ ${totalCash.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
@@ -2266,11 +2279,13 @@ const updateDashboardStats = () => {
             ['#e50914', '#111111', '#8b0000', '#228b22']
         );
     } else {
-        // Estatísticas simplificadas para membros comuns (não Admin)
-        const paidMonths = state.payments.length;
+        // Estatísticas simplificadas para membros comuns e secretários (painel pessoal)
+        const myPayments = state.payments.filter(p => p.person_id == state.personId && p.status === 'approved');
+        const paidMonths = myPayments.length;
         const pendingMonths = 12 - paidMonths;
+        const myTotalCash = myPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
         const totalCashElem = document.getElementById('stat-total-cash');
-        if (totalCashElem) totalCashElem.textContent = `R$ ${totalCash.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        if (totalCashElem) totalCashElem.textContent = `R$ ${myTotalCash.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
         // Gráfico de pizza mostrando progresso pessoal de pagamentos do ano
         renderPieChart(['Meses Pagos', 'Pendentes'], [paidMonths, pendingMonths], ['#e50914', '#111111']);
@@ -2292,8 +2307,9 @@ const renderEventDashboard = (participants, payments) => {
     const participantsMap = new Map();
     participants.forEach(p => participantsMap.set(p.id, p));
 
-    // Processa pagamentos apenas deste evento
-    payments.forEach(p => {
+    // Processa pagamentos apenas deste evento e para o usuário logado se não for Admin
+    const paymentsToProcess = state.role === 'admin' ? payments : payments.filter(p => p.person_id == state.personId);
+    paymentsToProcess.forEach(p => {
         if (p.status !== 'approved') return;
         const amount = parseFloat(p.amount);
         evTotal += amount;
@@ -2346,7 +2362,8 @@ const renderMensalidadeDashboard = () => {
     const peopleMap = new Map();
     state.people.forEach(p => peopleMap.set(p.id, p));
 
-    state.payments.forEach(p => {
+    const paymentsToProcess = state.role === 'admin' ? state.payments : state.payments.filter(p => p.person_id == state.personId);
+    paymentsToProcess.forEach(p => {
         if (p.status !== 'approved') return;
         const amount = parseFloat(p.amount);
         mTotal += amount;
@@ -2607,8 +2624,11 @@ function renderDashboard() {
         paymentsMap.set(key, p);
     });
 
+    // Define quais pessoas renderizar: Admin vê todos, membro/secretário vê apenas a si mesmo
+    const peopleToRender = state.role === 'admin' ? state.people : state.people.filter(p => p.id == state.personId);
+
     // Pré-processa os dados dos membros com status de pagamento e totais
-    const processedPeople = state.people.map(person => {
+    const processedPeople = peopleToRender.map(person => {
         let personTotal = 0;
         let hasPaid = false;
         let hasPending = false;

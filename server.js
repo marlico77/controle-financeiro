@@ -597,8 +597,8 @@ app.get('/api/payments', authenticateToken, async (req, res) => {
   const targetYear = parseInt(year) || new Date().getFullYear();
 
   try {
-    // Admin vê todos os pagamentos do ano selecionado
-    if (req.user.role === 'admin') {
+    // Admin e Secretário veem todos os pagamentos do ano selecionado
+    if (req.user.role === 'admin' || req.user.role === 'secretário') {
       const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason FROM payments WHERE year = $1', [targetYear]);
       return res.json(result.rows);
     }
@@ -891,12 +891,14 @@ app.get('/api/events', authenticateToken, async (req, res) => {
                 )
                 SELECT e.*, 
                        COALESCE(pc.count, 0) as total_participants,
-                       COALESCE(us.unit_counts, '{}'::jsonb) as unit_counts
+                       COALESCE(us.unit_counts, '{}'::jsonb) as unit_counts,
+                       EXISTS(SELECT 1 FROM event_participants ep WHERE ep.event_id = e.id AND ep.person_id = $1) as is_participant
                 FROM events e
                 LEFT JOIN participant_counts pc ON e.id = pc.event_id
                 LEFT JOIN unit_stats us ON e.id = us.event_id
                 ORDER BY e.date ASC
             `;
+            params = [req.user.personId || 0];
         } else {
             // Membro vê apenas se está inscrito ou não no evento
             queryText = `
