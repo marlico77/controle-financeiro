@@ -425,6 +425,16 @@ const initDB = async () => {
             )
         `);
         await db.query(`
+            CREATE TABLE IF NOT EXISTS site_albums (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                cover_url VARCHAR(1024) NOT NULL,
+                album_url VARCHAR(1024),
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        await db.query(`
             CREATE TABLE IF NOT EXISTS contact_messages (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
@@ -452,6 +462,39 @@ const initDB = async () => {
         await db.query('CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)');
         await db.query('CREATE INDEX IF NOT EXISTS idx_users_person_id ON users(person_id)');
         await db.query('CREATE INDEX IF NOT EXISTS idx_people_name ON people(name)');
+
+        // Seeding de álbuns iniciais se a tabela estiver vazia
+        const albumCount = await db.query('SELECT COUNT(*) FROM site_albums');
+        if (parseInt(albumCount.rows[0].count, 10) === 0) {
+            await db.query(`
+                INSERT INTO site_albums (title, description, cover_url, album_url) VALUES
+                (
+                    'XX Campori AP - Foi tudo por Jesus', 
+                    'Registros oficiais do nosso clube no 20º Campori da Associação Paulistana.', 
+                    'https://lh3.googleusercontent.com/pw/AP1GczOjQqGi948qkNBlYVV2-HqCHHul4JL5a22t1DMXY1wNmMQqZzD_Pd9cx92s7moTJDjgo569tm0A475ZRlGp0gyq0rmvq_4QygUWLJWwNhqfwOULiOH0krGGODqWEfWiaglOmXO3t8Amx-aifPUXhVP1=w844-h633-s-no-gm?authuser=0', 
+                    'https://photos.google.com/share/AF1QipOviZd2QVCOHxzOzhhBeyAwOWUpxuPpyErb0nRQ2xqH7waou1KApxAdKq__FTv80g?key=aVk2T0lLLXJURVZYYklnbU0tMjN2d2JSaFVDT2hR'
+                ),
+                (
+                    'Acampamento Silvestre 2025', 
+                    'Destaques e registros marcantes das nossas aventuras, pioneirias e especialidades de campo.', 
+                    'https://lh3.googleusercontent.com/pw/AP1GczOo5jypqFB1jUmZ__HdV9ShJOIgABWW98yUhdFddDANt6-OFHFe55mMuwcppvivlp9EddiuxbZx62oC6gZ_ai0Kh1qyXb1WZ-CD0HVtKZkTP_l4XdaliYZYDEkomeLwXG-fcfJxnM9vS5Su3yN5Vds2IA=w844-h633-s-no-gm?authuser=0', 
+                    'https://photos.google.com/share/AF1QipNGHv_y0NW9JFvRgCANmuDbeQbjjDVVVaVYxnB0zF91oDDIir-5TDeO9tgd6MjEuA?key=TUc5MkJ0T0lGZ3lwdE9LWGppbkU4ZjJXNm9kUjBR'
+                ),
+                (
+                    'Dia Mundial do Desbravador 2025', 
+                    'Celebração, investiduras, desfile e comemoração especial do Dia Mundial dos Desbravadores.', 
+                    'https://lh3.googleusercontent.com/pw/AP1GczN-55UNsqO8cfSRdVxt18kEfWrI5d2Qr42m7MYhRXCwzGAc9-3I-KD7aTTVy8mLMkOLkKjkM0RUtqT8_aqGuXv7Ahhvmc9JI_KzABUNt7ifzTOCwHFVA1-QiVpxWe3lFq5aSfcdc_PPphV3mEBL8fqw=w836-h627-s-no-gm?authuser=0', 
+                    'https://photos.google.com/share/AF1QipOkZry5iOa1I7zSoMi9ZW9RHCkqyzUM5EQxrumkWT4ax-CoRYO9NXYZsSq5-fHO5A?key=SktFaW1wNWpXMUdlWEhabG5yZzBfMHhubldsNDRR'
+                ),
+                (
+                    'Campori UCB 2023 - Fé invencível', 
+                    'Relembre os momentos inesquecíveis, os desafios e as vitórias no Campori da União Central Brasileira.', 
+                    'https://lh3.googleusercontent.com/pw/AP1GczPNry6E5lRQKbmSVSr1LhC7gZZFy9d2aSWUeerjFl7_UbFGHXDcae0ByXYK89UR4YBudMyWemTAeV3tRkRBKNwpawydtfRd2a72d42LZUVreBkLm7GPhX5YT6R1IttjXdduFKEKZuqfUyVJBQNUpeF4=w844-h633-s-no-gm?authuser=0', 
+                    'https://photos.google.com/share/AF1QipMKZ31sECjhuOUi07cPZRL1f2fCz68iEzM69Uu4YEwNhyRmoeG7-26587gAxSg1TA?key=V0cwVW9aNzZoYnRJcXAwUGl5WllWaGxqdHRHMmJn'
+                )
+            `);
+            console.log('[DB] Seeding default site albums.');
+        }
 
         console.log('[DB] Tables and Performance Indices verified/created.');
     } catch (err) {
@@ -1837,6 +1880,78 @@ app.post('/api/notifications/send', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('[NOTIF] Erro ao enviar:', err);
         res.status(500).json({ error: 'Erro ao processar envio' });
+    }
+});
+
+// --- API de Galeria de Fotos (Site Institucional) ---
+
+app.get('/api/site-albums', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM site_albums ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Erro ao buscar álbuns:', err);
+        res.status(500).json({ error: 'Erro ao buscar álbuns' });
+    }
+});
+
+app.post('/api/site-albums', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { title, description, cover_url, album_url } = req.body || {};
+    
+    if (!title || !cover_url) {
+        return res.status(400).json({ error: 'Título e link da foto de capa são obrigatórios.' });
+    }
+
+    try {
+        const result = await db.query(
+            'INSERT INTO site_albums (title, description, cover_url, album_url) VALUES ($1, $2, $3, $4) RETURNING *',
+            [title, description || null, cover_url, album_url || null]
+        );
+        logAction(req, 'CREATE_ALBUM', { id: result.rows[0].id, title });
+        res.json({ success: true, album: result.rows[0] });
+    } catch (err) {
+        console.error('Erro ao cadastrar álbum:', err);
+        res.status(500).json({ error: 'Erro ao cadastrar álbum' });
+    }
+});
+
+app.put('/api/site-albums/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { id } = req.params;
+    const { title, description, cover_url, album_url } = req.body || {};
+
+    if (!title || !cover_url) {
+        return res.status(400).json({ error: 'Título e link da foto de capa são obrigatórios.' });
+    }
+
+    try {
+        const result = await db.query(
+            'UPDATE site_albums SET title = $1, description = $2, cover_url = $3, album_url = $4 WHERE id = $5 RETURNING *',
+            [title, description || null, cover_url, album_url || null, id]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ error: 'Álbum não encontrado.' });
+        logAction(req, 'UPDATE_ALBUM', { id, title });
+        res.json({ success: true, album: result.rows[0] });
+    } catch (err) {
+        console.error('Erro ao atualizar álbum:', err);
+        res.status(500).json({ error: 'Erro ao atualizar álbum' });
+    }
+});
+
+app.delete('/api/site-albums/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { id } = req.params;
+
+    try {
+        const result = await db.query('DELETE FROM site_albums WHERE id = $1 RETURNING title', [id]);
+        if (result.rowCount === 0) return res.status(404).json({ error: 'Álbum não encontrado.' });
+        
+        logAction(req, 'DELETE_ALBUM', { id, title: result.rows[0].title });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Erro ao excluir álbum:', err);
+        res.status(500).json({ error: 'Erro ao excluir álbum' });
     }
 });
 

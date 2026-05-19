@@ -1009,7 +1009,8 @@ async function checkAuth() {
                 outflows: document.getElementById('nav-outflows'),
                 sales: document.getElementById('nav-sales'),
                 messages: document.getElementById('nav-messages'),
-                logs: document.getElementById('nav-logs')
+                logs: document.getElementById('nav-logs'),
+                gallery: document.getElementById('nav-gallery')
             };
 
             // Restrição de Abas e Ajustes Visuais por Perfil
@@ -1024,6 +1025,7 @@ async function checkAuth() {
                 // Secretário tem acesso aos relatórios e autorizações; membro comum não
                 if (navItems.reports) navItems.reports.style.display = isSecretary ? 'flex' : 'none';
                 if (navItems.authorizations) navItems.authorizations.style.display = isSecretary ? 'flex' : 'none';
+                if (navItems.gallery) navItems.gallery.style.display = isSecretary ? 'flex' : 'none';
 
                 // Ajusta os cartões de estatísticas no Dashboard para refletir o painel pessoal (membro/secretário)
                 const cards = document.querySelectorAll('.stat-card');
@@ -1042,6 +1044,7 @@ async function checkAuth() {
                 if (navItems.outflows) navItems.outflows.style.display = 'flex';
                 if (navItems.sales) navItems.sales.style.display = 'flex';
                 if (navItems.messages) navItems.messages.style.display = 'flex';
+                if (navItems.gallery) navItems.gallery.style.display = 'flex';
 
                 // Logs visíveis apenas para o usuário mestre (ADMINISTRADOR)
                 if (navItems.logs) navItems.logs.style.display = isMaster ? 'flex' : 'none';
@@ -1064,8 +1067,8 @@ async function checkAuth() {
                 setStorageItem('activeTab', 'dashboard', !!localStorage.getItem('token'));
             }
 
-            // Bloqueia relatórios e autorizações para membros comuns
-            if (state.role === 'member' && (state.activeTab === 'reports' || state.activeTab === 'authorizations')) {
+            // Bloqueia relatórios, autorizações e galeria para membros comuns
+            if (state.role === 'member' && (state.activeTab === 'reports' || state.activeTab === 'authorizations' || state.activeTab === 'gallery')) {
                 state.activeTab = 'dashboard';
                 setStorageItem('activeTab', 'dashboard', !!localStorage.getItem('token'));
             }
@@ -1378,6 +1381,7 @@ function switchTab(tabName, force = false) {
     else if (tabName === 'sales') title.textContent = 'Gestão de Vendas';
     else if (tabName === 'logs') title.textContent = 'Logs de Auditoria';
     else if (tabName === 'profile') title.textContent = 'Meu Perfil';
+    else if (tabName === 'gallery') title.textContent = 'Galeria de Fotos';
 
     // Dispara o carregamento/renderização específico da aba que foi aberta
     if (tabName === 'dashboard') renderDashboard();
@@ -1396,6 +1400,7 @@ function switchTab(tabName, force = false) {
 
     // Inicializações de funcionalidades específicas
     if (tabName === 'messages') renderMessages();
+    if (tabName === 'gallery') fetchGallery();
     if (tabName === 'pwa-install' && typeof updatePWAUI === 'function') {
         updatePWAUI();
     }
@@ -4364,6 +4369,136 @@ function calculateProfileAge(birthDate) {
 // Inicializações finais de módulos persistentes
 initializeNotifications();
 initMessageForm();
+
+// --- Lógica do Módulo Galeria ---
+async function fetchGallery() {
+    const tbody = document.getElementById('gallery-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem;">Carregando álbuns...</td></tr>';
+    
+    try {
+        const albums = await apiFetch('/api/site-albums');
+        renderGallery(albums);
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--error-color);">Erro ao carregar álbuns.</td></tr>';
+        showStatus('Erro ao carregar galeria.', 'error');
+    }
+}
+
+function renderGallery(albums) {
+    const tbody = document.getElementById('gallery-body');
+    if (!tbody) return;
+    
+    if (!albums || albums.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-dim);">Nenhum álbum cadastrado.</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = albums.map(album => `
+        <tr>
+            <td>
+                <div style="width: 60px; height: 60px; border-radius: 8px; overflow: hidden; background: #222;">
+                    <img src="${escapeHTML(album.cover_url)}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='logo.png'">
+                </div>
+            </td>
+            <td>
+                <div style="font-weight: bold; margin-bottom: 4px;">${escapeHTML(album.title)}</div>
+                <div style="font-size: 0.85rem; color: var(--text-dim); max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHTML(album.description || 'Sem descrição')}
+                </div>
+            </td>
+            <td>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn-primary btn-sm" onclick='editAlbum(${JSON.stringify(album).replace(/'/g, "&apos;")})'>Editar</button>
+                    <button class="btn-text btn-sm" style="color: var(--error-color);" onclick="deleteAlbum(${album.id})">Excluir</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Formulário de Cadastro/Edição de Álbum
+const galleryForm = document.getElementById('gallery-form');
+if (galleryForm) {
+    galleryForm.onsubmit = async (e) => {
+        e.preventDefault();
+        
+        const id = document.getElementById('gallery-id').value;
+        const payload = {
+            title: document.getElementById('gallery-title').value,
+            cover_url: document.getElementById('gallery-cover-url').value,
+            album_url: document.getElementById('gallery-album-url').value,
+            description: document.getElementById('gallery-desc').value
+        };
+        
+        const submitBtn = document.getElementById('gallery-submit-btn');
+        const isEditing = !!id;
+        
+        try {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Salvando...';
+            
+            const method = isEditing ? 'PUT' : 'POST';
+            const url = isEditing ? `/api/site-albums/${id}` : '/api/site-albums';
+            
+            await apiFetch(url, {
+                method,
+                body: JSON.stringify(payload)
+            });
+            
+            showStatus(isEditing ? 'Álbum atualizado!' : 'Álbum cadastrado!', 'success');
+            cancelAlbumEdit();
+            fetchGallery();
+            
+        } catch (err) {
+            showStatus('Erro: ' + err.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Salvar Álbum';
+        }
+    };
+}
+
+window.editAlbum = (album) => {
+    document.getElementById('gallery-id').value = album.id;
+    document.getElementById('gallery-title').value = album.title;
+    document.getElementById('gallery-cover-url').value = album.cover_url;
+    document.getElementById('gallery-album-url').value = album.album_url || '';
+    document.getElementById('gallery-desc').value = album.description || '';
+    
+    document.getElementById('gallery-submit-btn').textContent = 'Atualizar Álbum';
+    document.getElementById('gallery-cancel-btn').style.display = 'flex';
+    
+    // Scrolla para o topo do formulário
+    document.getElementById('gallery-page').scrollIntoView({ behavior: 'smooth' });
+};
+
+window.cancelAlbumEdit = () => {
+    const form = document.getElementById('gallery-form');
+    if (form) form.reset();
+    document.getElementById('gallery-id').value = '';
+    document.getElementById('gallery-submit-btn').textContent = 'Salvar Álbum';
+    document.getElementById('gallery-cancel-btn').style.display = 'none';
+};
+
+const cancelAlbumBtn = document.getElementById('gallery-cancel-btn');
+if (cancelAlbumBtn) {
+    cancelAlbumBtn.onclick = cancelAlbumEdit;
+}
+
+window.deleteAlbum = async (id) => {
+    const confirm = await showConfirm('Tem certeza que deseja excluir este álbum? Ele será removido do site.', 'Excluir Álbum');
+    if (!confirm) return;
+    
+    try {
+        await apiFetch(`/api/site-albums/${id}`, { method: 'DELETE' });
+        showStatus('Álbum excluído.', 'success');
+        fetchGallery();
+    } catch (err) {
+        showStatus('Erro ao excluir: ' + err.message, 'error');
+    }
+};
 
 // Fim do arquivo public/app.js - Sistema de Gestão Financeira v1.0
 

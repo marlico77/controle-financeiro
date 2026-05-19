@@ -219,6 +219,11 @@
                             </svg>
                         </span>Logs do Sistema
                     </li>
+                    <li data-target="gallery" id="nav-gallery">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M160 96C124.7 96 96 124.7 96 160L96 480C96 515.3 124.7 544 160 544L480 544C515.3 544 544 515.3 544 480L544 160C544 124.7 515.3 96 480 96L160 96zM224 176C250.5 176 272 197.5 272 224C272 250.5 250.5 272 224 272C197.5 272 176 250.5 176 224C176 197.5 197.5 176 224 176zM368 288C376.4 288 384.1 292.4 388.5 299.5L476.5 443.5C481 450.9 481.2 460.2 477 467.8C472.8 475.4 464.7 480 456 480L184 480C175.1 480 166.8 475 162.7 467.1C158.6 459.2 159.2 449.6 164.3 442.3L220.3 362.3C224.8 355.9 232.1 352.1 240 352.1C247.9 352.1 255.2 355.9 259.7 362.3L286.1 400.1L347.5 299.6C351.9 292.5 359.6 288.1 368 288.1z"/></svg>
+                        </span>Galeria
+                    </li>
                     <li data-target="profile">
                         <span class="icon">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M463 448.2C440.9 409.8 399.4 384 352 384L288 384C240.6 384 199.1 409.8 177 448.2C212.2 487.4 263.2 512 320 512C376.8 512 427.8 487.3 463 448.2zM64 320C64 178.6 178.6 64 320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576C178.6 576 64 461.4 64 320zM320 336C359.8 336 392 303.8 392 264C392 224.2 359.8 192 320 192C280.2 192 248 224.2 248 264C248 303.8 280.2 336 320 336z"/></svg>
@@ -813,6 +818,62 @@
                         </div>
                         <button type="submit" class="btn-primary" style="width: 100%; font-weight: 700;">Enviar Mensagem</button>
                     </form>
+                </div>
+            </div>
+
+            <!-- Gallery Page -->
+            <div id="gallery-page" class="tab-content" style="display: none;">
+                <div class="grid-layout">
+                    <!-- Gallery Registration Form -->
+                    <div class="glass-card" style="padding: 1.5rem;">
+                        <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; font-size: 1.3rem;">Cadastrar Álbum</h3>
+                        <form id="gallery-form">
+                            <input type="hidden" id="gallery-id">
+                            <div class="input-group">
+                                <label for="gallery-title">Nome do Álbum</label>
+                                <input type="text" id="gallery-title" required placeholder="Ex: Campori UCB 2023">
+                            </div>
+                            <div class="input-group">
+                                <label for="gallery-cover-url">Link da Foto de Capa (URL)</label>
+                                <input type="text" id="gallery-cover-url" required placeholder="https://lh3.googleusercontent.com/...">
+                            </div>
+                            <div class="input-group">
+                                <label for="gallery-album-url">Link do Álbum Google Photos (URL)</label>
+                                <input type="text" id="gallery-album-url" placeholder="https://photos.google.com/...">
+                            </div>
+                            <div class="input-group">
+                                <label for="gallery-desc">Breve Descrição do Evento</label>
+                                <textarea id="gallery-desc" style="width: 100%; min-height: 80px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;" placeholder="Relembre os momentos inesquecíveis..."></textarea>
+                            </div>
+                            <div style="display: flex; gap: 1rem; margin-top: 1.5rem; width: 100%;">
+                                <button type="submit" class="btn-primary" style="flex: 1; font-weight: 700; height: 46px; border-radius: 4px; font-size: 0.95rem; display: flex; align-items: center; justify-content: center;" id="gallery-submit-btn">Salvar Álbum</button>
+                                <button type="button" class="btn-secondary" style="flex: 1; display: none; height: 46px; border-radius: 4px; font-size: 0.95rem; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: #ffffff;" id="gallery-cancel-btn">Cancelar Edição</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Gallery History -->
+                    <div class="glass-card table-container" style="padding: 0;">
+                        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                            <h4 style="margin: 0;">Álbuns Publicados no Site</h4>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="gallery-table">
+                                <thead>
+                                    <tr>
+                                        <th>Capa</th>
+                                        <th>Nome do Álbum</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gallery-body">
+                                    <tr>
+                                        <td colspan="3" style="text-align: center; padding: 2rem;">Carregando álbuns...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
