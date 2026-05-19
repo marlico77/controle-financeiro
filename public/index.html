@@ -290,6 +290,9 @@
                             <button id="add-event-btn" class="btn-primary btn-small">Novo Evento</button>
                             <button id="add-participants-btn" class="btn-primary btn-small" style="display: none;">Adicionar Participantes</button>
                         </div>
+                        <div id="site-calendar-actions" style="display: none; gap: 0.8rem; align-items: center;">
+                            <button id="add-site-calendar-btn" class="btn-primary btn-small">Nova Data</button>
+                        </div>
                         <div class="year-selector">
                             <select id="year-select">
                                 <option value="2026">2026</option>
@@ -433,11 +436,18 @@
 
                 <!-- Events Page -->
                 <div id="events-page" class="tab-content" style="display: none;">
-                    <div id="events-master-view">
-                        <div class="events-grid" id="events-list">
-                            <!-- Events cards populated by JS -->
-                        </div>
+                    <div class="events-submenu" style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                        <button id="tab-internal-events" class="btn-text active" style="font-weight: 700; color: var(--accent-color); border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem;">Gestão de Eventos</button>
+                        <button id="tab-site-calendar" class="btn-text" style="font-weight: 700; color: var(--text-dim); padding-bottom: 0.5rem;">Calendário</button>
                     </div>
+
+                    <!-- Gestão de Eventos Interno -->
+                    <div id="events-internal-container">
+                        <div id="events-master-view">
+                            <div class="events-grid" id="events-list">
+                                <!-- Events cards populated by JS -->
+                            </div>
+                        </div>
 
                     <div id="events-detail-view" style="display: none;">
                         <button id="back-to-events" class="btn-text"
@@ -520,6 +530,33 @@
                                     <!-- Data populated by JS -->
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                    </div>
+
+                    <!-- Calendário do Site -->
+                    <div id="events-site-calendar-container" style="display: none;">
+                        <div class="glass-card table-container" style="padding: 0;">
+                            <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                                <h4 style="margin: 0;">Datas de Saídas e Atividades Cadastradas no Site</h4>
+                            </div>
+                            <div class="table-responsive">
+                                <table id="site-calendar-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Nome da Saída / Atividade</th>
+                                            <th>Descrição</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="site-calendar-body">
+                                        <tr>
+                                            <td colspan="4" style="text-align: center; padding: 2rem;">Carregando calendário...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1190,6 +1227,31 @@
                         </div>
                     </div>
                     <button type="submit" class="btn-primary" style="margin-top: 1.5rem;">Criar Evento</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Site Calendar Modal (Admin/Secretário) -->
+        <div id="site-calendar-create-modal" class="modal">
+            <div class="glass-card modal-content">
+                <span class="close-modal">&times;</span>
+                <h3>Nova Data de Saída / Atividade (Site)</h3>
+                <form id="site-calendar-form">
+                    <div class="input-group">
+                        <label for="sc-name">Nome da Saída / Atividade</label>
+                        <input type="text" id="sc-name" required placeholder="Ex: Caminhada Noturna / Acampamento">
+                    </div>
+                    <div class="input-group">
+                        <label for="sc-date">Data</label>
+                        <input type="date" id="sc-date" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="sc-desc">Descrição / Detalhes</label>
+                        <textarea id="sc-desc"
+                            style="width: 100%; min-height: 80px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;"
+                            placeholder="Descreva a atividade para o público do site..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary" style="margin-top: 1.5rem; width: 100%;">Cadastrar no Site</button>
                 </form>
             </div>
         </div>

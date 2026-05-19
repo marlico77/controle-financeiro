@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Tribo de Davi">
+    <meta name="referrer" content="no-referrer">
+    <title>Clube Tribo de Davi - Apresentação</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="style.css?v=208">
+
+    <style>
+        /* Estilos Exclusivos da Página de Apresentação */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        :root {
+            --presentation-accent: #e50914;
+            --presentation-bg: #111111;
+            --presentation-card: #1c1c1c;
+            --presentation-text: #ffffff;
+            --presentation-dim: #999999;
+        }
+
+        body.presentation-body {
+            background-color: var(--presentation-bg);
+            color: var(--presentation-text);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* Navbar Institucional */
+        .club-navbar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 3rem;
+            background: transparent;
+            border-bottom: none;
+            z-index: 1000;
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 2.5rem;
+        }
+
+        .nav-link {
+            color: var(--presentation-text);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            opacity: 0.8;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--presentation-accent);
+            opacity: 1;
+            transform: translateY(-1px);
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            text-decoration: none;
+        }
+
+        .navbar-brand img {
+            height: 45px;
+            width: auto;
+            filter: none;
+        }
+
+        .navbar-brand span {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--presentation-text);
+            letter-spacing: -0.5px;
+        }
+
+        .btn-portal {
+            background: var(--presentation-accent);
+            color: white;
+            padding: 0.6rem 1.4rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+        }
+
+        .btn-portal:hover {
+            background: #ff2a2a;
+            transform: translateY(-2px);
+            box-shadow: none;
+        }
+
+        /* Hero Section */
+        .hero-section {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 8rem 2rem 4rem;
+            background: url('bg-login.jpg') center/cover no-repeat fixed;
+        }
+
+        .hero-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(180deg, rgba(17,17,17,0.75) 0%, rgba(17,17,17,0.95) 100%);
+            z-index: 1;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .hero-logo {
+            width: 150px;
+            height: auto;
+            margin-bottom: 2rem;
+            filter: none;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .hero-badge {
+            background: rgba(229, 9, 20, 0.15);
+            border: 1px solid var(--presentation-accent);
+            color: var(--presentation-accent);
+            padding: 0.5rem 1.2rem;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-title {
+            font-size: 4rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            letter-spacing: -1.5px;
+            background: linear-gradient(135deg, #ffffff 0%, #aaaaaa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 1.3rem;
+            color: var(--presentation-dim);
+            margin-bottom: 2.5rem;
+            line-height: 1.6;
+            max-width: 650px;
+        }
+
+        /* Seção Institucional (História & Identidade) */
+        .section-padding {
+            padding: 6rem 3rem;
+            max-width: 1250px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--presentation-text);
+            margin-bottom: 1rem;
+            letter-spacing: -0.5px;
+        }
+
+        .section-header p {
+            color: var(--presentation-dim);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        .presentation-card {
+            background: rgba(28, 28, 28, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 3rem 2.5rem;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .presentation-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(229, 9, 20, 0.4);
+            background: rgba(35, 35, 35, 0.8);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-icon {
+            width: 55px;
+            height: 55px;
+            border-radius: 14px;
+            background: rgba(229, 9, 20, 0.15);
+            color: var(--presentation-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 1.8rem;
+            border: 1px solid rgba(229, 9, 20, 0.3);
+        }
+
+        .presentation-card h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--presentation-text);
+        }
+
+        .presentation-card p {
+            color: var(--presentation-dim);
+            line-height: 1.7;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        /* Liderança / Diretoria */
+        .leadership-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 2rem;
+        }
+
+        .leader-card {
+            background: rgba(28, 28, 28, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            flex: 0 0 calc((100% - 4rem) / 3);
+            scroll-snap-align: start;
+        }
+
+        .leader-card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-5px);
+            background: rgba(28, 28, 28, 0.8);
+        }
+
+        .leader-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #2a2a2a;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: var(--presentation-dim);
+            border: 2px solid var(--presentation-accent);
+            box-shadow: none;
+        }
+
+        .leader-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--presentation-text);
+            margin-bottom: 0.4rem;
+        }
+
+        .leader-role {
+            font-size: 0.9rem;
+            color: var(--presentation-accent);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Quadro de Fotos (Carrossel com Setas) */
+        .gallery-container {
+            background: rgba(20, 20, 20, 0.6);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 6rem 3rem;
+            position: relative;
+        }
+
+        .gallery-container .section-header {
+            max-width: 1250px;
+            margin: 0 auto 4rem;
+            text-align: center;
+        }
+
+        .carousel-wrapper {
+            position: relative;
+            max-width: 1250px;
+            margin: 0 auto;
+        }
+
+        .carousel-track-container {
+            overflow: hidden;
+            width: 100%;
+            padding: 1rem 0; /* Para a sombra do hover não ser cortada */
+        }
+
+        .carousel-track-container.native-scroll {
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+        }
+
+        .carousel-track-container::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+
+        .carousel-track {
+            display: flex;
+            gap: 2rem;
+            width: 100%;
+        }
+
+        .gallery-item {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            /* Exibido de 3 em 3 no desktop */
+            flex: 0 0 calc((100% - 4rem) / 3);
+            aspect-ratio: 4/3;
+            background: #1c1c1c;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            text-align: center;
+            padding: 2rem 1.5rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            text-decoration: none;
+            scroll-snap-align: start;
+        }
+
+        .gallery-item:hover {
+            border-color: var(--presentation-accent);
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 48px;
+            height: 48px;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            box-shadow: none;
+            padding: 0;
+        }
+
+        @media (hover: hover) {
+            .carousel-btn {
+                opacity: 0;
+                pointer-events: none;
+            }
+
+            .carousel-wrapper:hover .carousel-btn {
+                opacity: 1;
+                pointer-events: auto;
+            }
+        }
+
+
+        .carousel-btn svg {
+            width: 100%;
+            height: 100%;
+            fill: currentColor;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
+        }
+
+        .carousel-btn:hover {
+            color: var(--presentation-accent);
+            transform: translateY(-50%) scale(1.15);
+        }
+
+        .carousel-btn.prev-btn {
+            left: -20px;
+        }
+
+        .carousel-btn.next-btn {
+            right: -20px;
+        }
+
+        .album-cover {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s ease;
+        }
+
+        .gallery-item:hover .album-cover {
+            transform: scale(1.08);
+        }
+
+        .album-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(to top, rgba(17,17,17,0.95) 0%, rgba(17,17,17,0.5) 60%, rgba(17,17,17,0.2) 100%);
+            z-index: 1;
+        }
+
+        .gallery-item h4 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--presentation-text);
+            margin-bottom: 0.4rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .gallery-item p {
+            font-size: 0.9rem;
+            color: var(--presentation-dim);
+            margin: 0;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+
+        /* Rodapé Institucional */
+        .club-footer {
+            background: #0a0a0a;
+            padding: 4rem 3rem 3rem;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .footer-logo {
+            width: 80px;
+            height: auto;
+            margin-bottom: 1.5rem;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+
+        .footer-logo:hover {
+            opacity: 1;
+        }
+
+        .footer-text {
+            color: var(--presentation-dim);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+            max-width: 500px;
+            margin: 0 auto 2rem;
+        }
+
+        .footer-bottom {
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            color: #666666;
+            font-size: 0.85rem;
+        }
+
+        /* Calendário Anual */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            max-width: 1250px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .month-card {
+            background: #161616;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        .month-card:hover {
+            border-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .month-header {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1.2rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .month-header h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--presentation-text);
+            margin: 0;
+        }
+
+        .month-body {
+            padding: 1.5rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .empty-month {
+            color: var(--presentation-dim);
+            font-size: 0.9rem;
+            font-style: italic;
+            text-align: center;
+            margin: auto 0;
+            padding: 1rem 0;
+        }
+
+        .event-item {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            padding: 0.6rem 0.8rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .event-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .event-date-badge {
+            background: var(--presentation-accent);
+            color: #ffffff;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .event-details {
+            flex: 1;
+            min-width: 0;
+            text-align: left;
+        }
+
+        .event-details h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--presentation-text);
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @media (max-width: 1200px) {
+            .calendar-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        @media (max-width: 900px) {
+            .calendar-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 600px) {
+            .calendar-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Responsividade */
+        @media (max-width: 992px) {
+            .gallery-item, .leader-card { flex: 0 0 calc((100% - 2rem) / 2); }
+        }
+
+        @media (max-width: 768px) {
+            .club-navbar { padding: 1rem 1.5rem; }
+            .hero-title { font-size: 2.5rem; }
+            .hero-subtitle { font-size: 1.1rem; }
+            .hero-section { padding: 7rem 1.5rem 3rem; }
+            .section-padding { padding: 4rem 1.5rem; }
+            .gallery-container { padding: 4rem 1.5rem; }
+            .gallery-container .section-header { margin-bottom: 2.5rem; }
+            .section-header h2 { font-size: 2rem; }
+            .gallery-item { flex: 0 0 calc(100% - 1.5rem); padding: 1.5rem 1.2rem 1.2rem; }
+            .leader-card { flex: 0 0 calc(100% - 1.5rem); }
+            .carousel-track { gap: 1.5rem; }
+            .carousel-btn { width: 40px; height: 40px; }
+            .carousel-btn.prev-btn { left: -15px; }
+            .carousel-btn.next-btn { right: -15px; }
+        }
+
+        /* Seção de Contato */
+        .contact-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(28, 28, 28, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 3rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .contact-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--presentation-text);
+            opacity: 0.9;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="tel"],
+        .form-group input[type="email"],
+        .form-group textarea {
+            background: rgba(17, 17, 17, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 0.9rem 1.2rem;
+            color: var(--presentation-text);
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--presentation-accent);
+            box-shadow: 0 0 10px rgba(229, 9, 20, 0.2);
+            background: rgba(25, 25, 25, 0.9);
+        }
+
+        .flex-options {
+            justify-content: space-between;
+        }
+
+        .choice-group {
+            flex: 1;
+        }
+
+        .radio-options {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 0.2rem;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            color: var(--presentation-dim);
+            font-weight: 600;
+            font-size: 1rem;
+            transition: color 0.2s;
+        }
+
+        .radio-label input[type="radio"] {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            outline: none;
+            display: grid;
+            place-content: center;
+            transition: border-color 0.2s;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .radio-label input[type="radio"]::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            background-color: var(--presentation-accent);
+        }
+
+        .radio-label input[type="radio"]:checked {
+            border-color: var(--presentation-accent);
+        }
+
+        .radio-label input[type="radio"]:checked::before {
+            transform: scale(1);
+        }
+
+        .radio-label input[type="radio"]:checked + span {
+            color: var(--presentation-text);
+        }
+
+        .contact-feedback {
+            padding: 1rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        .contact-feedback.success {
+            background: rgba(46, 204, 113, 0.15);
+            border: 1px solid #2ecc71;
+            color: #2ecc71;
+        }
+
+        .contact-feedback.error {
+            background: rgba(231, 76, 60, 0.15);
+            border: 1px solid #e74c3c;
+            color: #e74c3c;
+        }
+
+        /* Spinner para o botão */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Ajustes de responsividade para o formulário */
+        @media (max-width: 768px) {
+            .contact-container {
+                padding: 1.5rem;
+            }
+            .form-row {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+            .flex-options {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+        }
+    </style>
+
+</head>
+
+<body class="presentation-body">
+
+    <!-- Navbar Institucional -->
+    <nav class="club-navbar">
+        <a href="clube.html" class="navbar-brand">
+            <img src="logo.png" alt="Tribo de Davi">
+            <span>Tribo de Davi</span>
+        </a>
+        <div class="nav-menu">
+            <a href="#" class="nav-link active">Início</a>
+            <a href="#calendario" class="nav-link">Calendário</a>
+            <a href="#fotos" class="nav-link">Fotos</a>
+            <a href="#contato" class="nav-link">Contato</a>
+            <a href="index.html" class="btn-portal">
+                <span>Mensalidades</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"/>
+                </svg>
+            </a>
+        </div>
+
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero-section">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <h1 class="hero-title">Formando Líderes para a Eternidade</h1>
+            <p class="hero-subtitle">Bem-vindo à página oficial do Clube Tribo de Davi. Uma jornada de fé, aventura, amizade e desenvolvimento físico, mental e espiritual.</p>
+            <a href="#historia" class="btn-portal" style="padding: 1rem 2.5rem; font-size: 1.1rem;">Conheça Nossa História ↓</a>
+        </div>
+    </header>
+
+    <!-- Seção História & Identidade -->
+    <section id="historia" class="section-padding">
+        <div class="section-header">
+            <h2>Quem Somos</h2>
+            <p>Conheça os pilares que sustentam nosso clube e o propósito que nos move a cada reunião e acampamento.</p>
+        </div>
+
+        <div class="history-grid">
+            <div class="presentation-card">
+                <div class="card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M14.778.085A.5.5 0 0 1 15 .5V8a.5.5 0 0 1-.314.464L8.44 11.824a.5.5 0 0 1-.44 0L1.686 8.464A.5.5 0 0 1 1.372 8V.5a.5.5 0 0 1 .582-.49l5.792 1.158a.5.5 0 0 0 .195 0l5.792-1.158a.5.5 0 0 1 .245.075zM2.372 1.456V7.62l5.188 2.45 5.188-2.45V1.456l-5.188 1.038a.5.5 0 0 1-.195 0L2.372 1.456z"/>
+                    </svg>
+                </div>
+                <h3>Nossa Missão</h3>
+                <p>Salvar do pecado e guiar no serviço. Trabalhamos para desenvolver o caráter de juvenis e adolescentes através de atividades práticas, civismo e amor ao próximo.</p>
+            </div>
+
+            <div class="presentation-card">
+                <div class="card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.25-11.75v5.5h4a.75.75 0 0 1 0 1.5h-4.75a.75.75 0 0 1-.75-.75v-6.25a.75.75 0 0 1 1.5 0z"/>
+                    </svg>
+                </div>
+                <h3>Tribo de Davi</h3>
+                <p>Inspirados pela coragem e fidelidade do rei Davi, buscamos ser jovens segundo o coração de Deus, prontos para enfrentar os gigantes modernos com fé e determinação.</p>
+            </div>
+
+            <div class="presentation-card">
+                <div class="card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11.5 0a.5.5 0 0 1 .5.5v1h2a.5.5 0 0 1 .5.5v12a.5.5 0 0 1-.5.5h-12a.5.5 0 0 1-.5-.5v-12a.5.5 0 0 1 .5-.5h2v-1a.5.5 0 0 1 1 0v1h6v-1a.5.5 0 0 1 .5-.5zm-9 3v1h11V3h-11zm11 2h-11v9h11V5z"/>
+                    </svg>
+                </div>
+                <h3>Nossas Atividades</h3>
+                <p>Acampamentos, especialidades práticas, nós e amarras, primeiros socorros, estudo da natureza e projetos comunitários que preparam o jovem para a vida.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Liderança / Diretoria -->
+    <section class="section-padding" style="background: rgba(20, 20, 20, 0.4); border-top: 1px solid rgba(255,255,255,0.05);">
+        <div class="section-header">
+            <h2>Nossa Liderança</h2>
+            <p>Conheça a equipe dedicada que coordena as atividades e acompanha de perto o desenvolvimento de cada desbravador.</p>
+        </div>
+
+        <div class="carousel-wrapper">
+            <button class="carousel-btn prev-btn" aria-label="Líder Anterior" id="prev-leader">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" style="transform: rotate(180deg);">
+                    <path d="M320 576C461.4 576 576 461.4 576 320C576 178.6 461.4 64 320 64C178.6 64 64 178.6 64 320C64 461.4 178.6 576 320 576zM361 417C351.6 426.4 336.4 426.4 327.1 417C317.8 407.6 317.7 392.4 327.1 383.1L366.1 344.1L216 344.1C202.7 344.1 192 333.4 192 320.1C192 306.8 202.7 296.1 216 296.1L366.1 296.1L327.1 257.1C317.7 247.7 317.7 232.5 327.1 223.2C336.5 213.9 351.7 213.8 361 223.2L441 303.2C450.4 312.6 450.4 327.8 441 337.1L361 417.1z"/>
+                </svg>
+            </button>
+
+            <div class="carousel-track-container native-scroll" id="leader-track">
+                <div class="carousel-track">
+                    <div class="leader-card">
+                        <div class="leader-avatar" style="overflow: hidden; padding: 0;">
+                            <img src="https://lh3.googleusercontent.com/pw/AP1GczON0EwwgJJfLv2ZdSNP_MWzzk_PJUB2tJQ0LdICT8NiKqROpSDviqUk6G8hddZinkyOtiNhI2JBJKktKHjHEVQFOstGlmfNNplILu36wNb9cMaeIVvVcq7olbpS22sIsUQ-1WPBMUbZSl1KFVP2OYk5=w475-h633-s-no-gm?authuser=0" alt="Diretor do Clube" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                        </div>
+                        <div class="leader-name">Diretor do Clube</div>
+                        <div class="leader-role">Arthur</div>
+                    </div>
+
+                    <div class="leader-card">
+                        <div class="leader-avatar" style="overflow: hidden; padding: 0;">
+                            <img src="https://lh3.googleusercontent.com/pw/AP1GczPonXVu_A2ixdKVnA2fTBHJT0L53Rma5qIn1GXeMSK1PXBKvTPFacoFspU27rwPJUEedwPbXpJPhUwpY7pjjokZ9-70aN_9xy-6Ke7dZcRG4A0GFRBGmfGMapcX4vp7ShRJgITS7t4TnkDPnbamv3iM=w475-h633-s-no-gm?authuser=0" alt="Diretor Associado" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                        </div>
+                        <div class="leader-name">Diretor Associado</div>
+                        <div class="leader-role">Lucas</div>
+                    </div>
+
+                    <div class="leader-card">
+                        <div class="leader-avatar" style="overflow: hidden; padding: 0;">
+                            <img src="https://lh3.googleusercontent.com/pw/AP1GczN9uDo8NOJCW1XTlxvQpewpo6drtgbeA_VD__w4iDjSbUc8bFh-V1khV-m5ByYsbEf7vqPl9FAa1lcP9sDMBxOnWHumOQCJE-5bRnnl6YjYo1Bfo5n0Qd39P5oaab83dLL4MsNjP5e1tdfvPkSlcKDD=w475-h633-s-no-gm?authuser=0" alt="Secretaria" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                        </div>
+                        <div class="leader-name">Secretaria</div>
+                        <div class="leader-role">Rafaella</div>
+                    </div>
+
+                    <div class="leader-card">
+                        <div class="leader-avatar" style="overflow: hidden; padding: 0;">
+                            <img src="https://lh3.googleusercontent.com/pw/AP1GczNVpKUc-3J7PPbErBLTRIdF-3a033HXjGq7QWiYXmHh1jW6euqzKbliIUy9ftNwxgCvdhE6EzTrByV0bv59nZCclFzBO8jxatZCfJyi2yzfreakx_n_WFB4nDZa4c66FL4GG_xsjkLij-zCITSt9Oqf=w475-h633-s-no-gm?authuser=0" alt="Tesoureiro" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                        </div>
+                        <div class="leader-name">Tesouraria</div>
+                        <div class="leader-role">Marlon</div>
+                    </div>
+
+                    <div class="leader-card">
+                        <div class="leader-avatar" style="overflow: hidden; padding: 0;">
+                            <img src="https://lh3.googleusercontent.com/pw/AP1GczN3MK_Cxt5jjuUPtm045D0wonUkSTyU5vQrJGXbQsoDzGh6XTsK1kpNYnmL5UcGw3pS6Lgy_Mn3lSTaVVoBrGJbuqXcsXVu7PDpMVWVeGnPt5WKJcD3xEfhgAI-EA5BerzZTrZ9hh_uwZrNkOyeH26i=w475-h633-s-no-gm?authuser=0" alt="Capelão" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                        </div>
+                        <div class="leader-name">Capelão</div>
+                        <div class="leader-role">Álvaro</div>
+                    </div>
+
+                    <div class="leader-card">
+                        <div class="leader-avatar" style="overflow: hidden; padding: 0;">
+                            <img src="https://lh3.googleusercontent.com/pw/AP1GczN-O95fYVMd_3597iScMgBulGjZ8_Y1wvc2diaqG9jEUTnDERnoc8UCFHwEejXJ7BacOTnPlLCP-IvNXQwcS1PhEbJgn4aZrqupqX3ZGvuQRT5_EPxDocXxvvuUEw_UtFypy3w50byxHyC4MuZDtk7k=w475-h633-s-no-gm?authuser=0" alt="Conselheiro" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                        </div>
+                        <div class="leader-name">Conselheiro</div>
+                        <div class="leader-role">Ivan</div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="carousel-btn next-btn" aria-label="Próximo Líder" id="next-leader">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                    <path d="M320 576C461.4 576 576 461.4 576 320C576 178.6 461.4 64 320 64C178.6 64 64 178.6 64 320C64 461.4 178.6 576 320 576zM361 417C351.6 426.4 336.4 426.4 327.1 417C317.8 407.6 317.7 392.4 327.1 383.1L366.1 344.1L216 344.1C202.7 344.1 192 333.4 192 320.1C192 306.8 202.7 296.1 216 296.1L366.1 296.1L327.1 257.1C317.7 247.7 317.7 232.5 327.1 223.2C336.5 213.9 351.7 213.8 361 223.2L441 303.2C450.4 312.6 450.4 327.8 441 337.1L361 417.1z"/>
+                </svg>
+            </button>
+        </div>
+    </section>
+
+    <!-- Calendário Anual Dinâmico -->
+    <section id="calendario" class="section-padding" style="background: rgba(17, 17, 17, 0.8); border-top: 1px solid rgba(255,255,255,0.05);">
+        <div class="section-header" style="margin-bottom: 3rem;">
+            <h2>Calendário Anual</h2>
+            <p>Acompanhe nossas datas de reuniões, acampamentos, feiras e investiduras agendadas para este ano.</p>
+        </div>
+
+        <div class="calendar-grid" id="calendar-grid">
+            <!-- Os 12 meses serão gerados dinamicamente via JavaScript -->
+        </div>
+    </section>
+
+    <!-- Quadro de Fotos (Carrossel com Setas) -->
+    <section id="fotos" class="gallery-container">
+        <div class="section-header">
+            <h2>Nosso Quadro de Fotos</h2>
+            <p>Momentos marcantes da Tribo de Davi em acampamentos, investiduras, desfiles civis e atividades comunitárias.</p>
+        </div>
+
+        <div class="carousel-wrapper">
+            <button class="carousel-btn prev-btn" aria-label="Álbum Anterior" id="prev-album">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" style="transform: rotate(180deg);">
+                    <path d="M320 576C461.4 576 576 461.4 576 320C576 178.6 461.4 64 320 64C178.6 64 64 178.6 64 320C64 461.4 178.6 576 320 576zM361 417C351.6 426.4 336.4 426.4 327.1 417C317.8 407.6 317.7 392.4 327.1 383.1L366.1 344.1L216 344.1C202.7 344.1 192 333.4 192 320.1C192 306.8 202.7 296.1 216 296.1L366.1 296.1L327.1 257.1C317.7 247.7 317.7 232.5 327.1 223.2C336.5 213.9 351.7 213.8 361 223.2L441 303.2C450.4 312.6 450.4 327.8 441 337.1L361 417.1z"/>
+                </svg>
+            </button>
+
+            <div class="carousel-track-container" id="album-track">
+                <div class="carousel-track">
+                    <!-- Grupo 1 -->
+                    <a href="https://photos.google.com/share/AF1QipOviZd2QVCOHxzOzhhBeyAwOWUpxuPpyErb0nRQ2xqH7waou1KApxAdKq__FTv80g?key=aVk2T0lLLXJURVZYYklnbU0tMjN2d2JSaFVDT2hR" target="_blank" class="gallery-item">
+                        <img src="https://lh3.googleusercontent.com/pw/AP1GczOjQqGi948qkNBlYVV2-HqCHHul4JL5a22t1DMXY1wNmMQqZzD_Pd9cx92s7moTJDjgo569tm0A475ZRlGp0gyq0rmvq_4QygUWLJWwNhqfwOULiOH0krGGODqWEfWiaglOmXO3t8Amx-aifPUXhVP1=w844-h633-s-no-gm?authuser=0" alt="XX Campori AP" class="album-cover">
+                        <div class="album-overlay"></div>
+                        <div style="position: relative; z-index: 2; width: 100%;">
+                            <h4>XX Campori AP - Foi tudo por Jesus</h4>
+                            <p>Registros oficiais do nosso clube no 20º Campori da Associação Paulistana.</p>
+                            <span class="btn-portal" style="margin-top: 1rem; font-size: 0.8rem; padding: 0.4rem 1rem;">VER ÁLBUM ↗</span>
+                        </div>
+                    </a>
+
+                    <a href="https://photos.google.com/share/AF1QipNGHv_y0NW9JFvRgCANmuDbeQbjjDVVVaVYxnB0zF91oDDIir-5TDeO9tgd6MjEuA?key=TUc5MkJ0T0lGZ3lwdE9LWGppbkU4ZjJXNm9kUjBR" target="_blank" class="gallery-item">
+                        <img src="https://lh3.googleusercontent.com/pw/AP1GczOo5jypqFB1jUmZ__HdV9ShJOIgABWW98yUhdFddDANt6-OFHFe55mMuwcppvivlp9EddiuxbZx62oC6gZ_ai0Kh1qyXb1WZ-CD0HVtKZkTP_l4XdaliYZYDEkomeLwXG-fcfJxnM9vS5Su3yN5Vds2IA=w844-h633-s-no-gm?authuser=0" alt="Acampamento Silvestre 2025" class="album-cover">
+                        <div class="album-overlay"></div>
+                        <div style="position: relative; z-index: 2; width: 100%;">
+                            <h4>Acampamento Silvestre 2025</h4>
+                            <p>Destaques e registros marcantes das nossas aventuras, pioneirias e especialidades de campo.</p>
+                            <span class="btn-portal" style="margin-top: 1rem; font-size: 0.8rem; padding: 0.4rem 1rem;">VER ÁLBUM ↗</span>
+                        </div>
+                    </a>
+
+                    <a href="https://photos.google.com/share/AF1QipOkZry5iOa1I7zSoMi9ZW9RHCkqyzUM5EQxrumkWT4ax-CoRYO9NXYZsSq5-fHO5A?key=SktFaW1wNWpXMUdlWEhabG5yZzBfMHhubldsNDRR" target="_blank" class="gallery-item">
+                        <img src="https://lh3.googleusercontent.com/pw/AP1GczN-55UNsqO8cfSRdVxt18kEfWrI5d2Qr42m7MYhRXCwzGAc9-3I-KD7aTTVy8mLMkOLkKjkM0RUtqT8_aqGuXv7Ahhvmc9JI_KzABUNt7ifzTOCwHFVA1-QiVpxWe3lFq5aSfcdc_PPphV3mEBL8fqw=w836-h627-s-no-gm?authuser=0" alt="Dia Mundial do Desbravador 2025" class="album-cover">
+                        <div class="album-overlay"></div>
+                        <div style="position: relative; z-index: 2; width: 100%;">
+                            <h4>Dia Mundial do Desbravador 2025</h4>
+                            <p>Celebração, investiduras, desfile e comemoração especial do Dia Mundial dos Desbravadores.</p>
+                            <span class="btn-portal" style="margin-top: 1rem; font-size: 0.8rem; padding: 0.4rem 1rem;">VER ÁLBUM ↗</span>
+                        </div>
+                    </a>
+
+                    <a href="https://photos.google.com/share/AF1QipMKZ31sECjhuOUi07cPZRL1f2fCz68iEzM69Uu4YEwNhyRmoeG7-26587gAxSg1TA?key=V0cwVW9aNzZoYnRJcXAwUGl5WllWaGxqdHRHMmJn" target="_blank" class="gallery-item">
+                        <img src="https://lh3.googleusercontent.com/pw/AP1GczPNry6E5lRQKbmSVSr1LhC7gZZFy9d2aSWUeerjFl7_UbFGHXDcae0ByXYK89UR4YBudMyWemTAeV3tRkRBKNwpawydtfRd2a72d42LZUVreBkLm7GPhX5YT6R1IttjXdduFKEKZuqfUyVJBQNUpeF4=w844-h633-s-no-gm?authuser=0" alt="Campori UCB 2023" class="album-cover">
+                        <div class="album-overlay"></div>
+                        <div style="position: relative; z-index: 2; width: 100%;">
+                            <h4>Campori UCB 2023 - Fé invencível</h4>
+                            <p>Relembre os momentos inesquecíveis, os desafios e as vitórias no Campori da União Central Brasileira.</p>
+                            <span class="btn-portal" style="margin-top: 1rem; font-size: 0.8rem; padding: 0.4rem 1rem;">VER ÁLBUM ↗</span>
+                        </div>
+                    </a>
+
+                    <!-- Grupo 2 (Cópias para Loop Infinito Perfeito) -->
+                    <a href="https://photos.google.com/share/AF1QipOviZd2QVCOHxzOzhhBeyAwOWUpxuPpyErb0nRQ2xqH7waou1KApxAdKq__FTv80g?key=aVk2T0lLLXJURVZYYklnbU0tMjN2d2JSaFVDT2hR" target="_blank" class="gallery-item" aria-hidden="true">
+                        <img src="https://lh3.googleusercontent.com/pw/AP1GczOjQqGi948qkNBlYVV2-HqCHHul4JL5a22t1DMXY1wNmMQqZzD_Pd9cx92s7moTJDjgo569tm0A475ZRlGp0gyq0rmvq_4QygUWLJWwNhqfwOULiOH0krGGODqWEfWiaglOmXO3t8Amx-aifPUXhVP1=w844-h633-s-no-gm?authuser=0" alt="XX Campori AP" class="album-cover">
+                        <div class="album-overlay"></div>
+                        <div style="position: relative; z-index: 2; width: 100%;">
+                            <h4>XX Campori AP - Foi tudo por Jesus</h4>
+                            <p>Registros oficiais do nosso clube no 20º Campori da Associação Paulistana.</p>
+                            <span class="btn-portal" style="margin-top: 1rem; font-size: 0.8rem; padding: 0.4rem 1rem;">VER ÁLBUM ↗</span>
+                        </div>
+                    </a>
+
+                    <a href="https://photos.google.com/share/AF1QipNGHv_y0NW9JFvRgCANmuDbeQbjjDVVVaVYxnB0zF91oDDIir-5TDeO9tgd6MjEuA?key=TUc5MkJ0T0lGZ3lwdE9LWGppbkU4ZjJXNm9kUjBR" target="_blank" class="gallery-item" aria-hidden="true">
+                        <img src="https://lh3.googleusercontent.com/pw/AP1GczOo5jypqFB1jUmZ__HdV9ShJOIgABWW98yUhdFddDANt6-OFHFe55mMuwcppvivlp9EddiuxbZx62oC6gZ_ai0Kh1qyXb1WZ-CD0HVtKZkTP_l4XdaliYZYDEkomeLwXG-fcfJxnM9vS5Su3yN5Vds2IA=w844-h633-s-no-gm?authuser=0" alt="Acampamento Silvestre 2025" class="album-cover">
+                        <div class="album-overlay"></div>
+                        <div style="position: relative; z-index: 2; width: 100%;">
+                            <h4>Acampamento Silvestre 2025</h4>
+                            <p>Destaques e registros marcantes das nossas aventuras, pioneirias e especialidades de campo.</p>
+                            <span class="btn-portal" style="margin-top: 1rem; font-size: 0.8rem; padding: 0.4rem 1rem;">VER ÁLBUM ↗</span>
+                        </div>
+                    </a>
+
+                    <a href="https://photos.google.com/share/AF1QipOkZry5iOa1I7zSoMi9ZW9RHCkqyzUM5EQxrumkWT4ax-CoRYO9NXYZsSq5-fHO5A?key=SktFaW1wNWpXMUdlWEhabG5yZzBfMHhubldsNDRR" target="_blank" class="gallery-item" aria-hidden="true">
+                        <img src="https://lh3.googleusercontent.com/pw/AP1GczN-55UNsqO8cfSRdVxt18kEfWrI5d2Qr42m7MYhRXCwzGAc9-3I-KD7aTTVy8mLMkOLkKjkM0RUtqT8_aqGuXv7Ahhvmc9JI_KzABUNt7ifzTOCwHFVA1-QiVpxWe3lFq5aSfcdc_PPphV3mEBL8fqw=w836-h627-s-no-gm?authuser=0" alt="Dia Mundial do Desbravador 2025" class="album-cover">
+                        <div class="album-overlay"></div>
+                        <div style="position: relative; z-index: 2; width: 100%;">
+                            <h4>Dia Mundial do Desbravador 2025</h4>
+                            <p>Celebração, investiduras, desfile e comemoração especial do Dia Mundial dos Desbravadores.</p>
+                            <span class="btn-portal" style="margin-top: 1rem; font-size: 0.8rem; padding: 0.4rem 1rem;">VER ÁLBUM ↗</span>
+                        </div>
+                    </a>
+
+                    <a href="https://photos.google.com/share/AF1QipMKZ31sECjhuOUi07cPZRL1f2fCz68iEzM69Uu4YEwNhyRmoeG7-26587gAxSg1TA?key=V0cwVW9aNzZoYnRJcXAwUGl5WllWaGxqdHRHMmJn" target="_blank" class="gallery-item" aria-hidden="true">
+                        <img src="https://lh3.googleusercontent.com/pw/AP1GczPNry6E5lRQKbmSVSr1LhC7gZZFy9d2aSWUeerjFl7_UbFGHXDcae0ByXYK89UR4YBudMyWemTAeV3tRkRBKNwpawydtfRd2a72d42LZUVreBkLm7GPhX5YT6R1IttjXdduFKEKZuqfUyVJBQNUpeF4=w844-h633-s-no-gm?authuser=0" alt="Campori UCB 2023" class="album-cover">
+                        <div class="album-overlay"></div>
+                        <div style="position: relative; z-index: 2; width: 100%;">
+                            <h4>Campori UCB 2023 - Fé invencível</h4>
+                            <p>Relembre os momentos inesquecíveis, os desafios e as vitórias no Campori da União Central Brasileira.</p>
+                            <span class="btn-portal" style="margin-top: 1rem; font-size: 0.8rem; padding: 0.4rem 1rem;">VER ÁLBUM ↗</span>
+                        </div>
+                    </a>
+
+                    <!-- Grupo 3 (Cópias para Loop Infinito Perfeito) -->
+                    <a href="https://photos.google.com/share/AF1QipOviZd2QVCOHxzOzhhBeyAwOWUpxuPpyErb0nRQ2xqH7waou1KApxAdKq__FTv80g?key=aVk2T0lLLXJURVZYYklnbU0tMjN2d2JSaFVDT2hR" target="_blank" class="gallery-item" aria-hidden="true">
+                        <img src="https://lh3.googleusercontent.com/pw/AP1GczOjQqGi948qkNBlYVV2-HqCHHul4JL5a22t1DMXY1wNmMQqZzD_Pd9cx92s7moTJDjgo569tm0A475ZRlGp0gyq0rmvq_4QygUWLJWwNhqfwOULiOH0krGGODqWEfWiaglOmXO3t8Amx-aifPUXhVP1=w844-h633-s-no-gm?authuser=0" alt="XX Campori AP" class="album-cover">
+                        <div class="album-overlay"></div>
+                        <div style="position: relative; z-index: 2; width: 100%;">
+                            <h4>XX Campori AP - Foi tudo por Jesus</h4>
+                            <p>Registros oficiais do nosso clube no 20º Campori da Associação Paulistana.</p>
+                            <span class="btn-portal" style="margin-top: 1rem; font-size: 0.8rem; padding: 0.4rem 1rem;">VER ÁLBUM ↗</span>
+                        </div>
+                    </a>
+
+                    <a href="https://photos.google.com/share/AF1QipNGHv_y0NW9JFvRgCANmuDbeQbjjDVVVaVYxnB0zF91oDDIir-5TDeO9tgd6MjEuA?key=TUc5MkJ0T0lGZ3lwdE9LWGppbkU4ZjJXNm9kUjBR" target="_blank" class="gallery-item" aria-hidden="true">
+                        <img src="https://lh3.googleusercontent.com/pw/AP1GczOo5jypqFB1jUmZ__HdV9ShJOIgABWW98yUhdFddDANt6-OFHFe55mMuwcppvivlp9EddiuxbZx62oC6gZ_ai0Kh1qyXb1WZ-CD0HVtKZkTP_l4XdaliYZYDEkomeLwXG-fcfJxnM9vS5Su3yN5Vds2IA=w844-h633-s-no-gm?authuser=0" alt="Acampamento Silvestre 2025" class="album-cover">
+                        <div class="album-overlay"></div>
+                        <div style="position: relative; z-index: 2; width: 100%;">
+                            <h4>Acampamento Silvestre 2025</h4>
+                            <p>Destaques e registros marcantes das nossas aventuras, pioneirias e especialidades de campo.</p>
+                            <span class="btn-portal" style="margin-top: 1rem; font-size: 0.8rem; padding: 0.4rem 1rem;">VER ÁLBUM ↗</span>
+                        </div>
+                    </a>
+
+                    <a href="https://photos.google.com/share/AF1QipOkZry5iOa1I7zSoMi9ZW9RHCkqyzUM5EQxrumkWT4ax-CoRYO9NXYZsSq5-fHO5A?key=SktFaW1wNWpXMUdlWEhabG5yZzBfMHhubldsNDRR" target="_blank" class="gallery-item" aria-hidden="true">
+                        <img src="https://lh3.googleusercontent.com/pw/AP1GczN-55UNsqO8cfSRdVxt18kEfWrI5d2Qr42m7MYhRXCwzGAc9-3I-KD7aTTVy8mLMkOLkKjkM0RUtqT8_aqGuXv7Ahhvmc9JI_KzABUNt7ifzTOCwHFVA1-QiVpxWe3lFq5aSfcdc_PPphV3mEBL8fqw=w836-h627-s-no-gm?authuser=0" alt="Dia Mundial do Desbravador 2025" class="album-cover">
+                        <div class="album-overlay"></div>
+                        <div style="position: relative; z-index: 2; width: 100%;">
+                            <h4>Dia Mundial do Desbravador 2025</h4>
+                            <p>Celebração, investiduras, desfile e comemoração especial do Dia Mundial dos Desbravadores.</p>
+                            <span class="btn-portal" style="margin-top: 1rem; font-size: 0.8rem; padding: 0.4rem 1rem;">VER ÁLBUM ↗</span>
+                        </div>
+                    </a>
+
+                    <a href="https://photos.google.com/share/AF1QipMKZ31sECjhuOUi07cPZRL1f2fCz68iEzM69Uu4YEwNhyRmoeG7-26587gAxSg1TA?key=V0cwVW9aNzZoYnRJcXAwUGl5WllWaGxqdHRHMmJn" target="_blank" class="gallery-item" aria-hidden="true">
+                        <img src="https://lh3.googleusercontent.com/pw/AP1GczPNry6E5lRQKbmSVSr1LhC7gZZFy9d2aSWUeerjFl7_UbFGHXDcae0ByXYK89UR4YBudMyWemTAeV3tRkRBKNwpawydtfRd2a72d42LZUVreBkLm7GPhX5YT6R1IttjXdduFKEKZuqfUyVJBQNUpeF4=w844-h633-s-no-gm?authuser=0" alt="Campori UCB 2023" class="album-cover">
+                        <div class="album-overlay"></div>
+                        <div style="position: relative; z-index: 2; width: 100%;">
+                            <h4>Campori UCB 2023 - Fé invencível</h4>
+                            <p>Relembre os momentos inesquecíveis, os desafios e as vitórias no Campori da União Central Brasileira.</p>
+                            <span class="btn-portal" style="margin-top: 1rem; font-size: 0.8rem; padding: 0.4rem 1rem;">VER ÁLBUM ↗</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <button class="carousel-btn next-btn" aria-label="Próximo Álbum" id="next-album">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                    <path d="M320 576C461.4 576 576 461.4 576 320C576 178.6 461.4 64 320 64C178.6 64 64 178.6 64 320C64 461.4 178.6 576 320 576zM361 417C351.6 426.4 336.4 426.4 327.1 417C317.8 407.6 317.7 392.4 327.1 383.1L366.1 344.1L216 344.1C202.7 344.1 192 333.4 192 320.1C192 306.8 202.7 296.1 216 296.1L366.1 296.1L327.1 257.1C317.7 247.7 317.7 232.5 327.1 223.2C336.5 213.9 351.7 213.8 361 223.2L441 303.2C450.4 312.6 450.4 327.8 441 337.1L361 417.1z"/>
+                </svg>
+            </button>
+        </div>
+    </section>
+
+    <!-- Seção de Contato -->
+    <section id="contato" class="section-padding" style="background: rgba(17, 17, 17, 0.6); border-top: 1px solid rgba(255,255,255,0.05);">
+        <div class="section-header">
+            <h2>Entre em Contato</h2>
+            <p>Ficou com alguma dúvida ou deseja fazer parte da nossa Tribo? Preencha os campos abaixo e entraremos em contato.</p>
+        </div>
+
+        <div class="contact-container">
+            <form id="contact-form" class="contact-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="contact-name">Nome Completo</label>
+                        <input type="text" id="contact-name" name="name" placeholder="Digite seu nome completo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-email">E-mail</label>
+                        <input type="email" id="contact-email" name="email" placeholder="seu-email@dominio.com" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="contact-phone">Telefone / WhatsApp</label>
+                        <input type="tel" id="contact-phone" name="phone" placeholder="(00) 00000-0000" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-address">Endereço Residencial</label>
+                        <input type="text" id="contact-address" name="address" placeholder="Rua, Número, Bairro, Cidade" required>
+                    </div>
+                </div>
+
+                <div class="form-row flex-options">
+                    <div class="form-group choice-group">
+                        <label>Deseja fazer parte do clube?</label>
+                        <div class="radio-options">
+                            <label class="radio-label">
+                                <input type="radio" id="wants-join-yes" name="wantsToJoin" value="true" required>
+                                <span>Sim</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" id="wants-join-no" name="wantsToJoin" value="false" checked required>
+                                <span>Não</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group choice-group">
+                        <label>É Adventista do Sétimo Dia?</label>
+                        <div class="radio-options">
+                            <label class="radio-label">
+                                <input type="radio" id="adventist-yes" name="isAdventist" value="true" required>
+                                <span>Sim</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" id="adventist-no" name="isAdventist" value="false" checked required>
+                                <span>Não</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="contact-message">Mensagem</label>
+                    <textarea id="contact-message" name="message" rows="5" placeholder="Escreva sua mensagem aqui..." required></textarea>
+                </div>
+
+                <div id="contact-feedback" class="contact-feedback" style="display: none;"></div>
+
+                <div class="form-submit">
+                    <button type="submit" class="btn-portal" id="btn-submit-contact" style="padding: 1rem 2.5rem; font-size: 1rem; width: 100%; justify-content: center; border: none; cursor: pointer;">
+                        <span id="submit-text">Enviar Mensagem</span>
+                        <div class="spinner" id="submit-spinner" style="display: none;"></div>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Rodapé Institucional -->
+
+    <footer class="club-footer">
+        <img src="logo.png" alt="Tribo de Davi" class="footer-logo">
+        <p class="footer-text">Clube de Desbravadores Tribo de Davi. Formando cidadãos para servir à comunidade e a Deus com lealdade e dedicação.</p>
+        <div class="footer-bottom">
+            &copy; 2026 Clube Tribo de Davi. Todos os direitos reservados.
+        </div>
+    </footer>
+
+    <!-- Botão Back to Top -->
+    <button id="back-to-top" title="Voltar ao topo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M8 12a.5.5 0 0 0 .5-.5V5.707l2.146 2.147a.5.5 0 0 0 .708-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 .708.708L7.5 5.707V11.5a.5.5 0 0 0 .5.5z"/>
+        </svg>
+    </button>
+
+    <script>
+        // Mostrar botão Back to Top ao rolar a página
+        const backToTopBtn = document.getElementById('back-to-top');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                backToTopBtn.style.display = 'flex';
+                backToTopBtn.style.alignItems = 'center';
+                backToTopBtn.style.justifyContent = 'center';
+            } else {
+                backToTopBtn.style.display = 'none';
+            }
+        });
+
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Função genérica para Carrossel
+        function initCarousel(trackId, prevBtnId, nextBtnId, itemSelector) {
+            const trackContainer = document.getElementById(trackId);
+            const track = trackContainer ? trackContainer.querySelector('.carousel-track') : null;
+            const prevBtn = document.getElementById(prevBtnId);
+            const nextBtn = document.getElementById(nextBtnId);
+
+            if (trackContainer && track && prevBtn && nextBtn) {
+                let isAnimating = false;
+
+                const getItemsToShift = () => {
+                    if (window.innerWidth <= 768) return 1;
+                    if (window.innerWidth <= 992) return 2;
+                    return 3;
+                };
+
+                const getShiftAmount = (n) => {
+                    const firstItem = track.querySelector(itemSelector);
+                    if (!firstItem) return 300;
+                    const gap = parseFloat(window.getComputedStyle(track).gap) || 32;
+                    return n * (firstItem.offsetWidth + gap);
+                };
+
+                nextBtn.addEventListener('click', () => {
+                    if (isAnimating) return;
+                    isAnimating = true;
+
+                    const n = getItemsToShift();
+                    const shiftAmount = getShiftAmount(n);
+
+                    track.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+                    track.style.transform = `translateX(-${shiftAmount}px)`;
+
+                    setTimeout(() => {
+                        track.style.transition = 'none';
+                        track.style.transform = 'translateX(0)';
+                        for (let i = 0; i < n; i++) {
+                            const firstChild = track.querySelector(itemSelector);
+                            if (firstChild) track.appendChild(firstChild);
+                        }
+                        isAnimating = false;
+                    }, 500);
+                });
+
+                prevBtn.addEventListener('click', () => {
+                    if (isAnimating) return;
+                    isAnimating = true;
+
+                    const n = getItemsToShift();
+                    const shiftAmount = getShiftAmount(n);
+
+                    track.style.transition = 'none';
+                    for (let i = 0; i < n; i++) {
+                        const lastChild = track.querySelector(`${itemSelector}:last-child`);
+                        if (lastChild) track.prepend(lastChild);
+                    }
+                    track.style.transform = `translateX(-${shiftAmount}px)`;
+
+                    track.getBoundingClientRect();
+
+                    requestAnimationFrame(() => {
+                        track.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+                        track.style.transform = 'translateX(0)';
+
+                        setTimeout(() => {
+                            isAnimating = false;
+                        }, 500);
+                    });
+                });
+
+                let startX = 0;
+                trackContainer.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                }, { passive: true });
+
+                trackContainer.addEventListener('touchend', (e) => {
+                    const diffX = startX - e.changedTouches[0].clientX;
+                    if (diffX > 50) nextBtn.click();
+                    else if (diffX < -50) prevBtn.click();
+                }, { passive: true });
+            }
+        }
+
+        initCarousel('album-track', 'prev-album', 'next-album', '.gallery-item');
+        
+        // Carrossel de Liderança (Scroll Nativo s/ Loop Infinito)
+        const leaderTrack = document.getElementById('leader-track');
+        const prevLeader = document.getElementById('prev-leader');
+        const nextLeader = document.getElementById('next-leader');
+
+        if (leaderTrack && prevLeader && nextLeader) {
+            nextLeader.addEventListener('click', () => {
+                const itemWidth = leaderTrack.querySelector('.leader-card').offsetWidth;
+                const gap = parseFloat(window.getComputedStyle(leaderTrack.querySelector('.carousel-track')).gap) || 32;
+                
+                if (Math.ceil(leaderTrack.scrollLeft + leaderTrack.clientWidth) >= leaderTrack.scrollWidth) {
+                    leaderTrack.scrollTo({ left: 0, behavior: 'smooth' });
+                } else {
+                    leaderTrack.scrollBy({ left: itemWidth + gap, behavior: 'smooth' });
+                }
+            });
+            prevLeader.addEventListener('click', () => {
+                const itemWidth = leaderTrack.querySelector('.leader-card').offsetWidth;
+                const gap = parseFloat(window.getComputedStyle(leaderTrack.querySelector('.carousel-track')).gap) || 32;
+                
+                if (leaderTrack.scrollLeft <= 0) {
+                    leaderTrack.scrollTo({ left: leaderTrack.scrollWidth, behavior: 'smooth' });
+                } else {
+                    leaderTrack.scrollBy({ left: -(itemWidth + gap), behavior: 'smooth' });
+                }
+            });
+        }
+
+        // Inicialização do Calendário Anual Dinâmico
+        const initCalendar = async () => {
+            const calendarGrid = document.getElementById('calendar-grid');
+            if (!calendarGrid) return;
+
+            const months = [
+                "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+            ];
+
+            calendarGrid.innerHTML = months.map((month, index) => `
+                <div class="month-card" id="month-${index}">
+                    <div class="month-header">
+                        <h3>${month}</h3>
+                    </div>
+                    <div class="month-body" id="events-${index}">
+                        <div class="empty-month">Nenhum evento agendado</div>
+                    </div>
+                </div>
+            `).join('');
+
+            try {
+                const response = await fetch('/api/public/events');
+                if (!response.ok) throw new Error('Falha ao buscar eventos');
+                const events = await response.json();
+
+                const eventsByMonth = {};
+                months.forEach((_, i) => eventsByMonth[i] = []);
+
+                events.forEach(event => {
+                    if (!event.date) return;
+                    const parts = event.date.split('T')[0].split('-');
+                    if (parts.length === 3) {
+                        const monthIndex = parseInt(parts[1], 10) - 1;
+                        const day = parseInt(parts[2], 10);
+                        if (eventsByMonth[monthIndex]) {
+                            eventsByMonth[monthIndex].push({ ...event, day });
+                        }
+                    }
+                });
+
+                months.forEach((_, index) => {
+                    const monthEvents = eventsByMonth[index];
+                    const bodyContainer = document.getElementById(`events-${index}`);
+
+                    if (monthEvents.length > 0) {
+                        monthEvents.sort((a, b) => a.day - b.day);
+
+                        bodyContainer.innerHTML = monthEvents.map(ev => `
+                            <div class="event-item" title="${ev.description || ev.name}">
+                                <div class="event-date-badge">${ev.day}</div>
+                                <div class="event-details">
+                                    <h4>${ev.name}</h4>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                });
+            } catch (err) {
+                console.error('[CALENDAR] Erro ao carregar calendário:', err);
+            }
+        };
+
+        initCalendar();
+
+        // Lógica de Envio do Formulário de Contato
+        const contactForm = document.getElementById('contact-form');
+        const submitBtn = document.getElementById('btn-submit-contact');
+        const submitText = document.getElementById('submit-text');
+        const submitSpinner = document.getElementById('submit-spinner');
+        const feedbackDiv = document.getElementById('contact-feedback');
+
+        if (contactForm) {
+            contactForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                // Estado de carregamento
+                submitBtn.disabled = true;
+                submitText.textContent = 'Enviando...';
+                submitSpinner.style.display = 'block';
+                feedbackDiv.style.display = 'none';
+                feedbackDiv.className = 'contact-feedback';
+
+                // Captura os dados do formulário
+                const formData = new FormData(contactForm);
+                const payload = {
+                    name: formData.get('name'),
+                    email: formData.get('email'),
+                    phone: formData.get('phone'),
+                    address: formData.get('address'),
+                    wantsToJoin: formData.get('wantsToJoin') === 'true',
+                    isAdventist: formData.get('isAdventist') === 'true',
+                    message: formData.get('message')
+                };
+
+                try {
+                    const response = await fetch('/api/contact', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const resData = await response.json();
+
+                    if (response.ok && resData.success) {
+                        feedbackDiv.textContent = resData.message || 'Mensagem enviada com sucesso!';
+                        feedbackDiv.classList.add('success');
+                        feedbackDiv.style.display = 'block';
+                        contactForm.reset();
+                    } else {
+                        throw new Error(resData.error || 'Ocorreu um erro ao enviar sua mensagem.');
+                    }
+                } catch (error) {
+                    console.error('[CONTACT] Erro no envio:', error);
+                    feedbackDiv.textContent = error.message || 'Erro de conexão com o servidor.';
+                    feedbackDiv.classList.add('error');
+                    feedbackDiv.style.display = 'block';
+                } finally {
+                    submitBtn.disabled = false;
+                    submitText.textContent = 'Enviar Mensagem';
+                    submitSpinner.style.display = 'none';
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>

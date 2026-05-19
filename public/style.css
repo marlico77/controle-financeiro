@@ -504,7 +504,7 @@ body {
 .input-group input:focus {
     outline: none;
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 3px var(--accent-glow);
+    box-shadow: none;
 }
 
 .password-wrapper {
@@ -556,7 +556,7 @@ body {
 .btn-primary:hover {
     background: #ff5252;
     transform: translateY(-1px);
-    box-shadow: 0 4px 15px var(--accent-glow);
+    box-shadow: none;
 }
 
 .btn-secondary {
@@ -905,12 +905,12 @@ td {
 
 .status-dot.paid {
     background: #4caf50; /* Green for approved */
-    box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+    box-shadow: none;
 }
 
 .status-dot.pending {
     background: #ffa500; /* Orange for pending */
-    box-shadow: 0 0 8px rgba(255, 165, 0, 0.4);
+    box-shadow: none;
 }
 
 /* Table Footer & Totals */

@@ -12,6 +12,7 @@ const UAParser = require('ua-parser-js'); // Analisador de User-Agent (detecta n
 const webPush = require('web-push'); // Biblioteca para envio de notificações push
 const cron = require('node-cron'); // Agendador de tarefas (não usado explicitamente mas carregado)
 const { createClient } = require('@supabase/supabase-js'); // Cliente para integração com Supabase Storage
+const nodemailer = require('nodemailer');
 
 // Inicializa o cliente do Supabase para armazenamento de arquivos em nuvem
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
@@ -62,7 +63,7 @@ const JWT_SECRET = SECRET || 'dev-secret-only';
 // Configurações de Middleware do Express
 app.use(cors()); // Habilita CORS
 app.use(express.json()); // Habilita parsing de JSON no corpo das requisições
-app.use(express.static('public')); // Serve os arquivos estáticos da pasta 'public' (frontend)
+app.use(express.static('public', { index: 'clube.html' })); // Serve os arquivos estáticos da pasta 'public' (frontend), tendo clube.html como página inicial padrão
 
 // --- Configuração de Web Push (Notificações Push) ---
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BPdV8b0gIcNWcgEfsVoyNMXrfBa-MFC4rMeqhDKC2PbN5O1Erq6aCo-E_4ev6SCgsalWP5WqpeZVcK95WV_GIhQ';
@@ -74,9 +75,188 @@ webPush.setVapidDetails(
     VAPID_PRIVATE_KEY
 );
 
-// Rota raiz: serve o index.html principal
+// Rota raiz: serve o clube.html principal (Página Institucional do Clube)
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'clube.html'));
+});
+
+// --- Configuração de E-mail (Resend) ---
+const sendResendEmail = async ({ to, subject, html }) => {
+    const apiKey = process.env.RESEND_API_KEY;
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'contato@tribodedavi.net.br';
+
+    if (!apiKey) {
+        console.log(`[RESEND SIMULATION] To: ${to} | Subject: ${subject}`);
+        console.log(html);
+        return { success: true, simulated: true };
+    }
+
+    try {
+        const response = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                from: fromEmail,
+                to: Array.isArray(to) ? to : [to],
+                subject: subject,
+                html: html
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || `HTTP ${response.status}`);
+        }
+        console.log(`[RESEND] E-mail enviado com sucesso: ${data.id}`);
+        return { success: true, id: data.id };
+    } catch (err) {
+        console.error('[RESEND] Erro ao enviar e-mail:', err);
+        return { success: false, error: err.message };
+    }
+};
+
+// Rota pública de envio de contato
+app.post('/api/contact', async (req, res) => {
+    const { name, email, address, wantsToJoin, isAdventist, phone, message } = req.body || {};
+
+    if (!name || !email || !address || wantsToJoin === undefined || isAdventist === undefined || !phone || !message) {
+        return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
+    }
+
+    try {
+        // 1. Salva a mensagem no banco de dados
+        await db.query(`
+            INSERT INTO contact_messages (name, email, address, wants_to_join, is_adventist, phone, message)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [name, email, address, wantsToJoin, isAdventist, phone, message]);
+
+        console.log(`[CONTACT] Nova mensagem de ${name} salva no banco.`);
+
+        // 2. Envia E-mail 1: Confirmação para o Visitante
+        await sendResendEmail({
+            to: email,
+            subject: 'Recebemos sua mensagem! - Tribo de Davi',
+            html: `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contato Recebido</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f4f5; color: #333333;">
+    <div style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.05);">
+        <div style="background-color: #111111; padding: 30px; text-align: center; border-bottom: 4px solid #e50914;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 1px;">TRIBO DE DAVI</h1>
+        </div>
+        <div style="padding: 40px 30px;">
+            <h2 style="color: #111111; margin-top: 0; font-size: 20px;">Olá, ${name}!</h2>
+            <p style="font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 20px;">
+                Recebemos sua mensagem enviada através do site oficial do <strong>Clube Tribo de Davi</strong>.
+            </p>
+            <p style="font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 30px;">
+                Agradecemos o seu contato! Em breve, um membro da nossa liderança entrará em contato com você pelo telefone informado (${phone}) ou através deste e-mail.
+            </p>
+            <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #eeeeee;">
+                <p style="margin: 0; font-size: 14px; color: #777777; font-style: italic;">"Ninguém tem maior amor do que aquele que dá a sua vida pelos seus amigos."</p>
+            </div>
+        </div>
+        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #eeeeee;">
+            <p style="font-size: 12px; color: #888888; margin: 0; line-height: 1.5;">
+                Esta é uma mensagem automática gerada pelo sistema do Clube Tribo de Davi.<br>
+                Por favor, não responda a este e-mail.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+            `
+        });
+
+        // 3. Envia E-mail 2: Notificação para a Liderança (Marlon)
+        await sendResendEmail({
+            to: 'marlonssoficial@gmail.com',
+            subject: `[Tribo de Davi] Novo Contato: ${name}`,
+            html: `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novo Contato Recebido</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f4f5; color: #333333;">
+    <div style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.05);">
+        <div style="background-color: #e50914; padding: 30px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 600;">Novo Contato Recebido</h1>
+        </div>
+        <div style="padding: 40px 30px;">
+            <p style="font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 25px;">
+                Você recebeu uma nova mensagem através do formulário de contato do site:
+            </p>
+            
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 15px;">
+                <tr>
+                    <td style="padding: 12px 15px; font-weight: 600; color: #111111; background-color: #f9fafb; border-bottom: 1px solid #eeeeee; width: 40%; border-radius: 6px 0 0 0;">Nome Completo:</td>
+                    <td style="padding: 12px 15px; color: #555555; background-color: #ffffff; border-bottom: 1px solid #eeeeee; border-radius: 0 6px 0 0;">${name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 15px; font-weight: 600; color: #111111; background-color: #f9fafb; border-bottom: 1px solid #eeeeee;">E-mail:</td>
+                    <td style="padding: 12px 15px; color: #0066cc; background-color: #ffffff; border-bottom: 1px solid #eeeeee;">
+                        <a href="mailto:${email}" style="color: #0066cc; text-decoration: none;">${email}</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 15px; font-weight: 600; color: #111111; background-color: #f9fafb; border-bottom: 1px solid #eeeeee;">Telefone:</td>
+                    <td style="padding: 12px 15px; color: #555555; background-color: #ffffff; border-bottom: 1px solid #eeeeee;">${phone}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 15px; font-weight: 600; color: #111111; background-color: #f9fafb; border-bottom: 1px solid #eeeeee;">Endereço:</td>
+                    <td style="padding: 12px 15px; color: #555555; background-color: #ffffff; border-bottom: 1px solid #eeeeee;">${address}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 15px; font-weight: 600; color: #111111; background-color: #f9fafb; border-bottom: 1px solid #eeeeee;">Deseja fazer parte?</td>
+                    <td style="padding: 12px 15px; color: #555555; background-color: #ffffff; border-bottom: 1px solid #eeeeee;">
+                        <span style="display: inline-block; padding: 3px 8px; background-color: ${wantsToJoin ? '#e6f4ea' : '#fce8e6'}; color: ${wantsToJoin ? '#137333' : '#c5221f'}; border-radius: 12px; font-size: 13px; font-weight: 600;">
+                            ${wantsToJoin ? 'Sim' : 'Não'}
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px 15px; font-weight: 600; color: #111111; background-color: #f9fafb; border-bottom: 1px solid #eeeeee; border-radius: 0 0 0 6px;">É Adventista do 7º Dia?</td>
+                    <td style="padding: 12px 15px; color: #555555; background-color: #ffffff; border-bottom: 1px solid #eeeeee; border-radius: 0 0 6px 0;">
+                        <span style="display: inline-block; padding: 3px 8px; background-color: ${isAdventist ? '#e6f4ea' : '#fce8e6'}; color: ${isAdventist ? '#137333' : '#c5221f'}; border-radius: 12px; font-size: 13px; font-weight: 600;">
+                            ${isAdventist ? 'Sim' : 'Não'}
+                        </span>
+                    </td>
+                </tr>
+            </table>
+            
+            <div style="background-color: #f9fafb; border-left: 4px solid #111111; padding: 20px; border-radius: 0 8px 8px 0;">
+                <h4 style="margin: 0 0 10px 0; color: #111111; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Mensagem:</h4>
+                <p style="margin: 0; line-height: 1.6; color: #333333; white-space: pre-wrap; font-size: 15px;">${message}</p>
+            </div>
+        </div>
+        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #eeeeee;">
+            <p style="font-size: 12px; color: #888888; margin: 0; line-height: 1.5;">
+                Esta é uma notificação automática gerada pelo site do Clube Tribo de Davi.<br>
+                Não é possível responder diretamente a este e-mail.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+            `
+        });
+
+        res.json({ success: true, message: 'Mensagem enviada com sucesso!' });
+    } catch (err) {
+        console.error('[CONTACT] Erro ao processar contato:', err);
+        res.status(500).json({ error: 'Erro no servidor ao enviar contato.' });
+    }
 });
 
 // Configuração do Multer: Usa MemoryStorage para processar arquivos em memória antes de salvar
@@ -234,6 +414,32 @@ const initDB = async () => {
                 receipt_mime VARCHAR(50),
                 created_at TIMESTAMP DEFAULT NOW()
             )
+        `);
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS site_calendar_events (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                date DATE NOT NULL,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS contact_messages (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                address VARCHAR(255) NOT NULL,
+                wants_to_join BOOLEAN NOT NULL,
+                is_adventist BOOLEAN NOT NULL,
+                phone VARCHAR(50) NOT NULL,
+                message TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+
+        await db.query(`
+            ALTER TABLE contact_messages 
+            ADD COLUMN IF NOT EXISTS email VARCHAR(255)
         `);
 
         // --- Criação de Índices de Performance ---
@@ -864,6 +1070,53 @@ app.delete('/api/people/:id', authenticateToken, async (req, res) => {
 });
 
 // --- API de Eventos ---
+
+// Rota pública para listar eventos no calendário da página institucional (clube.html)
+app.get('/api/public/events', async (req, res) => {
+    try {
+        const result = await db.query('SELECT id, name, description, date FROM site_calendar_events ORDER BY date ASC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching public events:', err);
+        res.status(500).json({ error: 'Erro ao buscar eventos públicos' });
+    }
+});
+
+// --- API do Calendário do Site (Submenu de Eventos) ---
+
+app.get('/api/site-calendar', authenticateToken, async (req, res) => {
+    try {
+        const result = await db.query('SELECT id, name, description, date FROM site_calendar_events ORDER BY date ASC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao buscar datas do calendário' });
+    }
+});
+
+app.post('/api/site-calendar', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { name, date, description } = req.body || {};
+    if (!name || !date) return res.status(400).json({ error: 'Nome e data são obrigatórios' });
+    try {
+        const result = await db.query('INSERT INTO site_calendar_events (name, date, description) VALUES ($1, $2, $3) RETURNING id', [name, date, description || null]);
+        logAction(req, 'CREATE_SITE_CALENDAR', { id: result.rows[0].id, name, date });
+        res.json({ success: true, id: result.rows[0].id, name, date });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao cadastrar no calendário do site' });
+    }
+});
+
+app.delete('/api/site-calendar/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    try {
+        await db.query('DELETE FROM site_calendar_events WHERE id = $1', [req.params.id]);
+        logAction(req, 'DELETE_SITE_CALENDAR', { id: req.params.id });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Erro ao deletar do calendário do site' });
+    }
+});
 
 // Lista todos os eventos e estatísticas de participação
 app.get('/api/events', authenticateToken, async (req, res) => {

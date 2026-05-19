@@ -1356,8 +1356,14 @@ function switchTab(tabName, force = false) {
     }
 
     const eventsActions = document.getElementById('events-actions');
-    if (eventsActions && state.role === 'admin') {
-        eventsActions.style.display = tabName === 'events' ? 'flex' : 'none';
+    const siteCalendarActions = document.getElementById('site-calendar-actions');
+    if (tabName === 'events') {
+        const isSite = state.activeEventsSubmenu === 'site';
+        if (eventsActions) eventsActions.style.display = (!isSite && state.role === 'admin') ? 'flex' : 'none';
+        if (siteCalendarActions) siteCalendarActions.style.display = (isSite && (state.role === 'admin' || state.role === 'secretário')) ? 'flex' : 'none';
+    } else {
+        if (eventsActions) eventsActions.style.display = 'none';
+        if (siteCalendarActions) siteCalendarActions.style.display = 'none';
     }
 
     // Atualiza o título dinâmico da página no topo
@@ -1376,7 +1382,10 @@ function switchTab(tabName, force = false) {
     // Dispara o carregamento/renderização específico da aba que foi aberta
     if (tabName === 'dashboard') renderDashboard();
     if (tabName === 'people') renderPeople();
-    if (tabName === 'events') fetchEventsData();
+    if (tabName === 'events') {
+        if (state.activeEventsSubmenu === 'site') fetchSiteCalendar();
+        else fetchEventsData();
+    }
     if (tabName === 'outflows') renderOutflows();
     if (tabName === 'sales') fetchSales();
     if (tabName === 'logs') fetchLogs();
@@ -1618,6 +1627,130 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
         renderLogs(); // Re-renderiza a tabela
     };
 });
+
+// --- Lógica do Calendário do Site ---
+async function fetchSiteCalendar() {
+    try {
+        const data = await apiFetch('/api/site-calendar');
+        state.siteCalendar = data;
+        renderSiteCalendar();
+    } catch (err) {
+        console.error('Error fetching site calendar:', err);
+    }
+}
+
+function renderSiteCalendar() {
+    const body = document.getElementById('site-calendar-body');
+    if (!body) return;
+
+    if (!state.siteCalendar || state.siteCalendar.length === 0) {
+        body.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem;">Nenhuma data cadastrada para o site.</td></tr>';
+        return;
+    }
+
+    body.innerHTML = state.siteCalendar.map(item => `
+        <tr class="animate-fade-in">
+            <td><strong>${formatDate(item.date)}</strong></td>
+            <td><strong style="color: var(--accent-color);">${escapeHTML(item.name)}</strong></td>
+            <td>${escapeHTML(item.description || '-')}</td>
+            <td>
+                ${(state.role === 'admin' || state.role === 'secretário') ? `<button class="btn-danger btn-small" onclick="deleteSiteCalendar(${item.id})">Excluir</button>` : '-'}
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function deleteSiteCalendar(id) {
+    if (!await showConfirm('Deseja realmente excluir esta data do calendário do site?', 'Excluir Data')) return;
+    try {
+        await apiFetch(`/api/site-calendar/${id}`, { method: 'DELETE' });
+        showStatus('Data excluída com sucesso!', 'success');
+        fetchSiteCalendar();
+    } catch (err) {
+        showStatus('Erro ao excluir: ' + err.message, 'error');
+    }
+}
+
+// Event Listeners para as Abas e Modal do Calendário do Site
+const initSiteCalendarListeners = () => {
+    const tabInternal = document.getElementById('tab-internal-events');
+    const tabSite = document.getElementById('tab-site-calendar');
+    const internalContainer = document.getElementById('events-internal-container');
+    const siteContainer = document.getElementById('events-site-calendar-container');
+    const eventsActions = document.getElementById('events-actions');
+    const siteActions = document.getElementById('site-calendar-actions');
+
+    if (tabInternal && tabSite) {
+        tabInternal.onclick = () => {
+            state.activeEventsSubmenu = 'internal';
+            tabInternal.className = 'btn-text active';
+            tabInternal.style.color = 'var(--accent-color)';
+            tabInternal.style.borderBottom = '2px solid var(--accent-color)';
+            tabSite.className = 'btn-text';
+            tabSite.style.color = 'var(--text-dim)';
+            tabSite.style.borderBottom = 'none';
+
+            if (internalContainer) internalContainer.style.display = 'block';
+            if (siteContainer) siteContainer.style.display = 'none';
+            if (eventsActions) eventsActions.style.display = state.role === 'admin' ? 'flex' : 'none';
+            if (siteActions) siteActions.style.display = 'none';
+
+            fetchEventsData();
+        };
+
+        tabSite.onclick = () => {
+            state.activeEventsSubmenu = 'site';
+            tabSite.className = 'btn-text active';
+            tabSite.style.color = 'var(--accent-color)';
+            tabSite.style.borderBottom = '2px solid var(--accent-color)';
+            tabInternal.className = 'btn-text';
+            tabInternal.style.color = 'var(--text-dim)';
+            tabInternal.style.borderBottom = 'none';
+
+            if (internalContainer) internalContainer.style.display = 'none';
+            if (siteContainer) siteContainer.style.display = 'block';
+            if (eventsActions) eventsActions.style.display = 'none';
+            if (siteActions) siteActions.style.display = (state.role === 'admin' || state.role === 'secretário') ? 'flex' : 'none';
+
+            fetchSiteCalendar();
+        };
+    }
+
+    const addBtn = document.getElementById('add-site-calendar-btn');
+    const modal = document.getElementById('site-calendar-create-modal');
+    if (addBtn && modal) {
+        addBtn.onclick = () => {
+            document.getElementById('site-calendar-form').reset();
+            modal.style.display = 'flex';
+        };
+    }
+
+    const form = document.getElementById('site-calendar-form');
+    if (form) {
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('sc-name').value;
+            const date = document.getElementById('sc-date').value;
+            const description = document.getElementById('sc-desc').value;
+
+            try {
+                await apiFetch('/api/site-calendar', {
+                    method: 'POST',
+                    body: JSON.stringify({ name, date, description })
+                });
+                showStatus('Data cadastrada no site com sucesso!', 'success');
+                if (modal) modal.style.display = 'none';
+                form.reset();
+                fetchSiteCalendar();
+            } catch (err) {
+                showStatus('Erro ao cadastrar: ' + err.message, 'error');
+            }
+        };
+    }
+};
+
+document.addEventListener('DOMContentLoaded', initSiteCalendarListeners);
+setTimeout(initSiteCalendarListeners, 1000);
 
 // --- Lógica de Eventos ---
 // Busca a lista de eventos cadastrados no sistema
