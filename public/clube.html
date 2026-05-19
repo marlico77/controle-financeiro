@@ -220,7 +220,7 @@
 
         .history-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
             gap: 2rem;
         }
 
@@ -486,7 +486,7 @@
         /* Rodapé Institucional */
         .club-footer {
             background: #0a0a0a;
-            padding: 4rem 3rem 3rem;
+            padding: 4rem 1.5rem 3rem;
             text-align: center;
             border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
@@ -638,20 +638,36 @@
         }
 
         @media (max-width: 768px) {
-            .club-navbar { padding: 1rem 1.5rem; }
-            .hero-title { font-size: 2.5rem; }
+            .club-navbar { 
+                padding: 1.5rem; 
+                flex-direction: column;
+                gap: 1.2rem;
+            }
+            .nav-menu {
+                gap: 1rem;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .hero-title { font-size: 2.2rem; }
             .hero-subtitle { font-size: 1.1rem; }
-            .hero-section { padding: 7rem 1.5rem 3rem; }
+            .hero-section { padding: 10rem 1.5rem 3rem; }
             .section-padding { padding: 4rem 1.5rem; }
             .gallery-container { padding: 4rem 1.5rem; }
             .gallery-container .section-header { margin-bottom: 2.5rem; }
             .section-header h2 { font-size: 2rem; }
-            .gallery-item { flex: 0 0 calc(100% - 1.5rem); padding: 1.5rem 1.2rem 1.2rem; }
-            .leader-card { flex: 0 0 calc(100% - 1.5rem); }
-            .carousel-track { gap: 1.5rem; }
+            .gallery-item { flex: 0 0 85%; padding: 1.5rem 1.2rem 1.2rem; }
+            .leader-card { flex: 0 0 85%; padding: 2rem 1.5rem; }
+            .carousel-track { gap: 1rem; }
             .carousel-btn { width: 40px; height: 40px; }
-            .carousel-btn.prev-btn { left: -15px; }
-            .carousel-btn.next-btn { right: -15px; }
+            .carousel-btn.prev-btn { left: 0px; }
+            .carousel-btn.next-btn { right: 0px; }
+        }
+
+        @media (max-width: 480px) {
+            .hero-title { font-size: 1.8rem; }
+            .nav-link { font-size: 0.9rem; }
+            .btn-portal { padding: 0.5rem 1rem; font-size: 0.8rem; }
+            .gallery-item, .leader-card { flex: 0 0 92%; }
         }
 
         /* Seção de Contato */
