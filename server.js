@@ -12,7 +12,6 @@ const UAParser = require('ua-parser-js'); // Analisador de User-Agent (detecta n
 const webPush = require('web-push'); // Biblioteca para envio de notificações push
 const cron = require('node-cron'); // Agendador de tarefas (não usado explicitamente mas carregado)
 const { createClient } = require('@supabase/supabase-js'); // Cliente para integração com Supabase Storage
-const nodemailer = require('nodemailer');
 
 // Inicializa o cliente do Supabase para armazenamento de arquivos em nuvem
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
@@ -372,7 +371,7 @@ const syncMemberUsers = async () => {
                     'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT (username) DO NOTHING',
                     [baseUsername, defaultHash, 'member', p.id]
                 );
-            } catch (err) {
+            } catch{
                 // Fallback: Se colidir username, anexa o ID da pessoa para garantir unicidade
                 await db.query(
                     'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT DO NOTHING',
@@ -581,7 +580,7 @@ app.get('/api/auth/status', authenticateToken, async (req, res) => {
             name: user.name || user.username,
             personId: user.person_id
         });
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao verificar status' });
     }
 });
@@ -675,7 +674,7 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20', [req.user.id]);
         res.json(result.rows);
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao buscar notificações' });
     }
 });
@@ -685,7 +684,7 @@ app.patch('/api/notifications/read-all', authenticateToken, async (req, res) => 
     try {
         await db.query('UPDATE notifications SET is_read = TRUE WHERE user_id = $1', [req.user.id]);
         res.json({ success: true });
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao atualizar notificações' });
     }
 });
@@ -710,7 +709,7 @@ app.get('/api/people', authenticateToken, async (req, res) => {
     if (!req.user.personId) return res.json([]);
     const result = await db.query('SELECT * FROM people WHERE id = $1', [req.user.personId]);
     res.json(result.rows);
-  } catch (err) {
+  } catch{
     res.status(500).json({ error: 'Erro ao buscar dados' });
   }
 });
@@ -719,7 +718,7 @@ app.get('/api/people', authenticateToken, async (req, res) => {
 app.post('/api/people', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
   
-  let { name, responsible, birth_date, cpf, unit, username, password, role } = req.body || {};
+  let { name, responsible, birth_date, cpf, unit, username, role } = req.body || {};
   // Valida se o nome tem pelo menos duas partes (Nome e Sobrenome)
   if (!name || name.trim().split(/\s+/).length < 2) {
       return res.status(400).json({ error: 'O nome deve conter pelo menos Nome e Sobrenome.' });
@@ -856,7 +855,7 @@ app.get('/api/payments', authenticateToken, async (req, res) => {
     if (!req.user.personId) return res.json([]);
     const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason FROM payments WHERE person_id = $1 AND year = $2', [req.user.personId, targetYear]);
     res.json(result.rows);
-  } catch (err) {
+  } catch{
     res.status(500).json({ error: 'Erro ao buscar pagamentos' });
   }
 });
@@ -868,7 +867,7 @@ app.get('/api/payments/detail/:id', authenticateToken, async (req, res) => {
         const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason FROM payments WHERE id = $1', [req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Pagamento não encontrado' });
         res.json(result.rows[0]);
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao buscar detalhes' });
     }
 });
@@ -984,7 +983,7 @@ app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
 
         res.json({ success: true });
         logAction(req, 'APPROVE_PAYMENT', { id: req.params.id, person_id: payment.person_id, month: payment.month });
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao aprovar pagamento' });
     }
 });
@@ -1009,7 +1008,7 @@ app.post('/api/payments/:id/reject', authenticateToken, async (req, res) => {
         }
 
         res.json({ success: true });
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao rejeitar pagamento' });
     }
 });
@@ -1020,7 +1019,7 @@ app.delete('/api/payments/:id', authenticateToken, async (req, res) => {
   try {
     await db.query('DELETE FROM payments WHERE id = $1', [req.params.id]);
     res.json({ success: true });
-  } catch (err) {
+  } catch{
     res.status(500).json({ error: 'Erro ao deletar pagamento' });
   }
 });
@@ -1107,7 +1106,7 @@ app.delete('/api/people/:id', authenticateToken, async (req, res) => {
     await db.query('DELETE FROM people WHERE id = $1', [req.params.id]);
     res.json({ success: true });
     logAction(req, 'DELETE_PERSON', { id: req.params.id });
-  } catch (err) {
+  } catch{
     res.status(500).json({ error: 'Erro ao deletar membro' });
   }
 });
@@ -1131,7 +1130,7 @@ app.get('/api/site-calendar', authenticateToken, async (req, res) => {
     try {
         const result = await db.query('SELECT id, name, description, date FROM site_calendar_events ORDER BY date ASC');
         res.json(result.rows);
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao buscar datas do calendário' });
     }
 });
@@ -1156,7 +1155,7 @@ app.delete('/api/site-calendar/:id', authenticateToken, async (req, res) => {
         await db.query('DELETE FROM site_calendar_events WHERE id = $1', [req.params.id]);
         logAction(req, 'DELETE_SITE_CALENDAR', { id: req.params.id });
         res.json({ success: true });
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao deletar do calendário do site' });
     }
 });
@@ -1253,7 +1252,7 @@ app.post('/api/events', authenticateToken, async (req, res) => {
         }
         await db.query('COMMIT');
         res.json({ id: eventId, name });
-    } catch (err) {
+    } catch{
         await db.query('ROLLBACK');
         res.status(500).json({ error: 'Erro ao criar evento' });
     }
@@ -1338,7 +1337,7 @@ app.delete('/api/events/:id', authenticateToken, async (req, res) => {
     try {
         await db.query('DELETE FROM events WHERE id = $1', [req.params.id]);
         res.json({ success: true });
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao deletar evento' });
     }
 });
@@ -1373,7 +1372,7 @@ app.get('/api/event-payments', authenticateToken, async (req, res) => {
 
         const result = await db.query(sql, params);
         res.json(result.rows);
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao buscar pagamentos de eventos' });
     }
 });
@@ -1385,7 +1384,7 @@ app.get('/api/event-payments/detail/:id', authenticateToken, async (req, res) =>
         const result = await db.query('SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, rejection_reason FROM event_payments WHERE id = $1', [req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Pagamento de evento não encontrado' });
         res.json(result.rows[0]);
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao buscar detalhes' });
     }
 });
@@ -1502,7 +1501,7 @@ app.get('/api/sales', authenticateToken, async (req, res) => {
         sql += ' ORDER BY date DESC';
         const result = await db.query(sql, params);
         res.json(result.rows);
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao buscar vendas' });
     }
 });
@@ -1557,7 +1556,7 @@ app.delete('/api/sales/:id', authenticateToken, async (req, res) => {
         await db.query('DELETE FROM sales WHERE id = $1', [req.params.id]);
         res.json({ success: true });
         logAction(req, 'DELETE_SALE', { id: req.params.id });
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao deletar venda' });
     }
 });
@@ -1582,7 +1581,7 @@ app.post('/api/event-payments/:id/approve', authenticateToken, async (req, res) 
             await createNotification(userForMember.id, 'Pagamento de Evento Aprovado', `Seu pagamento para o evento ${payment.event_name} foi aprovado!`, 'success');
         }
         res.json({ success: true });
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao aprovar' });
     }
 });
@@ -1605,7 +1604,7 @@ app.post('/api/event-payments/:id/reject', authenticateToken, async (req, res) =
             await createNotification(userForMember.id, 'Pagamento de Evento Rejeitado', `Seu pagamento para o evento ${payment.event_name} foi rejeitado. Motivo: ${reason}`, 'error');
         }
         res.json({ success: true });
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao rejeitar' });
     }
 });
@@ -1616,7 +1615,7 @@ app.delete('/api/event-payments/:id', authenticateToken, async (req, res) => {
     try {
         await db.query('DELETE FROM event_payments WHERE id = $1', [req.params.id]);
         res.json({ success: true });
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao deletar' });
     }
 });
@@ -1629,7 +1628,7 @@ app.get('/api/outflows', authenticateToken, async (req, res) => {
     try {
         const result = await db.query('SELECT id, amount, category, date, description, receipt_path, receipt_mime, created_at FROM outflows ORDER BY date DESC');
         res.json(result.rows);
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao buscar saídas' });
     }
 });
@@ -1685,7 +1684,7 @@ app.delete('/api/outflows/:id', authenticateToken, async (req, res) => {
         await db.query('DELETE FROM outflows WHERE id = $1', [req.params.id]);
         logAction(req, 'DELETE_OUTFLOW', { id: req.params.id });
         res.json({ success: true });
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao deletar saída' });
     }
 });
@@ -1705,7 +1704,7 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
 
     try {
         // 1. Tenta baixar do Supabase Storage (Nuvem) primeiro
-        const { data, error } = await supabase.storage
+        const { data } = await supabase.storage
             .from('receipts')
             .download(filename);
 
@@ -1761,7 +1760,7 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
         // Envia o binário com o MIME-type correto (JPG, PDF, etc)
         res.set('Content-Type', payment.receipt_mime || 'application/octet-stream');
         res.send(payment.receipt_content);
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao processar arquivo' });
     }
 });
@@ -1776,7 +1775,7 @@ app.get('/api/admin/logs', authenticateToken, async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM system_logs ORDER BY created_at DESC LIMIT 200');
         res.json(result.rows);
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao buscar logs' });
     }
 });
@@ -1816,7 +1815,7 @@ app.get('/api/notifications/unread', authenticateToken, async (req, res) => {
             ORDER BY created_at DESC
         `, [req.user.id]);
         res.json(result.rows);
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao buscar notificações' });
     }
 });
@@ -1826,7 +1825,7 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
     try {
         await db.query('UPDATE notifications SET is_read = true WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)', [req.params.id, req.user.id]);
         res.json({ success: true });
-    } catch (err) {
+    } catch{
         res.status(500).json({ error: 'Erro ao marcar como lida' });
     }
 });
@@ -1896,7 +1895,7 @@ app.get('/api/site-albums', async (req, res) => {
 });
 
 app.post('/api/site-albums', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário' && req.user.role !== 'social_midia') return res.sendStatus(403);
     const { title, description, cover_url, album_url } = req.body || {};
     
     if (!title || !cover_url) {
@@ -1917,7 +1916,7 @@ app.post('/api/site-albums', authenticateToken, async (req, res) => {
 });
 
 app.put('/api/site-albums/:id', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário' && req.user.role !== 'social_midia') return res.sendStatus(403);
     const { id } = req.params;
     const { title, description, cover_url, album_url } = req.body || {};
 
@@ -1940,7 +1939,7 @@ app.put('/api/site-albums/:id', authenticateToken, async (req, res) => {
 });
 
 app.delete('/api/site-albums/:id', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário' && req.user.role !== 'social_midia') return res.sendStatus(403);
     const { id } = req.params;
 
     try {

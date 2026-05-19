@@ -457,7 +457,7 @@ async function generateEventReport() {
             printable.innerHTML = html;
             modal.style.display = 'flex';
         }
-    } catch (err) {
+    } catch{
         showStatus('Erro ao carregar dados do evento.', 'error');
     }
 }
@@ -492,7 +492,7 @@ async function generateAuthDocument(type) {
                     reader.onloadend = () => resolve(reader.result);
                     reader.readAsDataURL(blob);
                 });
-            } catch (e) { return 'logo.png'; } // Fallback caso falhe
+            } catch{ return 'logo.png'; } // Fallback caso falhe
         };
 
         const logoSrc = await getLogoBase64();
@@ -675,7 +675,7 @@ async function apiFetch(url, options = {}) {
     try {
         const text = await res.text();
         data = text ? JSON.parse(text) : {}; // Tenta converter a resposta para objeto JavaScript
-    } catch (e) {
+    } catch{
         console.warn('[API] Resposta não é JSON:', url);
     }
 
@@ -749,8 +749,6 @@ const paymentModal = document.getElementById('payment-modal');       // Modal de
 const personModal = document.getElementById('person-modal');         // Modal de cadastro/edição de membro
 const eventCreateModal = document.getElementById('event-create-modal'); // Modal de criação de evento
 const eventPaymentModal = document.getElementById('event-payment-modal'); // Modal de pagamento de evento
-const reportSelectorModal = document.getElementById('report-selector-modal'); // Seletor de relatórios
-const reportModal = document.getElementById('report-modal');           // Visualização do relatório pronto
 const closeButtons = document.querySelectorAll('.close-modal');       // Botões 'X' para fechar modais
 
 // --- Gerenciador do Formulário de Mensagens/Notificações (Admin) ---
@@ -997,6 +995,7 @@ async function checkAuth() {
             // --- Lógica de Visibilidade de Abas baseada em Nível de Acesso (Roles) ---
             const isAdmin = state.role === 'admin';
             const isSecretary = state.role === 'secretário';
+            const isSocialMedia = state.role === 'social_midia';
             const isMaster = isAdmin && (state.username || '').toUpperCase() === 'ADMINISTRADOR';
 
             // Mapeamento dos elementos de navegação
@@ -1022,10 +1021,12 @@ async function checkAuth() {
                 if (navItems.messages) navItems.messages.style.display = 'none';
                 if (navItems.logs) navItems.logs.style.display = 'none';
 
-                // Secretário tem acesso aos relatórios e autorizações; membro comum não
+                // Secretário tem acesso aos relatórios e autorizações; membro comum e social media não
                 if (navItems.reports) navItems.reports.style.display = isSecretary ? 'flex' : 'none';
                 if (navItems.authorizations) navItems.authorizations.style.display = isSecretary ? 'flex' : 'none';
-                if (navItems.gallery) navItems.gallery.style.display = isSecretary ? 'flex' : 'none';
+                
+                // Secretário e Social Media têm acesso à Galeria; membro comum não
+                if (navItems.gallery) navItems.gallery.style.display = (isSecretary || isSocialMedia) ? 'flex' : 'none';
 
                 // Ajusta os cartões de estatísticas no Dashboard para refletir o painel pessoal (membro/secretário)
                 const cards = document.querySelectorAll('.stat-card');
@@ -1067,8 +1068,14 @@ async function checkAuth() {
                 setStorageItem('activeTab', 'dashboard', !!localStorage.getItem('token'));
             }
 
-            // Bloqueia relatórios, autorizações e galeria para membros comuns
-            if (state.role === 'member' && (state.activeTab === 'reports' || state.activeTab === 'authorizations' || state.activeTab === 'gallery')) {
+            // Bloqueia relatórios e autorizações para quem não é admin nem secretário (ou seja, membro comum e social_midia)
+            if (state.role !== 'admin' && state.role !== 'secretário' && (state.activeTab === 'reports' || state.activeTab === 'authorizations')) {
+                state.activeTab = 'dashboard';
+                setStorageItem('activeTab', 'dashboard', !!localStorage.getItem('token'));
+            }
+
+            // Bloqueia galeria apenas para membros comuns (permitido para admin, secretário, e social_midia)
+            if (state.role === 'member' && state.activeTab === 'gallery') {
                 state.activeTab = 'dashboard';
                 setStorageItem('activeTab', 'dashboard', !!localStorage.getItem('token'));
             }
@@ -1254,7 +1261,7 @@ loginForm.addEventListener('submit', async (e) => {
             // Exibe mensagem de erro (Ex: Usuário ou senha inválidos)
             loginError.textContent = data.error;
         }
-    } catch (err) {
+    } catch{
         loginError.textContent = 'Erro ao conectar ao servidor';
     } finally {
         // Restaura o botão de login
@@ -1675,6 +1682,7 @@ async function deleteSiteCalendar(id) {
         showStatus('Erro ao excluir: ' + err.message, 'error');
     }
 }
+window.deleteSiteCalendar = deleteSiteCalendar;
 
 // Event Listeners para as Abas e Modal do Calendário do Site
 const initSiteCalendarListeners = () => {
@@ -2013,26 +2021,6 @@ window.openEventPaymentModalFromGridIndex = (personId, month, paymentIndex = -1)
     openEventPaymentModal(state.currentEvent.id, state.currentEvent.name, payment);
 };
 
-// Outra variante da função de abertura de modal (para uso direto na grade)
-const openEventPaymentModalFromGrid = (personId, month, payment = null) => {
-    // Restrição de acesso: somente o próprio ou admin
-    if (state.role !== 'admin' && state.role !== 'secretário' && parseInt(personId) !== parseInt(state.personId)) return;
-
-    if (!state.currentEvent) return;
-
-    const epEventId = document.getElementById('ep-event-id');
-    if (epEventId) epEventId.value = state.currentEvent.id;
-    const epEventName = document.getElementById('ep-event-name');
-    if (epEventName) epEventName.textContent = state.currentEvent.name;
-    const epMonth = document.getElementById('ep-month');
-    if (epMonth) epMonth.value = month || "";
-    const epYear = document.getElementById('ep-year');
-    if (epYear) epYear.value = month ? state.eventDetailYear : "";
-
-    state.tempPaymentPersonId = personId;
-
-    openEventPaymentModal(state.currentEvent.id, state.currentEvent.name, payment);
-};
 
 // Renderiza a lista de membros (checklist) para adicionar a um evento
 const renderEventParticipantsChecklist = () => {
@@ -2253,7 +2241,7 @@ const deleteEventPayment = async (id) => {
             // Recarrega os dados do evento para atualizar a grade na tela
             const activeEventId = document.getElementById('ep-event-id').value;
             if (activeEventId) openEventDetail(parseInt(activeEventId), true);
-        } catch (err) {
+        } catch{
             showStatus('Erro ao remover pagamento', 'error');
         }
     }
@@ -2298,6 +2286,7 @@ const deleteEvent = async (id) => {
         } catch (err) { showStatus(err.message, 'error'); }
     }
 };
+window.deleteEvent = deleteEvent;
 
 
 // --- Processamento de Estatísticas do Dashboard ---
@@ -2307,7 +2296,6 @@ const updateDashboardStats = () => {
     let direcaoTotal = 0; // Total arrecadado da unidade Direção
     let desbravadoresTotal = 0; // Total arrecadado da unidade Desbravadores
     let eventosTotal = 0; // Total vindo de eventos
-    let outrosTotal = 0; // Outras arrecadações
 
     const monthlyData = new Array(12).fill(0); // Dados para o gráfico de barras mensal
 
@@ -2327,8 +2315,6 @@ const updateDashboardStats = () => {
             direcaoTotal += amount;
         } else if (unit.includes('DESBRAVADOR')) {
             desbravadoresTotal += amount;
-        } else {
-            outrosTotal += amount;
         }
     });
 
@@ -2348,8 +2334,6 @@ const updateDashboardStats = () => {
                 direcaoTotal += amount;
             } else if (unit.includes('DESBRAVADOR')) {
                 desbravadoresTotal += amount;
-            } else {
-                outrosTotal += amount;
             }
 
             // Soma ao mês correspondente no gráfico mensal (se houver data vinculada)
@@ -2723,7 +2707,7 @@ if (outflowForm) {
                 const data = await res.json();
                 showStatus(data.error, 'error');
             }
-        } catch (err) {
+        } catch{
             showStatus('Erro ao salvar despesa', 'error');
         }
     };
@@ -2892,6 +2876,7 @@ const setSort = (column) => {
     }
     renderPeople(); // Re-renderiza a tabela
 };
+window.setSort = setSort;
 
 // Renderiza a tabela de gerenciamento de membros (aba Membros)
 function renderPeople() {
@@ -3125,7 +3110,7 @@ const deletePayment = async (id) => {
             await apiFetch(`/api/payments/${id}`, { method: 'DELETE' });
             paymentModal.style.display = 'none';
             await loadInitialData();
-        } catch (err) {
+        } catch{
             showStatus('Erro ao excluir pagamento', 'error');
         }
     }
@@ -3318,16 +3303,10 @@ document.getElementById('delete-member-btn').onclick = async () => {
             await apiFetch(`/api/people/${id}`, { method: 'DELETE' });
             personModal.style.display = 'none';
             await loadInitialData();
-        } catch (err) { showStatus('Erro ao excluir membro', 'error'); }
+        } catch{ showStatus('Erro ao excluir membro', 'error'); }
     }
 };
 
-// Configura fechamento de todos os modais pelos botões "X"
-closeButtons.forEach(btn => {
-    btn.onclick = () => {
-        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-    };
-});
 
 
 // --- Manipuladores de Formulários ---
@@ -3433,7 +3412,7 @@ document.getElementById('payment-form').onsubmit = async (e) => {
             const data = await res.json();
             document.getElementById('payment-error').textContent = data.error;
         }
-    } catch (err) {
+    } catch{
         showStatus('Erro ao salvar pagamento', 'error');
     }
 };
@@ -3556,7 +3535,7 @@ document.getElementById('event-payment-form').onsubmit = async (e) => {
             const data = await res.json();
             showStatus(data.error, 'error');
         }
-    } catch (err) { showStatus('Erro ao salvar pagamento', 'error'); }
+    } catch{ showStatus('Erro ao salvar pagamento', 'error'); }
 };
 
 
@@ -4098,7 +4077,8 @@ async function deleteSale(id) {
             showStatus(err.message, 'error');
         }
     }
-};
+}
+window.deleteSale = deleteSale;
 
 // Processa o formulário de nova venda (incluindo upload de comprovante de depósito se houver)
 const salesForm = document.getElementById('sales-form');
@@ -4130,7 +4110,7 @@ if (salesForm) {
                 const data = await res.json();
                 showStatus(data.error, 'error');
             }
-        } catch (err) {
+        } catch{
             showStatus('Erro ao salvar venda', 'error');
         }
     };
@@ -4380,7 +4360,7 @@ async function fetchGallery() {
     try {
         const albums = await apiFetch('/api/site-albums');
         renderGallery(albums);
-    } catch (err) {
+    } catch{
         tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--error-color);">Erro ao carregar álbuns.</td></tr>';
         showStatus('Erro ao carregar galeria.', 'error');
     }

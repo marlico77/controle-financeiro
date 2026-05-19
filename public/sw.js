@@ -68,7 +68,7 @@ self.addEventListener('push', event => {
     try {
       // Tenta extrair os dados da notificação enviada pelo servidor
       data = event.data.json();
-    } catch (e) {
+    } catch{
       // Se não for JSON, trata como texto simples
       data = { title: 'Nova Mensagem', body: event.data.text() };
     }
