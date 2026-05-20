@@ -1548,7 +1548,18 @@
             }
         };
 
-        initCalendar();
+        initCalendar().then(() => {
+            const currentMonth = new Date().getMonth();
+            const currentQuad = Math.floor(currentMonth / 4); // 0 = Jan-Abr, 1 = Mai-Ago, 2 = Set-Dez
+            
+            setTimeout(() => {
+                const calendarTrack = document.getElementById('calendar-track');
+                if (calendarTrack) {
+                    const scrollAmount = calendarTrack.clientWidth;
+                    calendarTrack.scrollTo({ left: currentQuad * scrollAmount, behavior: 'instant' });
+                }
+            }, 300);
+        });
 
         // Controle de Navegação do Carrossel do Calendário (Scroll-based)
         const calendarTrack = document.getElementById('calendar-track');
