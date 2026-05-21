@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestao-fin-v15'; // Nome da versão do cache (deve ser atualizado para forçar refresh de arquivos)
+const CACHE_NAME = 'gestao-fin-v16'; // Nome da versão do cache (deve ser atualizado para forçar refresh de arquivos)
 const STATIC_ASSETS = [ // Lista de arquivos estáticos que serão salvos no cache para funcionamento offline
   '/', // Página inicial
   '/index.html', // Estrutura HTML
