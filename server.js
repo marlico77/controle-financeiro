@@ -135,7 +135,7 @@ app.post('/api/contact', async (req, res) => {
         console.log(`[CONTACT] Nova mensagem de ${name} salva no banco.`);
 
         // 2. Envia E-mail 1: Confirmação para o Visitante
-        await sendResendEmail({
+        const email1Result = await sendResendEmail({
             to: email,
             subject: 'Recebemos sua mensagem! - Tribo de Davi',
             html: `
@@ -146,37 +146,50 @@ app.post('/api/contact', async (req, res) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contato Recebido</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f4f5; color: #333333;">
-    <div style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.05);">
-        <div style="background-color: #111111; padding: 30px; text-align: center; border-bottom: 4px solid #e50914;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 1px;">TRIBO DE DAVI</h1>
-        </div>
-        <div style="padding: 40px 30px;">
-            <h2 style="color: #111111; margin-top: 0; font-size: 20px;">Olá, ${name}!</h2>
-            <p style="font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 20px;">
-                Recebemos sua mensagem enviada através do site oficial do <strong>Clube Tribo de Davi</strong>.
-            </p>
-            <p style="font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 30px;">
-                Agradecemos o seu contato! Em breve, um membro da nossa liderança entrará em contato com você pelo telefone informado (${phone}) ou através deste e-mail.
-            </p>
-            <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #eeeeee;">
-                <p style="margin: 0; font-size: 14px; color: #777777; font-style: italic;">"Ninguém tem maior amor do que aquele que dá a sua vida pelos seus amigos."</p>
-            </div>
-        </div>
-        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #eeeeee;">
-            <p style="font-size: 12px; color: #888888; margin: 0; line-height: 1.5;">
-                Esta é uma mensagem automática gerada pelo sistema do Clube Tribo de Davi.<br>
-                Por favor, não responda a este e-mail.
-            </p>
-        </div>
-    </div>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f7f7f7; color: #333333; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f7f7f7; padding: 40px 10px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" max-width="600" style="max-width: 600px; background-color: #ffffff; border: 1px solid #e8e8e8; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03);" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                        <td style="padding: 40px 40px 10px 40px;" align="center">
+                            <img src="https://www.tribodedavi.net.br/logo.png" alt="Logo" width="120" style="display: block; width: 120px; height: auto; max-width: 100%; border: 0;" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 30px 40px 40px 40px;">
+                            <h2 style="font-size: 16px; font-weight: bold; color: #111111; margin-top: 0; margin-bottom: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Estimado (a) ${name}</h2>
+                            <p style="font-size: 14px; line-height: 1.6; color: #444444; margin-top: 0; margin-bottom: 20px;">
+                                Recebemos sua mensagem enviada através do site oficial do <strong>Clube de Desbravadores Tribo de Davi</strong>.
+                            </p>
+                            <p style="font-size: 14px; line-height: 1.6; color: #444444; margin-top: 0; margin-bottom: 30px;">
+                                Agradecemos o seu contato! Em breve, um membro da nossa liderança entrará em contato com você pelo telefone informado (${phone}) ou através deste e-mail.
+                            </p>
+                            <div style="border-top: 1px solid #eeeeee; padding-top: 20px;">
+                                <p style="font-size: 14px; font-weight: bold; color: #222222; margin: 0 0 5px 0;">Clube de Desbravadores Tribo de Davi</p>
+                                <p style="font-size: 13px; color: #666666; margin: 0;">Igreja Adventista do Sétimo Dia</p>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                <table role="presentation" width="100%" max-width="600" style="max-width: 600px; margin-top: 20px;" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                        <td align="center" style="font-size: 10px; color: #888888; text-transform: uppercase; letter-spacing: 1px;">
+                            POWERED BY <br>
+                            <strong style="color: #666666; font-size: 11px;">SISTEMA TRIBO DE DAVI</strong>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
-            `
+`
         });
 
         // 3. Envia E-mail 2: Notificação para a Liderança (Marlon)
-        await sendResendEmail({
+        const email2Result = await sendResendEmail({
             to: 'marlonssoficial@gmail.com',
             subject: `[Tribo de Davi] Novo Contato: ${name}`,
             html: `
@@ -187,68 +200,84 @@ app.post('/api/contact', async (req, res) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Novo Contato Recebido</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f4f5; color: #333333;">
-    <div style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.05);">
-        <div style="background-color: #e50914; padding: 30px; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 600;">Novo Contato Recebido</h1>
-        </div>
-        <div style="padding: 40px 30px;">
-            <p style="font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 25px;">
-                Você recebeu uma nova mensagem através do formulário de contato do site:
-            </p>
-            
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 15px;">
-                <tr>
-                    <td style="padding: 12px 15px; font-weight: 600; color: #111111; background-color: #f9fafb; border-bottom: 1px solid #eeeeee; width: 40%; border-radius: 6px 0 0 0;">Nome Completo:</td>
-                    <td style="padding: 12px 15px; color: #555555; background-color: #ffffff; border-bottom: 1px solid #eeeeee; border-radius: 0 6px 0 0;">${name}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 12px 15px; font-weight: 600; color: #111111; background-color: #f9fafb; border-bottom: 1px solid #eeeeee;">E-mail:</td>
-                    <td style="padding: 12px 15px; color: #0066cc; background-color: #ffffff; border-bottom: 1px solid #eeeeee;">
-                        <a href="mailto:${email}" style="color: #0066cc; text-decoration: none;">${email}</a>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 12px 15px; font-weight: 600; color: #111111; background-color: #f9fafb; border-bottom: 1px solid #eeeeee;">Telefone:</td>
-                    <td style="padding: 12px 15px; color: #555555; background-color: #ffffff; border-bottom: 1px solid #eeeeee;">${phone}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 12px 15px; font-weight: 600; color: #111111; background-color: #f9fafb; border-bottom: 1px solid #eeeeee;">Endereço:</td>
-                    <td style="padding: 12px 15px; color: #555555; background-color: #ffffff; border-bottom: 1px solid #eeeeee;">${address}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 12px 15px; font-weight: 600; color: #111111; background-color: #f9fafb; border-bottom: 1px solid #eeeeee;">Deseja fazer parte?</td>
-                    <td style="padding: 12px 15px; color: #555555; background-color: #ffffff; border-bottom: 1px solid #eeeeee;">
-                        <span style="display: inline-block; padding: 3px 8px; background-color: ${wantsToJoin ? '#e6f4ea' : '#fce8e6'}; color: ${wantsToJoin ? '#137333' : '#c5221f'}; border-radius: 12px; font-size: 13px; font-weight: 600;">
-                            ${wantsToJoin ? 'Sim' : 'Não'}
-                        </span>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 12px 15px; font-weight: 600; color: #111111; background-color: #f9fafb; border-bottom: 1px solid #eeeeee; border-radius: 0 0 0 6px;">É Adventista do 7º Dia?</td>
-                    <td style="padding: 12px 15px; color: #555555; background-color: #ffffff; border-bottom: 1px solid #eeeeee; border-radius: 0 0 6px 0;">
-                        <span style="display: inline-block; padding: 3px 8px; background-color: ${isAdventist ? '#e6f4ea' : '#fce8e6'}; color: ${isAdventist ? '#137333' : '#c5221f'}; border-radius: 12px; font-size: 13px; font-weight: 600;">
-                            ${isAdventist ? 'Sim' : 'Não'}
-                        </span>
-                    </td>
-                </tr>
-            </table>
-            
-            <div style="background-color: #f9fafb; border-left: 4px solid #111111; padding: 20px; border-radius: 0 8px 8px 0;">
-                <h4 style="margin: 0 0 10px 0; color: #111111; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Mensagem:</h4>
-                <p style="margin: 0; line-height: 1.6; color: #333333; white-space: pre-wrap; font-size: 15px;">${message}</p>
-            </div>
-        </div>
-        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #eeeeee;">
-            <p style="font-size: 12px; color: #888888; margin: 0; line-height: 1.5;">
-                Esta é uma notificação automática gerada pelo site do Clube Tribo de Davi.<br>
-                Não é possível responder diretamente a este e-mail.
-            </p>
-        </div>
-    </div>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f7f7f7; color: #333333; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f7f7f7; padding: 40px 10px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" max-width="600" style="max-width: 600px; background-color: #ffffff; border: 1px solid #e8e8e8; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03);" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                        <td style="padding: 40px 40px 10px 40px;" align="center">
+                            <img src="https://www.tribodedavi.net.br/logo.png" alt="Logo" width="120" style="display: block; width: 120px; height: auto; max-width: 100%; border: 0;" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 30px 40px 40px 40px;">
+                            <h2 style="font-size: 16px; font-weight: bold; color: #111111; margin-top: 0; margin-bottom: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Novo Contato Recebido</h2>
+                            <p style="font-size: 14px; color: #666666; margin-top: 0; margin-bottom: 25px;">
+                                As informações preenchidas pelo visitante no formulário do site foram registradas com sucesso.
+                            </p>
+                            
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 30px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                                <tr>
+                                    <td style="padding: 8px 0; font-size: 14px; color: #333333; border-bottom: 1px solid #f0f0f0;"><strong>Nome Completo</strong></td>
+                                    <td align="right" style="padding: 8px 0; font-size: 14px; color: #666666; border-bottom: 1px solid #f0f0f0;">${name}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; font-size: 14px; color: #333333; border-bottom: 1px solid #f0f0f0;"><strong>E-mail</strong></td>
+                                    <td align="right" style="padding: 8px 0; font-size: 14px; color: #0066cc; border-bottom: 1px solid #f0f0f0;"><a href="mailto:${email}" style="color: #0066cc; text-decoration: none;">${email}</a></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; font-size: 14px; color: #333333; border-bottom: 1px solid #f0f0f0;"><strong>Telefone</strong></td>
+                                    <td align="right" style="padding: 8px 0; font-size: 14px; color: #666666; border-bottom: 1px solid #f0f0f0;">${phone}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; font-size: 14px; color: #333333; border-bottom: 1px solid #f0f0f0;"><strong>Endereço</strong></td>
+                                    <td align="right" style="padding: 8px 0; font-size: 14px; color: #666666; border-bottom: 1px solid #f0f0f0;">${address}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; font-size: 14px; color: #333333; border-bottom: 1px solid #f0f0f0;"><strong>Deseja fazer parte?</strong></td>
+                                    <td align="right" style="padding: 8px 0; font-size: 14px; color: #666666; border-bottom: 1px solid #f0f0f0;">${wantsToJoin ? 'Sim' : 'Não'}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0; font-size: 14px; color: #333333; border-bottom: 1px solid #f0f0f0;"><strong>É Adventista?</strong></td>
+                                    <td align="right" style="padding: 8px 0; font-size: 14px; color: #666666; border-bottom: 1px solid #f0f0f0;">${isAdventist ? 'Sim' : 'Não'}</td>
+                                </tr>
+                            </table>
+                            
+                            <div style="margin-bottom: 30px;">
+                                <h3 style="font-size: 14px; font-weight: bold; color: #111111; margin-top: 0; margin-bottom: 10px;">Mensagem</h3>
+                                <div style="background-color: #fafafa; border: 1px solid #eeeeee; border-radius: 4px; padding: 15px; font-size: 14px; line-height: 1.5; color: #444444; white-space: pre-wrap; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">${message}</div>
+                            </div>
+                            
+                            <div style="border-top: 1px solid #eeeeee; padding-top: 20px;">
+                                <p style="font-size: 14px; font-weight: bold; color: #222222; margin: 0 0 5px 0;">Clube de Desbravadores Tribo de Davi</p>
+                                <p style="font-size: 13px; color: #666666; margin: 0;">Igreja Adventista do Sétimo Dia</p>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                <table role="presentation" width="100%" max-width="600" style="max-width: 600px; margin-top: 20px;" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                        <td align="center" style="font-size: 10px; color: #888888; text-transform: uppercase; letter-spacing: 1px;">
+                            POWERED BY <br>
+                            <strong style="color: #666666; font-size: 11px;">SISTEMA TRIBO DE DAVI</strong>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
-            `
+`
+        });
+
+        // 4. Registra os resultados do envio dos e-mails no log do sistema
+        await logAction(req, 'CONTACT_FORM_SUBMITTED', {
+            name,
+            email,
+            email1: email1Result,
+            email2: email2Result
         });
 
         res.json({ success: true, message: 'Mensagem enviada com sucesso!' });
