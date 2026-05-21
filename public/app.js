@@ -1000,6 +1000,14 @@ async function checkAuth() {
                 return;
             }
 
+            // Verifica Aceite da LGPD
+            if (!status.lgpdAccepted) {
+                const lgpdModal = document.getElementById('lgpd-modal');
+                if (lgpdModal) {
+                    lgpdModal.style.display = 'flex';
+                }
+            }
+
             // Tudo OK: Esconde login/splash e libera o Dashboard principal
             loginSection.style.display = 'none';
             mainSection.style.display = 'flex';
@@ -1344,6 +1352,27 @@ function logout() {
 if (logoutBtn) logoutBtn.onclick = logout;
 const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
 if (mobileLogoutBtn) mobileLogoutBtn.onclick = logout;
+
+// Aceite LGPD
+const acceptLgpdBtn = document.getElementById('accept-lgpd-btn');
+if (acceptLgpdBtn) {
+    acceptLgpdBtn.onclick = async () => {
+        try {
+            acceptLgpdBtn.disabled = true;
+            acceptLgpdBtn.textContent = 'Aguarde...';
+            const res = await apiFetch('/api/auth/lgpd-accept', { method: 'POST' });
+            if (res.success) {
+                document.getElementById('lgpd-modal').style.display = 'none';
+                showStatus('Termos aceitos com sucesso!', 'success');
+            }
+        } catch (err) {
+            console.error('Erro LGPD:', err);
+            showStatus('Erro ao aceitar termos. Tente novamente.', 'error');
+            acceptLgpdBtn.disabled = false;
+            acceptLgpdBtn.textContent = 'Li, Compreendi e Aceito os Termos';
+        }
+    };
+}
 
 // Botão para forçar login (derrubar outras sessões ativas do mesmo usuário)
 const confirmForceLoginBtn = document.getElementById('confirm-force-login');

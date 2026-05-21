@@ -483,6 +483,10 @@ const initDB = async () => {
             ADD COLUMN IF NOT EXISTS email VARCHAR(255)
         `);
 
+        await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS lgpd_accepted BOOLEAN DEFAULT FALSE');
+        await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS lgpd_accepted_at TIMESTAMP');
+
+
         // --- Criação de Índices de Performance ---
         // Essencial para manter o sistema rápido com o crescimento dos dados
         await db.query('CREATE INDEX IF NOT EXISTS idx_payments_year ON payments(year)');
@@ -584,7 +588,8 @@ app.post('/api/login', async (req, res) => {
       username: dbUsername,
       name: user.name || dbUsername,
       personId: personId,
-      mustChangePassword: !!must_change_password
+      mustChangePassword: !!must_change_password,
+      lgpdAccepted: !!user.lgpd_accepted
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -597,7 +602,7 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/auth/status', authenticateToken, async (req, res) => {
     try {
         const result = await db.query(`
-            SELECT u.must_change_password, u.role, u.person_id, u.username, p.name 
+            SELECT u.must_change_password, u.role, u.person_id, u.username, u.lgpd_accepted, p.name 
             FROM users u 
             LEFT JOIN people p ON u.person_id = p.id 
             WHERE u.id = $1
@@ -610,7 +615,8 @@ app.get('/api/auth/status', authenticateToken, async (req, res) => {
             role: user.role,
             username: user.username,
             name: user.name || user.username,
-            personId: user.person_id
+            personId: user.person_id,
+            lgpdAccepted: !!user.lgpd_accepted
         });
     } catch{
         res.status(500).json({ error: 'Erro ao verificar status' });
@@ -681,6 +687,17 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Erro interno no servidor' });
+    }
+});
+
+// Aceite dos Termos de Uso e LGPD
+app.post('/api/auth/lgpd-accept', authenticateToken, async (req, res) => {
+    try {
+        await db.query('UPDATE users SET lgpd_accepted = TRUE, lgpd_accepted_at = NOW() WHERE id = $1', [req.user.id]);
+        res.json({ success: true, message: 'Termos aceitos com sucesso' });
+    } catch (err) {
+        console.error('[LGPD] Erro ao registrar aceite:', err);
+        res.status(500).json({ error: 'Erro ao registrar aceite da política de privacidade' });
     }
 });
 
