@@ -423,6 +423,9 @@ const initDB = async () => {
                 created_at TIMESTAMP DEFAULT NOW()
             )
         `);
+        await db.query(`ALTER TABLE site_calendar_events ADD COLUMN IF NOT EXISTS local VARCHAR(255)`);
+        await db.query(`ALTER TABLE site_calendar_events ADD COLUMN IF NOT EXISTS responsible VARCHAR(255)`);
+        await db.query(`ALTER TABLE site_calendar_events DROP COLUMN IF EXISTS division`);
         await db.query(`
             CREATE TABLE IF NOT EXISTS site_albums (
                 id SERIAL PRIMARY KEY,
@@ -1116,7 +1119,7 @@ app.delete('/api/people/:id', authenticateToken, async (req, res) => {
 // Rota pública para listar eventos no calendário da página institucional (clube.html)
 app.get('/api/public/events', async (req, res) => {
     try {
-        const result = await db.query('SELECT id, name, description, date FROM site_calendar_events ORDER BY date ASC');
+        const result = await db.query('SELECT id, name, description, date, local, responsible FROM site_calendar_events ORDER BY date ASC');
         res.json(result.rows);
     } catch (err) {
         console.error('Error fetching public events:', err);
@@ -1128,7 +1131,7 @@ app.get('/api/public/events', async (req, res) => {
 
 app.get('/api/site-calendar', authenticateToken, async (req, res) => {
     try {
-        const result = await db.query('SELECT id, name, description, date FROM site_calendar_events ORDER BY date ASC');
+        const result = await db.query('SELECT id, name, description, date, local, responsible FROM site_calendar_events ORDER BY date ASC');
         res.json(result.rows);
     } catch{
         res.status(500).json({ error: 'Erro ao buscar datas do calendário' });
@@ -1137,12 +1140,12 @@ app.get('/api/site-calendar', authenticateToken, async (req, res) => {
 
 app.post('/api/site-calendar', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
-    const { name, date, description } = req.body || {};
+    const { name, date, description, local, responsible } = req.body || {};
     if (!name || !date) return res.status(400).json({ error: 'Nome e data são obrigatórios' });
     try {
-        const result = await db.query('INSERT INTO site_calendar_events (name, date, description) VALUES ($1, $2, $3) RETURNING id', [name, date, description || null]);
-        logAction(req, 'CREATE_SITE_CALENDAR', { id: result.rows[0].id, name, date });
-        res.json({ success: true, id: result.rows[0].id, name, date });
+        const result = await db.query('INSERT INTO site_calendar_events (name, date, description, local, responsible) VALUES ($1, $2, $3, $4, $5) RETURNING id', [name, date, description || null, local || null, responsible || null]);
+        logAction(req, 'CREATE_SITE_CALENDAR', { id: result.rows[0].id, name, date, local, responsible });
+        res.json({ success: true, id: result.rows[0].id, name, date, local, responsible });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Erro ao cadastrar no calendário do site' });
@@ -1159,6 +1162,28 @@ app.delete('/api/site-calendar/:id', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Erro ao deletar do calendário do site' });
     }
 });
+
+app.put('/api/site-calendar/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { name, date, description, local, responsible } = req.body || {};
+    if (!name || !date) return res.status(400).json({ error: 'Nome e data são obrigatórios' });
+    try {
+        const id = req.params.id;
+        const result = await db.query(
+            'UPDATE site_calendar_events SET name = $1, date = $2, description = $3, local = $4, responsible = $5 WHERE id = $6 RETURNING id',
+            [name, date, description || null, local || null, responsible || null, id]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Evento não encontrado' });
+        }
+        logAction(req, 'UPDATE_SITE_CALENDAR', { id, name, date, local, responsible });
+        res.json({ success: true, id, name, date, local, responsible });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao atualizar no calendário do site' });
+    }
+});
+
 
 // Lista todos os eventos e estatísticas de participação
 app.get('/api/events', authenticateToken, async (req, res) => {
