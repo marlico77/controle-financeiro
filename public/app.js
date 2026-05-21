@@ -1442,7 +1442,7 @@ function switchTab(tabName, force = false) {
 
 // Atribui evento de clique a todos os itens do menu lateral
 navLinks.forEach(link => {
-    link.onclick = (e) => {
+    link.onclick = () => {
         const target = link.dataset.target;
         if (target) {
             console.log('[NAV] Mudando para aba:', target);
@@ -3285,6 +3285,7 @@ const openPaymentModal = (person, month, payment = null) => {
     const saveBtn = document.getElementById('save-payment-btn');
     const adminActions = document.getElementById('admin-payment-actions');
     const rejectionReasonContainer = document.getElementById('rejection-reason-container');
+    const rejectionReasonText = document.getElementById('rejection-reason-text');
     const rejectionForm = document.getElementById('rejection-form');
 
     // Reseta o estado visual do modal para o padrão "novo pagamento"
@@ -4189,7 +4190,8 @@ if (installBtn) {
             const { outcome } = await deferredPrompt.userChoice;
             console.log(`User response to the install prompt: ${outcome}`);
             deferredPrompt = null;
-            if (pwaBanner) pwaBanner.style.display = 'none';
+            const banner = document.getElementById('pwa-install-banner');
+            if (banner) banner.style.display = 'none';
         } else {
             // Fallback: Se o prompt não estiver pronto, guia o usuário manualmente
             const manualGuide = document.getElementById('android-manual-guide');
@@ -4279,6 +4281,7 @@ const handleInstallClick = async (e) => {
         } else {
             state.activeTab = 'pwa-install';
             document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+            const pwaInstallPage = document.getElementById('pwa-install-page');
             if (pwaInstallPage) pwaInstallPage.style.display = 'block';
             document.querySelectorAll('.nav-links li').forEach(li => li.classList.remove('active'));
             if (menuInstallBtn) menuInstallBtn.classList.add('active');
@@ -4768,7 +4771,8 @@ window.editAlbum = (album) => {
     document.getElementById('gallery-page').scrollIntoView({ behavior: 'smooth' });
 };
 
-window.cancelAlbumEdit = () => {
+const cancelAlbumEdit = () => {
+    window.cancelAlbumEdit = cancelAlbumEdit;
     const form = document.getElementById('gallery-form');
     if (form) form.reset();
     document.getElementById('gallery-id').value = '';

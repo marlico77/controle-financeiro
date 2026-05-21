@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Tribo de Davi">
     <meta name="referrer" content="no-referrer">
-    <title>Clube Tribo de Davi - Apresentação</title>
+    <title>Clube Tribo de Davi</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -520,26 +520,12 @@
 
         /* Calendário Anual */
         .calendar-grid {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 1.5rem;
-            width: 100%;
-        }
-
-        .calendar-grid .month-card {
-            flex: 0 0 calc((100% - 4.5rem) / 4);
-            scroll-snap-align: start;
-        }
-
-        @media (max-width: 1200px) {
-            .calendar-grid .month-card {
-                flex: 0 0 calc((100% - 1.5rem) / 2);
-            }
-        }
-
-        @media (max-width: 600px) {
-            .calendar-grid .month-card {
-                flex: 0 0 100%;
-            }
+            max-width: 1250px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
         }
 
         .month-card {
@@ -574,213 +560,77 @@
         }
 
         .month-body {
-            padding: 1.2rem;
+            padding: 1.5rem;
             flex: 1;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            gap: 1rem;
         }
 
-        .mini-calendar {
-            display: flex;
-            flex-direction: column;
-            gap: 0.4rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .weekdays-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            text-align: center;
-            font-weight: 700;
-            font-size: 0.7rem;
+        .empty-month {
             color: var(--presentation-dim);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding-bottom: 0.2rem;
+            font-size: 0.9rem;
+            font-style: italic;
+            text-align: center;
+            margin: auto 0;
+            padding: 1rem 0;
         }
 
-        .days-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 0.2rem;
-        }
-
-        .calendar-day {
-            position: relative;
+        .event-item {
             display: flex;
+            gap: 0.75rem;
             align-items: center;
-            justify-content: center;
-            aspect-ratio: 1;
-            font-size: 0.75rem;
-            color: #b3b3b3;
-            border-radius: 50%;
-            cursor: default;
-            transition: all 0.2s ease;
-        }
-
-        .calendar-day.empty-day {
-            visibility: hidden;
-        }
-
-        .calendar-day:not(.empty-day):hover {
-            background: rgba(255, 255, 255, 0.08);
-            color: #fff;
-        }
-
-        .calendar-day.has-event {
-            background: var(--presentation-accent);
-            color: #fff;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(229, 9, 20, 0.3);
-        }
-
-        .calendar-day.has-event:hover {
-            background: #ff1e27;
-            box-shadow: 0 4px 10px rgba(229, 9, 20, 0.5);
-        }
-
-        /* Tooltip Box */
-        .calendar-day .tooltip-box {
-            position: absolute;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%) translateY(5px);
-            background: #1e1e1e;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
             padding: 0.6rem 0.8rem;
-            color: #fff;
-            font-size: 0.75rem;
-            line-height: 1.3;
-            width: max-content;
-            max-width: 200px;
-            z-index: 100;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-            pointer-events: none;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
-            text-align: left;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            transition: background 0.2s;
         }
 
-        .calendar-day .tooltip-box::after {
-            content: '';
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            border-width: 5px;
-            border-style: solid;
-            border-color: #1e1e1e transparent transparent transparent;
-        }
-
-        .calendar-day:hover .tooltip-box {
-            opacity: 1;
-            visibility: visible;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .tooltip-box strong {
-            color: #fff;
-            display: block;
-            margin-bottom: 2px;
-        }
-        
-        .tooltip-box hr {
-            border: 0;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            margin: 4px 0;
-        }
-
-        /* Lista de Eventos Compacta */
-        .events-compact-list {
-            margin-top: 0.4rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            padding-top: 0.6rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.4rem;
-            height: 90px;
-            overflow-y: auto;
-        }
-
-        .events-compact-list::-webkit-scrollbar {
-            width: 4px;
-        }
-        
-        .events-compact-list::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        
-        .events-compact-list::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
-        }
-
-        .events-compact-list::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .compact-event-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.3rem 0.5rem;
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 6px;
-            transition: all 0.2s ease;
-        }
-
-        .compact-event-item:hover {
+        .event-item:hover {
             background: rgba(255, 255, 255, 0.05);
         }
 
-        .compact-day-badge {
-            background: rgba(255, 255, 255, 0.06);
-            color: var(--presentation-text);
-            font-size: 0.75rem;
-            font-weight: 700;
-            min-width: 20px;
-            height: 20px;
-            border-radius: 4px;
+        .event-date-badge {
+            background: var(--presentation-accent);
+            color: #ffffff;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
             flex-shrink: 0;
         }
 
-        .compact-event-item:hover .compact-day-badge {
-            background: var(--presentation-accent);
-            color: #fff;
-        }
-
-        .compact-event-details {
+        .event-details {
             flex: 1;
             min-width: 0;
             text-align: left;
         }
 
-        .compact-event-details h4 {
-            font-size: 0.75rem;
+        .event-details h4 {
+            font-size: 0.9rem;
             font-weight: 600;
-            margin: 0;
             color: var(--presentation-text);
+            margin: 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        .empty-month {
-            color: var(--presentation-dim);
-            font-size: 0.8rem;
-            font-style: italic;
-            text-align: center;
-            margin: auto 0;
-            padding: 0.5rem 0;
+        @media (max-width: 1200px) {
+            .calendar-grid { grid-template-columns: repeat(3, 1fr); }
         }
 
+        @media (max-width: 900px) {
+            .calendar-grid { grid-template-columns: repeat(2, 1fr); }
+        }
 
+        @media (max-width: 600px) {
+            .calendar-grid { grid-template-columns: 1fr; }
+        }
 
         /* Responsividade */
         @media (max-width: 992px) {
@@ -1151,24 +1001,8 @@
             <p>Acompanhe nossas datas de reuniões, acampamentos, feiras e investiduras agendadas para este ano.</p>
         </div>
 
-        <div class="carousel-wrapper">
-            <button class="carousel-btn prev-btn" aria-label="Meses Anteriores" id="prev-calendar">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" style="transform: rotate(180deg);">
-                    <path d="M320 576C461.4 576 576 461.4 576 320C576 178.6 461.4 64 320 64C178.6 64 64 178.6 64 320C64 461.4 178.6 576 320 576zM361 417C351.6 426.4 336.4 426.4 327.1 417C317.8 407.6 317.7 392.4 327.1 383.1L366.1 344.1L216 344.1C202.7 344.1 192 333.4 192 320.1C192 306.8 202.7 296.1 216 296.1L366.1 296.1L327.1 257.1C317.7 247.7 317.7 232.5 327.1 223.2C336.5 213.9 351.7 213.8 361 223.2L441 303.2C450.4 312.6 450.4 327.8 441 337.1L361 417.1z"/>
-                </svg>
-            </button>
-
-            <div class="carousel-track-container native-scroll" id="calendar-track">
-                <div class="carousel-track calendar-grid" id="calendar-grid">
-                    <!-- Os 12 meses serão gerados dinamicamente via JavaScript -->
-                </div>
-            </div>
-
-            <button class="carousel-btn next-btn" aria-label="Próximos Meses" id="next-calendar">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
-                    <path d="M320 576C461.4 576 576 461.4 576 320C576 178.6 461.4 64 320 64C178.6 64 64 178.6 64 320C64 461.4 178.6 576 320 576zM361 417C351.6 426.4 336.4 426.4 327.1 417C317.8 407.6 317.7 392.4 327.1 383.1L366.1 344.1L216 344.1C202.7 344.1 192 333.4 192 320.1C192 306.8 202.7 296.1 216 296.1L366.1 296.1L327.1 257.1C317.7 247.7 317.7 232.5 327.1 223.2C336.5 213.9 351.7 213.8 361 223.2L441 303.2C450.4 312.6 450.4 327.8 441 337.1L361 417.1z"/>
-                </svg>
-            </button>
+        <div class="calendar-grid" id="calendar-grid">
+            <!-- Os 12 meses serão gerados dinamicamente via JavaScript -->
         </div>
     </section>
 
@@ -1440,20 +1274,8 @@
                     <div class="month-header">
                         <h3>${month}</h3>
                     </div>
-                    <div class="month-body">
-                        <!-- Mini Calendário Grid -->
-                        <div class="mini-calendar">
-                            <div class="weekdays-grid">
-                                <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
-                            </div>
-                            <div class="days-grid" id="days-grid-${index}">
-                                <!-- Dias gerados via JS -->
-                            </div>
-                        </div>
-                        <!-- Lista compacta de eventos -->
-                        <div class="events-compact-list" id="events-${index}">
-                            <div class="empty-month">Nenhum evento agendado</div>
-                        </div>
+                    <div class="month-body" id="events-${index}">
+                        <div class="empty-month">Nenhum evento agendado</div>
                     </div>
                 </div>
             `).join('');
@@ -1478,69 +1300,21 @@
                     }
                 });
 
-                const year = new Date().getFullYear();
-
                 months.forEach((_, index) => {
                     const monthEvents = eventsByMonth[index];
-                    const daysGridContainer = document.getElementById(`days-grid-${index}`);
                     const bodyContainer = document.getElementById(`events-${index}`);
 
-                    // 1. Gerar os dias do mês
-                    const firstDayIndex = new Date(year, index, 1).getDay(); // 0-6 (Domingo a Sábado)
-                    const totalDays = new Date(year, index + 1, 0).getDate();
-
-                    let daysHtml = '';
-                    
-                    // Células vazias antes do primeiro dia
-                    for (let i = 0; i < firstDayIndex; i++) {
-                        daysHtml += `<div class="calendar-day empty-day"></div>`;
-                    }
-
-                    // Dicionário de eventos por dia para este mês
-                    const eventsByDay = {};
-                    monthEvents.forEach(ev => {
-                        if (!eventsByDay[ev.day]) eventsByDay[ev.day] = [];
-                        eventsByDay[ev.day].push(ev);
-                    });
-
-                    // Células dos dias
-                    for (let dayNum = 1; dayNum <= totalDays; dayNum++) {
-                        const dayEvents = eventsByDay[dayNum] || [];
-                        if (dayEvents.length > 0) {
-                            const tooltipContent = dayEvents.map(ev => `<strong>${ev.name}</strong>`).join('<hr>');
-                            daysHtml += `
-                                <div class="calendar-day has-event" title="${dayEvents.map(ev => ev.name).join(', ')}">
-                                    ${dayNum}
-                                    <div class="tooltip-box">${tooltipContent}</div>
-                                </div>
-                            `;
-                        } else {
-                            daysHtml += `
-                                <div class="calendar-day">
-                                    ${dayNum}
-                                </div>
-                            `;
-                        }
-                    }
-
-                    if (daysGridContainer) {
-                        daysGridContainer.innerHTML = daysHtml;
-                    }
-
-                    // 2. Gerar a lista de eventos compacta
                     if (monthEvents.length > 0) {
                         monthEvents.sort((a, b) => a.day - b.day);
 
                         bodyContainer.innerHTML = monthEvents.map(ev => `
-                            <div class="compact-event-item" title="${ev.description || ev.name}">
-                                <div class="compact-day-badge">${ev.day}</div>
-                                <div class="compact-event-details">
+                            <div class="event-item" title="${ev.description || ev.name}">
+                                <div class="event-date-badge">${ev.day}</div>
+                                <div class="event-details">
                                     <h4>${ev.name}</h4>
                                 </div>
                             </div>
                         `).join('');
-                    } else {
-                        bodyContainer.innerHTML = `<div class="empty-month">Nenhum evento agendado</div>`;
                     }
                 });
             } catch (err) {
@@ -1548,59 +1322,7 @@
             }
         };
 
-        initCalendar().then(() => {
-            const currentMonth = new Date().getMonth();
-            const currentQuad = Math.floor(currentMonth / 4); // 0 = Jan-Abr, 1 = Mai-Ago, 2 = Set-Dez
-            
-            setTimeout(() => {
-                const calendarTrack = document.getElementById('calendar-track');
-                if (calendarTrack) {
-                    const scrollAmount = calendarTrack.clientWidth;
-                    calendarTrack.scrollTo({ left: currentQuad * scrollAmount, behavior: 'instant' });
-                }
-            }, 300);
-        });
-
-        // Controle de Navegação do Carrossel do Calendário (Scroll-based)
-        const calendarTrack = document.getElementById('calendar-track');
-        const prevCalendar = document.getElementById('prev-calendar');
-        const nextCalendar = document.getElementById('next-calendar');
-
-        if (calendarTrack && prevCalendar && nextCalendar) {
-            nextCalendar.addEventListener('click', () => {
-                const scrollAmount = calendarTrack.clientWidth;
-                
-                // Se chegou ao fim do scroll horizontal, volta para o início (com tolerância de 10px para sub-pixels)
-                if (Math.ceil(calendarTrack.scrollLeft + calendarTrack.clientWidth) >= calendarTrack.scrollWidth - 10) {
-                    calendarTrack.scrollTo({ left: 0, behavior: 'smooth' });
-                } else {
-                    calendarTrack.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-                }
-            });
-
-            prevCalendar.addEventListener('click', () => {
-                const scrollAmount = calendarTrack.clientWidth;
-                
-                // Se já está no início do scroll horizontal, vai para o fim (com tolerância de 10px)
-                if (calendarTrack.scrollLeft <= 10) {
-                    calendarTrack.scrollTo({ left: calendarTrack.scrollWidth, behavior: 'smooth' });
-                } else {
-                    calendarTrack.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-                }
-            });
-
-            // Suporte para navegação via deslizar do dedo (touch swipe) no mobile
-            let calendarStartX = 0;
-            calendarTrack.addEventListener('touchstart', (e) => {
-                calendarStartX = e.touches[0].clientX;
-            }, { passive: true });
-
-            calendarTrack.addEventListener('touchend', (e) => {
-                const diffX = calendarStartX - e.changedTouches[0].clientX;
-                if (diffX > 50) nextCalendar.click();
-                else if (diffX < -50) prevCalendar.click();
-            }, { passive: true });
-        }
+        initCalendar();
 
         // Inicialização da Galeria Dinâmica
         const initGallery = async () => {

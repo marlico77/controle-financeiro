@@ -188,7 +188,7 @@ app.post('/api/contact', async (req, res) => {
 `
         });
 
-        // 3. Envia E-mail 2: Notificação para a Liderança (Marlon)
+        // 3. Envia E-mail 2: Notificação para a Liderança 
         const email2Result = await sendResendEmail({
             to: 'marlonssoficial@gmail.com',
             subject: `[Tribo de Davi] Novo Contato: ${name}`,
