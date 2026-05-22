@@ -367,6 +367,57 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
+// --- Middleware para bloqueio de uploads no Sábado ---
+const blockSabbathUploads = (req, res, next) => {
+    // Administradores contornam o bloqueio
+    if (req.user && req.user.role === 'admin') {
+        return next();
+    }
+
+    const now = new Date();
+    
+    // Tenta usar o fuso horário enviado pelo navegador do usuário, caso contrário usa o de Brasília
+    let userTimezone = 'America/Sao_Paulo';
+    try {
+        const headerTz = req.headers['x-timezone'];
+        if (headerTz) {
+            new Intl.DateTimeFormat('en-US', { timeZone: headerTz }); // Valida se o fuso existe
+            userTimezone = headerTz;
+        }
+    } catch (e) {
+        userTimezone = 'America/Sao_Paulo';
+    }
+
+    // Obtém o dia e hora no fuso horário do usuário
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: userTimezone,
+        weekday: 'short',
+        hour: 'numeric',
+        hour12: false
+    });
+    
+    const parts = formatter.formatToParts(now);
+    let weekday = '';
+    let hour = 0;
+    
+    for (const part of parts) {
+        if (part.type === 'weekday') weekday = part.value;
+        if (part.type === 'hour') hour = parseInt(part.value, 10);
+    }
+    
+    // Sexta >= 18h ou Sábado < 18h no fuso do usuário
+    if ((weekday === 'Fri' && hour >= 18) || (weekday === 'Sat' && hour < 18)) {
+        return res.status(403).json({ error: 'O sistema não aceita envios de comprovantes de pagamento durante as horas do Sábado no seu fuso horário local.' });
+    }
+    
+    next();
+};
+
+// Endpoint para obter o horário do servidor (usado no frontend para travas)
+app.get('/api/time', (req, res) => {
+    res.json({ timestamp: Date.now() });
+});
+
 // --- Sincronização: Criar Usuários para Novos Membros ---
 const syncMemberUsers = async () => {
     try {
@@ -922,7 +973,7 @@ app.get('/api/payments/detail/:id', authenticateToken, async (req, res) => {
 });
 
 // Registra novo pagamento (com suporte a múltiplos meses em um único envio)
-app.post('/api/payments', authenticateToken, upload.single('receipt'), async (req, res) => {
+app.post('/api/payments', authenticateToken, blockSabbathUploads, upload.single('receipt'), async (req, res) => {
   const { person_id, month, year, amount, months } = req.body;
   
   if (!person_id || (!month && !months) || !year || !amount) {
@@ -1460,8 +1511,8 @@ app.get('/api/event-payments/detail/:id', authenticateToken, async (req, res) =>
     }
 });
 
-// Registra novo pagamento para um evento (Membro envia comprovante)
-app.post('/api/event-payments', authenticateToken, upload.single('receipt'), async (req, res) => {
+// Registra pagamento de evento
+app.post('/api/event-payments', authenticateToken, blockSabbathUploads, upload.single('receipt'), async (req, res) => {
     const { person_id, event_id, amount, month, year } = req.body || {};
     
     // Processa e comprime a imagem do comprovante
@@ -1577,8 +1628,8 @@ app.get('/api/sales', authenticateToken, async (req, res) => {
     }
 });
 
-// Registra uma nova venda
-app.post('/api/sales', authenticateToken, upload.single('receipt'), async (req, res) => {
+// Registra nova venda
+app.post('/api/sales', authenticateToken, blockSabbathUploads, upload.single('receipt'), async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { event_name, amount, date, description } = req.body || {};
     
@@ -1704,8 +1755,8 @@ app.get('/api/outflows', authenticateToken, async (req, res) => {
     }
 });
 
-// Registra uma nova despesa
-app.post('/api/outflows', authenticateToken, upload.single('receipt'), async (req, res) => {
+// Registra nova despesa
+app.post('/api/outflows', authenticateToken, blockSabbathUploads, upload.single('receipt'), async (req, res) => {
     try {
         if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
         const { amount, category, date, description } = req.body;
