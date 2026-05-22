@@ -2023,11 +2023,11 @@ function renderCalendarExportPreview() {
         // Monta o HTML com o timbre da logo do clube à esquerda em cima, sem o triângulo SVG
         let html = `
             <div class="calendar-print-canvas">
-                <div style="position: relative; text-align: center; margin-bottom: 2rem; min-height: 70px; display: flex; justify-content: center; align-items: center;">
+                <div style="position: relative; text-align: center; margin-bottom: 1rem; min-height: 50px; display: flex; justify-content: center; align-items: center;">
                     <div style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center;">
-                        <img src="logo.png" style="height: 65px; width: 65px; object-fit: contain;" onerror="this.style.display='none'" />
+                        <img src="logo.png" style="height: 45px; width: 45px; object-fit: contain;" onerror="this.style.display='none'" />
                     </div>
-                    <h2 style="margin: 0; font-size: 1.6rem; font-weight: 800; font-family: Arial, sans-serif; color: #000; text-transform: uppercase;">
+                    <h2 style="margin: 0; font-size: 1.3rem; font-weight: 800; font-family: Arial, sans-serif; color: #000; text-transform: uppercase;">
                         ${titleText}
                     </h2>
                 </div>
@@ -2044,7 +2044,7 @@ function renderCalendarExportPreview() {
                 
                 html += `
                     <div class="calendar-month-section">
-                        <h3 style="text-align: center; font-size: 1.3rem; margin: 1.5rem 0 0.8rem 0; font-family: Arial, sans-serif; text-transform: uppercase; color: #000; font-weight: bold;">
+                        <h3 style="text-align: left; font-size: 1.1rem; margin: 0.5rem 0 0.3rem 0; font-family: Arial, sans-serif; text-transform: uppercase; color: #000; font-weight: bold;">
                             ${monthName}
                         </h3>
                         <table class="calendar-print-table">
