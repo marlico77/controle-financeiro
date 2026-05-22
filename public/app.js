@@ -1700,12 +1700,27 @@ function renderSiteCalendar() {
     const body = document.getElementById('site-calendar-body');
     if (!body) return;
 
-    if (!state.siteCalendar || state.siteCalendar.length === 0) {
-        body.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">Nenhuma data cadastrada para o site.</td></tr>';
+    let eventsToRender = state.siteCalendar || [];
+
+    const searchInput = document.getElementById('site-calendar-search');
+    if (searchInput && searchInput.value) {
+        const term = searchInput.value.toLowerCase();
+        eventsToRender = eventsToRender.filter(item => {
+            const dateStr = formatDate(item.date).toLowerCase();
+            const nameStr = (item.name || '').toLowerCase();
+            const descStr = (item.description || '').toLowerCase();
+            const localStr = (item.local || '').toLowerCase();
+            const respStr = (item.responsible || '').toLowerCase();
+            return dateStr.includes(term) || nameStr.includes(term) || descStr.includes(term) || localStr.includes(term) || respStr.includes(term);
+        });
+    }
+
+    if (!eventsToRender || eventsToRender.length === 0) {
+        body.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">Nenhuma data cadastrada ou encontrada para o site.</td></tr>';
         return;
     }
 
-    body.innerHTML = state.siteCalendar.map(item => `
+    body.innerHTML = eventsToRender.map(item => `
         <tr class="animate-fade-in">
             <td><strong>${formatDate(item.date)}</strong></td>
             <td><strong style="color: var(--accent-color);">${escapeHTML(item.name)}</strong></td>
@@ -3291,6 +3306,8 @@ document.addEventListener('input', (e) => {
         if (state.currentEventParticipants && state.currentEventPayments) {
             renderEventDetailGrid(state.currentEventParticipants, state.currentEventPayments);
         }
+    } else if (e.target.id === 'site-calendar-search') {
+        renderSiteCalendar();
     }
 });
 
