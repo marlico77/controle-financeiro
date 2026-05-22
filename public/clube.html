@@ -546,7 +546,6 @@
             background: #161616;
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
-            overflow: hidden;
             display: flex;
             flex-direction: column;
             transition: all 0.3s ease;
@@ -564,6 +563,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            border-radius: 16px 16px 0 0;
         }
 
         .month-header h3 {
@@ -679,6 +679,43 @@
             opacity: 1;
             visibility: visible;
             transform: translateX(-50%) translateY(0);
+        }
+
+        /* Ajustes para tooltips nas extremidades (coluna 1, 2 e coluna 6, 7) para evitar cortes na tela */
+        .calendar-day:nth-child(7n + 1) .tooltip-box,
+        .calendar-day:nth-child(7n + 2) .tooltip-box {
+            left: 0;
+            transform: translateX(-10px) translateY(5px);
+        }
+        
+        .calendar-day:nth-child(7n + 1):hover .tooltip-box,
+        .calendar-day:nth-child(7n + 2):hover .tooltip-box {
+            transform: translateX(-10px) translateY(0);
+        }
+        
+        .calendar-day:nth-child(7n + 1) .tooltip-box::after,
+        .calendar-day:nth-child(7n + 2) .tooltip-box::after {
+            left: 20px;
+            transform: none;
+        }
+
+        .calendar-day:nth-child(7n + 6) .tooltip-box,
+        .calendar-day:nth-child(7n + 7) .tooltip-box {
+            left: auto;
+            right: 0;
+            transform: translateX(10px) translateY(5px);
+        }
+        
+        .calendar-day:nth-child(7n + 6):hover .tooltip-box,
+        .calendar-day:nth-child(7n + 7):hover .tooltip-box {
+            transform: translateX(10px) translateY(0);
+        }
+        
+        .calendar-day:nth-child(7n + 6) .tooltip-box::after,
+        .calendar-day:nth-child(7n + 7) .tooltip-box::after {
+            left: auto;
+            right: 20px;
+            transform: none;
         }
 
         .tooltip-box strong {
