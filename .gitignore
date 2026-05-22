@@ -6,3 +6,5 @@ uploads/
 dist/
 build/
 scratch/
+public/images/
+images/
