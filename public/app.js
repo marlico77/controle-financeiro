@@ -1078,6 +1078,20 @@ async function checkAuth() {
                 document.getElementById('page-title').textContent = 'Dashboard de Mensalidades';
             }
 
+            // Oculta aba Calendário dentro de Eventos para usuários comuns e social media
+            const tabSite = document.getElementById('tab-site-calendar');
+            if (tabSite) {
+                if (isAdmin || isSecretary) {
+                    tabSite.style.display = 'inline-block'; // Mostra para admin e secretário
+                } else {
+                    tabSite.style.display = 'none'; // Esconde para membro comum e social midia
+                    // Reseta para a aba interna se não tiver acesso
+                    if (state.activeEventsSubmenu === 'site') {
+                        state.activeEventsSubmenu = 'internal';
+                    }
+                }
+            }
+
             // Garante que a sidebar reflita o estado salvo
             initializeSidebar();
 
@@ -2145,7 +2159,9 @@ const renderEvents = () => {
     const eventsToRender = state.role === 'admin' ? state.events : state.events.filter(e => e.is_participant);
 
     // Gera o HTML para cada cartão de evento
+    // Gera o HTML para cada cartão de evento
     list.innerHTML = eventsToRender.map(event => {
+        const canViewDetails = state.role === 'admin' || state.role === 'secretário';
         return `
             <div class="glass-card event-card animate-fade-in" style="padding: 1.5rem; margin-bottom: 1rem; cursor: pointer;" onclick="openEventDetail(${event.id})">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -2158,6 +2174,7 @@ const renderEvents = () => {
                 </div>
                 <p class="event-date" style="font-size: 0.8rem; color: var(--text-dim); margin-top: 5px;">${event.date ? formatDate(event.date) : 'Sem data'}</p>
                 
+                ${canViewDetails ? `
                 <div class="event-stats-mini" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 0.5rem;">
                     <span style="background: rgba(229, 9, 20, 0.1); color: var(--accent-color); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
                         ${event.total_participants || 0} Inscritos
@@ -2168,7 +2185,10 @@ const renderEvents = () => {
                         </span>
                     `).join('')}
                 </div>
+                ` : ''}
+
                 <p class="event-desc" style="font-size: 0.9rem; margin-top: 10px;">${escapeHTML(event.description || 'Sem descrição')}</p>
+                
                 <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--accent-color); font-weight: 500;">
                     Clique para ver detalhamento →
                 </div>
@@ -2509,6 +2529,7 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
     // Bloqueia a abertura do modal se estiver pendente nas horas do Sábado
     if ((!payment || payment.status === 'pending') && isSabbathBlocked()) {
         showAlert('<div style="font-size: 1.1rem; line-height: 1.5; color: var(--accent-color);"><strong>"Lembra-te do dia de sábado, para o santificar."</strong><br><span style="font-size: 0.9rem;">(Êxodo 20:8)</span></div><br><p style="margin-top: 10px;">O sistema não aceitará anexos de comprovantes de pagamento durante as horas do Sábado.</p><p style="margin-top: 5px;">Por favor, aguarde e tente novamente após as 18h de sábado.</p>', 'Horas do Sábado', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="60" height="60" fill="var(--accent-color)"><path d="M320 32C328.4 32 336.3 36.4 340.6 43.7L396.1 136.3L500.9 110C509.1 108 517.8 110.4 523.7 116.3C529.6 122.2 532 131 530 139.1L503.7 243.8L596.4 299.3C603.6 303.6 608.1 311.5 608.1 319.9C608.1 328.3 603.7 336.2 596.4 340.5L503.7 396.1L530 500.8C532 509 529.6 517.7 523.7 523.6C517.8 529.5 509 532 500.9 530L396.2 503.7L340.7 596.4C336.4 603.6 328.5 608.1 320.1 608.1C311.7 608.1 303.8 603.7 299.5 596.4L243.9 503.7L139.2 530C131 532 122.4 529.6 116.4 523.7C110.4 517.8 108 509 110 500.8L136.2 396.1L43.6 340.6C36.4 336.2 32 328.4 32 320C32 311.6 36.4 303.7 43.7 299.4L136.3 243.9L110 139.1C108 130.9 110.3 122.3 116.3 116.3C122.3 110.3 131 108 139.2 110L243.9 136.2L299.4 43.6L301.2 41C305.7 35.3 312.6 31.9 320 31.9zM320 176C240.5 176 176 240.5 176 320C176 399.5 240.5 464 320 464C399.5 464 464 399.5 464 320C464 240.5 399.5 176 320 176zM320 416C267 416 224 373 224 320C224 267 267 224 320 224C373 224 416 267 416 320C416 373 373 416 320 416z"/></svg>');
+        return;
     }
 
     const epEventId = document.getElementById('ep-event-id');
@@ -2823,14 +2844,33 @@ const renderEventDashboard = (participants, payments) => {
     if (direcaoStat) direcaoStat.textContent = `R$ ${evDirecao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
     if (desbravaStat) desbravaStat.textContent = `R$ ${evDesbrava.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
-    // Gráfico de pizza do evento (Receita por Unidade)
-    renderPieChart(
-        ['Direção', 'Desbravadores', 'Outros'],
-        [evDirecao, evDesbrava, evOutros],
-        ['#e50914', '#111111', '#707070'],
-        'evPieChart',
-        'evPie'
-    );
+    if (direcaoStat && desbravaStat) {
+        const direcaoCard = direcaoStat.closest('.stat-card');
+        const desbravaCard = desbravaStat.closest('.stat-card');
+        const totalLabel = totalStat.previousElementSibling;
+        const pieChartContainer = document.getElementById('evPieChart')?.closest('.chart-container');
+        
+        if (state.role === 'admin') {
+            if (direcaoCard) direcaoCard.style.display = 'block';
+            if (desbravaCard) desbravaCard.style.display = 'block';
+            if (totalLabel) totalLabel.textContent = 'Arrecadação do Evento';
+            if (pieChartContainer) pieChartContainer.style.display = 'block';
+            
+            // Gráfico de pizza do evento (Receita por Unidade)
+            renderPieChart(
+                ['Direção', 'Desbravadores', 'Outros'],
+                [evDirecao, evDesbrava, evOutros],
+                ['#e50914', '#111111', '#707070'],
+                'evPieChart',
+                'evPie'
+            );
+        } else {
+            if (direcaoCard) direcaoCard.style.display = 'none';
+            if (desbravaCard) desbravaCard.style.display = 'none';
+            if (totalLabel) totalLabel.textContent = 'Total Pago';
+            if (pieChartContainer) pieChartContainer.style.display = 'none';
+        }
+    }
 
     // Gráfico de barras do evento (Receita por Mês)
     renderBarChart(evMonthlyData, 'evBarChart', 'evBar');
