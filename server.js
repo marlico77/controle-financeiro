@@ -1025,7 +1025,7 @@ app.post('/api/payments', authenticateToken, blockSabbathUploads, upload.single(
             // Se já existe um registro para o mês, atualiza-o (correção de comprovante ou reenvio)
             await db.query(`
                 UPDATE payments 
-                SET amount = $1, receipt_path = $2, receipt_content = $3, receipt_mime = $4, status = $5, rejection_reason = NULL 
+                SET amount = $1, receipt_path = COALESCE($2, receipt_path), receipt_content = COALESCE($3, receipt_content), receipt_mime = COALESCE($4, receipt_mime), status = $5, rejection_reason = NULL 
                 WHERE id = $6
             `, [amountPerMonth, receipt_path, finalDBContent, receipt_mime, status, existing.id]);
             
