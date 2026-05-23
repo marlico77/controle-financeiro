@@ -511,17 +511,17 @@ async function generateAuthDocument(type) {
 
         // Estrutura do documento de autorização com campos em branco para preenchimento manual do pai
         const htmlContent = `
-            <div class="report-canvas" style="font-family: Arial; line-height: 1.8; max-width: 100%; margin: 0 auto; padding: 20px; color: black;">
-                <div class="report-header">
-                    <img src="${logoSrc}">
-                    <div>
+            <div class="report-canvas" style="font-family: Arial; line-height: 1.8; max-width: 100%; margin: 0 auto; padding: 10px 20px 20px 20px; color: black;">
+                <div style="position: relative; text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 30px; min-height: 60px;">
+                    <img src="${logoSrc}" style="position: absolute; left: 0; top: 0; height: 65px; width: auto;">
+                    <div style="padding-top: 5px;">
                         <h2 style="margin: 0; font-size: 1.2rem; text-transform: uppercase;">CLUBE DE DESBRAVADORES TRIBO DE DAVI-AP</h2>
                         <h3 style="margin: 5px 0 0 0; font-size: 1rem; text-decoration: underline;">Autorização de Saída</h3>
                     </div>
                 </div>
-                <div style="margin-top: 40px; text-align: justify; line-height: 2.2;">
-                    Eu, <span style="border-bottom: 1px solid black; display: inline-block; min-width: 200px; margin: 0 5px;"></span>, 
-                    responsável pelo(a) desbravador(a) <span style="border-bottom: 1px solid black; display: inline-block; min-width: 200px; margin: 0 5px;"></span>, 
+                <div style="margin-top: 30px; text-align: justify; line-height: 2.4;">
+                    Eu, <span style="border-bottom: 1px solid black; display: inline-block; min-width: 400px; margin: 0 5px;"></span>, 
+                    responsável pelo(a) desbravador(a) <span style="border-bottom: 1px solid black; display: inline-block; min-width: 350px; margin: 0 5px;"></span>, 
                     autorizo-o(a) a participar do evento <strong>${eventName}</strong>, que será realizado no dia <strong>${formattedDate}</strong>, no local <strong>${eventLocation}</strong>. Os desbravadores deverão se apresentar às <strong>${departureTime}</strong>h em <strong>${departureLocation}</strong> para a partida.
                 </div>
                 <p style="text-align: justify; line-height: 2.2;">O evento tem término previsto para as <strong>${returnTime}</strong>h, momento em que o responsável deverá buscar a criança no mesmo local de partida indicado acima.</p>
