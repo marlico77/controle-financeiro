@@ -1962,12 +1962,12 @@ async function openCalendarExportModal() {
         calFilters.style.display = 'flex';
         modal.style.display = 'flex';
         
-        // Adiciona a regra de CSS para orientação de impressão A4 landscape dinamicamente
+        // Adiciona a regra de CSS para orientação de impressão A4 portrait dinamicamente
         let styleEl = document.getElementById('print-orientation-style');
         if (!styleEl) {
             styleEl = document.createElement('style');
             styleEl.id = 'print-orientation-style';
-            styleEl.innerHTML = '@page { size: A4 landscape; margin: 8mm; }';
+            styleEl.innerHTML = '@page { size: A4 portrait; margin: 8mm; }';
             document.head.appendChild(styleEl);
         }
         
@@ -2092,7 +2092,7 @@ function renderCalendarExportPreview() {
         const formattedNow = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} às ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
         
         html += `
-            <div style="text-align: right; font-size: 0.75rem; color: #555; margin-top: 2.5rem; font-family: Arial, sans-serif; border-top: 1px solid #000; padding-top: 0.5rem; font-style: italic;">
+            <div style="text-align: center; font-size: 0.75rem; color: #555; margin-top: 2.5rem; font-family: Arial, sans-serif; border-top: 1px solid #000; padding-top: 0.5rem; font-style: italic;">
                 Gerado automaticamente pelo Sistema de Gestão Financeira em ${formattedNow}
             </div>
         `;

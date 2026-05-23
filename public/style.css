@@ -1796,10 +1796,12 @@ tfoot td {
 }
 
 @media print { 
+    body, html { height: auto !important; min-height: 0 !important; background: white !important; }
+    #app { display: none !important; }
     body * { visibility: hidden !important; } 
     #report-modal, #report-modal * { visibility: visible !important; } 
     #report-modal { 
-        position: absolute !important; 
+        position: relative !important; 
         left: 0 !important; 
         top: 0 !important; 
         width: 100% !important; 
@@ -1814,6 +1816,7 @@ tfoot td {
         position: static !important; 
         width: 100% !important; 
         max-width: none !important; 
+        max-height: none !important; 
         height: auto !important; 
         background: white !important; 
         box-shadow: none !important; 
@@ -1827,6 +1830,7 @@ tfoot td {
         margin: 0 !important; 
         width: 100% !important; 
         height: auto !important; 
+        min-height: 0 !important;
         overflow: visible !important; 
     } 
     button, .close-modal, .btn-primary { display: none !important; } 
@@ -1922,41 +1926,7 @@ tfoot td {
     font-family: monospace;
 }
 
-/* Print styles for Authorizations */
-@media print {
-    body * {
-        visibility: hidden;
-    }
-    #report-modal, #report-modal * {
-        visibility: visible;
-    }
-    #report-modal {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: auto;
-        background: white;
-        backdrop-filter: none;
-    }
-    .modal-content {
-        box-shadow: none;
-        border: none;
-        max-width: 100%;
-        width: 100%;
-        height: auto;
-        overflow: visible;
-        background: white;
-    }
-    .close-modal, .btn-primary {
-        display: none !important;
-    }
-    .report-canvas {
-        border: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-}
+/* Print styles for Authorizations (merged with general print styles) */
 
 /* Notification Dropdown Mobile Fix */
 @media (max-width: 768px) {
@@ -2396,7 +2366,7 @@ input:checked + .slider:before {
 /* Calendar Export styles (visible in preview and in print) */
 .calendar-print-canvas {
     border: 4px double #000;
-    padding: 15px;
+    padding: 12px;
     background: white;
     color: black;
     font-family: Arial, sans-serif;
@@ -2406,18 +2376,19 @@ input:checked + .slider:before {
 .calendar-print-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 5px;
-    margin-bottom: 10px;
+    margin-top: 4px;
+    margin-bottom: 8px;
     color: black;
     background: white;
 }
 
 .calendar-print-table th, .calendar-print-table td {
     border: 1px solid #000;
-    padding: 4px 6px;
-    font-size: 0.85rem;
+    padding: 3px 5px;
+    font-size: 0.8rem;
     text-align: left;
     color: black;
+    line-height: 1.2;
 }
 
 .calendar-print-table th {
@@ -2428,7 +2399,8 @@ input:checked + .slider:before {
 
 .calendar-month-section {
     page-break-inside: avoid;
-    margin-bottom: 15px;
+    break-inside: avoid;
+    margin-bottom: 8px;
 }
 
 @media print {
@@ -2436,19 +2408,29 @@ input:checked + .slider:before {
         display: none !important;
     }
     .calendar-print-canvas {
-        border: 4px double #000 !important;
-        padding: 15px !important;
+        border: 2px solid #000 !important;
+        padding: 10px !important;
         background: white !important;
         color: black !important;
     }
     .calendar-print-table th, .calendar-print-table td {
         border: 1px solid #000 !important;
         color: black !important;
+        padding: 3px 5px !important;
+        font-size: 0.8rem !important;
+        line-height: 1.2 !important;
     }
     .calendar-print-table th {
         background-color: #f2f2f2 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+    }
+    .calendar-month-section {
+        margin-bottom: 10px !important;
+    }
+    .calendar-month-section h3 {
+        font-size: 1rem !important;
+        margin: 6px 0 4px 0 !important;
     }
 }
 
