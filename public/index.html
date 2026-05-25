@@ -41,7 +41,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="logo.png">
-    <link rel="stylesheet" href="style.css?v=209">
+    <link rel="stylesheet" href="style.css?v=210">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
@@ -1104,6 +1104,9 @@
                     <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--text-color);">5. Seus Direitos</h4>
                     <p style="margin-bottom: 1rem;">Você possui o direito de solicitar a visualização, retificação ou exclusão de seus dados pessoais entrando em contato direto com a Secretaria ou Diretoria do Clube. Contudo, a exclusão de dados administrativos obrigatórios pode resultar no desligamento das atividades ativas do clube por motivos de segurança (ex: falta de seguro de vida).</p>
 
+                    <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--text-color);">6. Isenção de Recebimento de Valores</h4>
+                    <p style="margin-bottom: 1rem;">O presente sistema atua exclusivamente como uma ferramenta de registro e gestão de comprovantes. O sistema <strong>não recebe, não processa e não intermedia</strong> transações financeiras de nenhuma natureza. Todos os pagamentos são realizados diretamente pelo usuário para a conta bancária oficial da Igreja Adventista do Sétimo Dia do Jardim Boa Vista. É de total responsabilidade do membro ou responsável conferir os dados da transferência antes da conclusão e envio do comprovante na plataforma.</p>
+
                     <div class="info-tag" style="margin-top: 1.5rem; margin-bottom: 0; text-align: center;">
                         Para prosseguir utilizando o sistema financeiro e administrativo, confirme que leu e aceita as condições legais acima.
                     </div>
@@ -1179,6 +1182,19 @@
                         <label for="amount">Valor Total (R$)</label>
                         <input type="number" id="amount" step="0.01" required placeholder="0,00">
                     </div>
+                    
+                    <div style="background: rgba(229, 9, 20, 0.05); border: 1px dashed var(--accent-color); border-radius: 8px; padding: 1.2rem; margin-bottom: 1.5rem; text-align: center;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: var(--accent-color); font-size: 1rem; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20" fill="currentColor"><path d="M306.4 356.5C311.8 351.1 321.1 351.1 326.5 356.5L403.5 433.5C417.7 447.7 436.6 455.5 456.6 455.5L471.7 455.5L374.6 552.6C344.3 582.1 295.1 582.1 264.8 552.6L167.3 455.2L176.6 455.2C196.6 455.2 215.5 447.4 229.7 433.2L306.4 356.5zM326.5 282.9C320.1 288.4 311.9 288.5 306.4 282.9L229.7 206.2C215.5 191.1 196.6 184.2 176.6 184.2L167.3 184.2L264.7 86.8C295.1 56.5 344.3 56.5 374.6 86.8L471.8 183.9L456.6 183.9C436.6 183.9 417.7 191.7 403.5 205.9L326.5 282.9zM176.6 206.7C190.4 206.7 203.1 212.3 213.7 222.1L290.4 298.8C297.6 305.1 307 309.6 316.5 309.6C325.9 309.6 335.3 305.1 342.5 298.8L419.5 221.8C429.3 212.1 442.8 206.5 456.6 206.5L494.3 206.5L552.6 264.8C582.9 295.1 582.9 344.3 552.6 374.6L494.3 432.9L456.6 432.9C442.8 432.9 429.3 427.3 419.5 417.5L342.5 340.5C328.6 326.6 304.3 326.6 290.4 340.6L213.7 417.2C203.1 427 190.4 432.6 176.6 432.6L144.8 432.6L86.8 374.6C56.5 344.3 56.5 295.1 86.8 264.8L144.8 206.7L176.6 206.7z"/></svg>
+                            Pague via PIX
+                        </h4>
+                        <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1rem; line-height: 1.4;">Faça o pagamento utilizando a chave abaixo e em seguida anexe o comprovante.</p>
+                        <div style="background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.8rem; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem;">
+                            <span style="font-family: monospace; font-size: 0.95rem; font-weight: bold; color: var(--text-color); word-break: break-all; text-align: left; cursor: pointer;" onclick="window.copyPix(this, 'jdboavista.ap@adventistas.org')" id="pix-key-1" title="Clique para copiar">jdboavista.ap@adventistas.org</span>
+                            <button type="button" class="btn-secondary" onclick="window.copyPix(this, 'jdboavista.ap@adventistas.org')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; white-space: nowrap; margin: 0; transition: all 0.2s;">Copiar</button>
+                        </div>
+                    </div>
+
                     <div class="input-group">
                         <label for="receipt">Comprovante (PNG, JPG, PDF) - Opcional</label>
                         <input type="file" id="receipt" accept="image/*,.pdf">
@@ -1458,6 +1474,19 @@
                         <label for="ep-amount">Valor (R$)</label>
                         <input type="number" id="ep-amount" step="0.01" required placeholder="0,00">
                     </div>
+                    
+                    <div style="background: rgba(229, 9, 20, 0.05); border: 1px dashed var(--accent-color); border-radius: 8px; padding: 1.2rem; margin-bottom: 1.5rem; text-align: center;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: var(--accent-color); font-size: 1rem; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20" fill="currentColor"><path d="M306.4 356.5C311.8 351.1 321.1 351.1 326.5 356.5L403.5 433.5C417.7 447.7 436.6 455.5 456.6 455.5L471.7 455.5L374.6 552.6C344.3 582.1 295.1 582.1 264.8 552.6L167.3 455.2L176.6 455.2C196.6 455.2 215.5 447.4 229.7 433.2L306.4 356.5zM326.5 282.9C320.1 288.4 311.9 288.5 306.4 282.9L229.7 206.2C215.5 191.1 196.6 184.2 176.6 184.2L167.3 184.2L264.7 86.8C295.1 56.5 344.3 56.5 374.6 86.8L471.8 183.9L456.6 183.9C436.6 183.9 417.7 191.7 403.5 205.9L326.5 282.9zM176.6 206.7C190.4 206.7 203.1 212.3 213.7 222.1L290.4 298.8C297.6 305.1 307 309.6 316.5 309.6C325.9 309.6 335.3 305.1 342.5 298.8L419.5 221.8C429.3 212.1 442.8 206.5 456.6 206.5L494.3 206.5L552.6 264.8C582.9 295.1 582.9 344.3 552.6 374.6L494.3 432.9L456.6 432.9C442.8 432.9 429.3 427.3 419.5 417.5L342.5 340.5C328.6 326.6 304.3 326.6 290.4 340.6L213.7 417.2C203.1 427 190.4 432.6 176.6 432.6L144.8 432.6L86.8 374.6C56.5 344.3 56.5 295.1 86.8 264.8L144.8 206.7L176.6 206.7z"/></svg>
+                            Pague via PIX
+                        </h4>
+                        <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1rem; line-height: 1.4;">Faça o pagamento utilizando a chave abaixo e em seguida anexe o comprovante.</p>
+                        <div style="background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.8rem; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem;">
+                            <span style="font-family: monospace; font-size: 0.95rem; font-weight: bold; color: var(--text-color); word-break: break-all; text-align: left; cursor: pointer;" onclick="window.copyPix(this, 'jdboavista.ap@adventistas.org')" id="pix-key-2" title="Clique para copiar">jdboavista.ap@adventistas.org</span>
+                            <button type="button" class="btn-secondary" onclick="window.copyPix(this, 'jdboavista.ap@adventistas.org')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; white-space: nowrap; margin: 0; transition: all 0.2s;">Copiar</button>
+                        </div>
+                    </div>
+
                     <div class="input-group">
                         <label for="ep-receipt">Comprovante</label>
                         <input type="file" id="ep-receipt" accept="image/*,.pdf">
@@ -1782,7 +1811,7 @@
     </div>
 
 
-    <script src="app.js?v=209"></script>
+    <script src="app.js?v=210"></script>
     <!-- Notification Modal (For priority alerts) -->
     <div id="notification-modal" class="modal" style="display: none;">
         <div class="glass-card modal-content animate-slide-up" style="max-width: 400px; text-align: center; padding: 2rem; border: 1px solid rgba(229, 9, 20, 0.2);">
@@ -1798,6 +1827,7 @@
             <button id="close-notif-btn" class="btn-primary" style="width: 100%; padding: 1rem; font-weight: 700; border-radius: 12px; background: var(--accent-color);">Entendido</button>
         </div>
     </div>
+
 </body>
 
 </html>

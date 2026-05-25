@@ -78,6 +78,31 @@ window.toggleMultiMonth = (isChecked) => {
     if (singleInfo) singleInfo.style.display = isChecked ? 'none' : 'block'; // Oculta info única se marcado
 };
 
+// Copia o PIX e altera o estilo do botão temporariamente
+window.copyPix = (element, text) => {
+    navigator.clipboard.writeText(text);
+    if (typeof showStatus === 'function') {
+        showStatus('Chave PIX copiada!', 'success');
+    }
+    
+    // Identifica o botão (se clicou no texto, o botão é o próximo elemento)
+    let btn = element.tagName === 'BUTTON' ? element : element.nextElementSibling;
+    if (!btn || btn.tagName !== 'BUTTON') return;
+    
+    const originalText = btn.textContent;
+    btn.textContent = 'Copiado!';
+    btn.style.background = 'var(--success-color)';
+    btn.style.color = 'white';
+    btn.style.borderColor = 'var(--success-color)';
+    
+    setTimeout(() => {
+        btn.textContent = originalText;
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.borderColor = '';
+    }, 2000);
+};
+
 // Nomes completos dos meses em português
 const months = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
