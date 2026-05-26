@@ -2051,14 +2051,25 @@ const normalizePhoneNumber = (phone) => {
     return cleaned;
 };
 
+const buildWhatsAppUrl = (baseUrl, instanceId) => {
+    if (baseUrl.includes('/api/v1/instances/')) {
+        const match = baseUrl.match(/^(https?:\/\/[^\/]+)/);
+        if (match) {
+            baseUrl = match[1];
+        }
+    }
+    return `${baseUrl.replace(/\/$/, '')}/api/v1/instances/${instanceId}/send-text`;
+};
+
 const sendWhatsAppMessage = async (baseUrl, instanceId, apiKey, number, message) => {
     try {
-        const url = `${baseUrl.replace(/\/$/, '')}/api/v1/instances/${instanceId}/send-text`;
+        const url = buildWhatsAppUrl(baseUrl, instanceId);
         const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': apiKey
+                'x-api-key': apiKey,
+                'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify({ number, message })
         });
