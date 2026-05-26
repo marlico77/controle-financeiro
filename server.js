@@ -537,6 +537,36 @@ const initDB = async () => {
         await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS lgpd_accepted BOOLEAN DEFAULT FALSE');
         await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS lgpd_accepted_at TIMESTAMP');
 
+        // --- WhatsApp W-API Integration Database Schema ---
+        await db.query('ALTER TABLE people ADD COLUMN IF NOT EXISTS phone VARCHAR(50)');
+
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS whatsapp_settings (
+                id SERIAL PRIMARY KEY,
+                api_key VARCHAR(255) NOT NULL,
+                base_url VARCHAR(255) NOT NULL,
+                instance_id VARCHAR(255) NOT NULL,
+                enabled BOOLEAN DEFAULT FALSE,
+                reminder_template TEXT,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+
+        // Seed default WhatsApp settings if empty
+        const wsCount = await db.query('SELECT COUNT(*) FROM whatsapp_settings');
+        if (parseInt(wsCount.rows[0].count, 10) === 0) {
+            await db.query(`
+                INSERT INTO whatsapp_settings (api_key, base_url, instance_id, enabled, reminder_template) VALUES
+                (
+                    'sk-live-3680b7cc4cba82233968337f73c0d2cbbcff555b8d5041fd',
+                    'http://localhost:8000',
+                    'instancia-principal',
+                    false,
+                    'Olá {nome}, tudo bem? Lembramos que a mensalidade do mês de {mensalidade} está pendente. Por favor, regularize assim que possível para nos ajudar com as atividades do clube! Obrigado.'
+                )
+            `);
+            console.log('[DB] Seeding default whatsapp settings.');
+        }
 
         // --- Criação de Índices de Performance ---
         // Essencial para manter o sistema rápido com o crescimento dos dados
@@ -818,7 +848,7 @@ app.get('/api/people', authenticateToken, async (req, res) => {
 app.post('/api/people', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
   
-  let { name, responsible, birth_date, cpf, unit, username, role } = req.body || {};
+  let { name, responsible, birth_date, cpf, unit, phone, username, role } = req.body || {};
   // Valida se o nome tem pelo menos duas partes (Nome e Sobrenome)
   if (!name || name.trim().split(/\s+/).length < 2) {
       return res.status(400).json({ error: 'O nome deve conter pelo menos Nome e Sobrenome.' });
@@ -833,8 +863,8 @@ app.post('/api/people', authenticateToken, async (req, res) => {
       
       // Insere na tabela 'people'
       const result = await client.query(
-        'INSERT INTO people (name, responsible, birth_date, cpf, unit) VALUES ($1, $2, $3, $4, $5) RETURNING id', 
-        [name, responsible || null, birth_date || null, cpf || null, unit || null]
+        'INSERT INTO people (name, responsible, birth_date, cpf, unit, phone) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id', 
+        [name, responsible || null, birth_date || null, cpf || null, unit || null, phone || null]
       );
       
       const personId = result.rows[0].id;
@@ -899,10 +929,15 @@ app.post('/api/people/import', authenticateToken, upload.single('file'), async (
             const nameKey = keys.find(k => k.trim().toUpperCase() === 'NOME');
             const unitKey = keys.find(k => k.trim().toUpperCase() === 'UNIDADE');
             const birthKey = keys.find(k => k.trim().toUpperCase().includes('NASCIMENTO'));
+            const phoneKey = keys.find(k => {
+                const upper = k.trim().toUpperCase();
+                return upper === 'TELEFONE' || upper === 'CELULAR' || upper === 'WHATSAPP' || upper === 'PHONE';
+            });
             
             const name = nameKey ? item[nameKey] : null;
             const unit = unitKey ? item[unitKey] : null;
             let birthDate = birthKey ? item[birthKey] : null;
+            const phone = phoneKey ? item[phoneKey] : null;
 
             // Converte data do formato numérico do Excel para String se necessário
             if (typeof birthDate === 'number') {
@@ -912,8 +947,8 @@ app.post('/api/people/import', authenticateToken, upload.single('file'), async (
             
             if (name) {
                 await client.query(
-                    'INSERT INTO people (name, unit, birth_date) VALUES ($1, $2, $3)', 
-                    [name.toString().trim(), unit ? unit.toString().trim() : null, birthDate || null]
+                    'INSERT INTO people (name, unit, birth_date, phone) VALUES ($1, $2, $3, $4)', 
+                    [name.toString().trim(), unit ? unit.toString().trim() : null, birthDate || null, phone ? phone.toString().trim() : null]
                 );
                 count++;
             }
@@ -1127,7 +1162,7 @@ app.delete('/api/payments/:id', authenticateToken, async (req, res) => {
 // Atualiza dados cadastrais de um membro (Admin ou o próprio usuário)
 app.put('/api/people/:id', authenticateToken, async (req, res) => {
   try {
-    let { name, responsible, birth_date, cpf, unit, username, password, role } = req.body || {};
+    let { name, responsible, birth_date, cpf, unit, phone, username, password, role } = req.body || {};
     // Normaliza username para evitar erros de digitação e acentuação
     if (username) username = username.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const { id } = req.params;
@@ -1140,8 +1175,8 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
     if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
 
     // Atualiza tabela people
-    const updateResult = await db.query('UPDATE people SET name = $1, responsible = $2, birth_date = $3, cpf = $4, unit = $5 WHERE id = $6', 
-      [name, responsible || null, birth_date || null, cpf || null, unit || null, id]);
+    const updateResult = await db.query('UPDATE people SET name = $1, responsible = $2, birth_date = $3, cpf = $4, unit = $5, phone = $6 WHERE id = $7', 
+      [name, responsible || null, birth_date || null, cpf || null, unit || null, phone || null, id]);
     
     if (updateResult.rowCount === 0) {
       return res.status(404).json({ error: 'Membro não encontrado' });
@@ -2004,6 +2039,126 @@ app.post('/api/notifications/send', authenticateToken, async (req, res) => {
     }
 });
 
+// --- WhatsApp W-API Helpers & Endpoints ---
+
+const normalizePhoneNumber = (phone) => {
+    if (!phone) return null;
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length < 10) return null;
+    if (cleaned.length === 10 || cleaned.length === 11) {
+        cleaned = '55' + cleaned;
+    }
+    return cleaned;
+};
+
+const sendWhatsAppMessage = async (baseUrl, instanceId, apiKey, number, message) => {
+    try {
+        const url = `${baseUrl.replace(/\/$/, '')}/api/v1/instances/${instanceId}/send-text`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey
+            },
+            body: JSON.stringify({ number, message })
+        });
+        
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
+        }
+        
+        const data = await response.json();
+        return { success: true, data };
+    } catch (err) {
+        console.error(`[WA] Erro ao enviar mensagem para ${number}:`, err.message);
+        return { success: false, error: err.message };
+    }
+};
+
+app.get('/api/whatsapp/settings', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    try {
+        const result = await db.query('SELECT * FROM whatsapp_settings LIMIT 1');
+        res.json(result.rows[0] || {});
+    } catch (err) {
+        console.error('[WA] Erro ao buscar configurações:', err);
+        res.status(500).json({ error: 'Erro ao buscar configurações' });
+    }
+});
+
+app.post('/api/whatsapp/settings', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { api_key, base_url, instance_id, enabled, reminder_template } = req.body || {};
+    if (!api_key || !base_url || !instance_id || reminder_template === undefined) {
+        return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+    }
+    try {
+        await db.query(`
+            UPDATE whatsapp_settings 
+            SET api_key = $1, base_url = $2, instance_id = $3, enabled = $4, reminder_template = $5, updated_at = NOW()
+            WHERE id = (SELECT id FROM whatsapp_settings LIMIT 1)
+        `, [api_key, base_url, instance_id, enabled || false, reminder_template]);
+        
+        logAction(req, 'UPDATE_WHATSAPP_SETTINGS', { base_url, instance_id, enabled });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[WA] Erro ao salvar configurações:', err);
+        res.status(500).json({ error: 'Erro ao salvar configurações' });
+    }
+});
+
+app.post('/api/whatsapp/send', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { personIds, message } = req.body || {};
+    
+    if (!personIds || !Array.isArray(personIds) || personIds.length === 0 || !message) {
+        return res.status(400).json({ error: 'Parâmetros obrigatórios ausentes.' });
+    }
+    
+    try {
+        const settingsResult = await db.query('SELECT * FROM whatsapp_settings LIMIT 1');
+        const settings = settingsResult.rows[0];
+        
+        if (!settings) {
+            return res.status(400).json({ error: 'Configurações de WhatsApp não encontradas.' });
+        }
+        
+        const peopleResult = await db.query('SELECT id, name, phone FROM people WHERE id = ANY($1::int[])', [personIds]);
+        const targets = peopleResult.rows.filter(p => p.phone);
+        
+        if (targets.length === 0) {
+            return res.status(400).json({ error: 'Nenhum dos membros selecionados possui telefone cadastrado.' });
+        }
+        
+        res.json({ success: true, message: `Iniciado envio de ${targets.length} mensagens no WhatsApp em segundo plano.` });
+        
+        (async () => {
+            console.log(`[WA] Iniciando envio manual em massa de ${targets.length} mensagens.`);
+            for (let i = 0; i < targets.length; i++) {
+                const target = targets[i];
+                const normalizedPhone = normalizePhoneNumber(target.phone);
+                
+                if (normalizedPhone) {
+                    console.log(`[WA] [${i+1}/${targets.length}] Enviando para ${target.name} (${normalizedPhone})...`);
+                    await sendWhatsAppMessage(settings.base_url, settings.instance_id, settings.api_key, normalizedPhone, message);
+                } else {
+                    console.warn(`[WA] Telefone inválido para ${target.name}: ${target.phone}`);
+                }
+                
+                if (i < targets.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                }
+            }
+            console.log(`[WA] Finalizado envio manual em massa de mensagens.`);
+        })().catch(err => console.error('[WA] Erro na fila de envio manual:', err));
+        
+    } catch (err) {
+        console.error('[WA] Erro na rota de envio:', err);
+        res.status(500).json({ error: 'Erro ao processar envio' });
+    }
+});
+
 // --- API de Galeria de Fotos (Site Institucional) ---
 
 app.get('/api/site-albums', async (req, res) => {
@@ -2078,46 +2233,85 @@ app.delete('/api/site-albums/:id', authenticateToken, async (req, res) => {
 
 // --- Lógica de Lembretes Automáticos (CRON) ---
 
+
 // Envia lembretes para quem ainda não pagou a mensalidade do mês atual
 const sendPaymentReminders = async () => {
     try {
         const currentMonth = new Date().getMonth() + 1;
         const currentYear = new Date().getFullYear();
 
-        // Busca usuários que NÃO possuem pagamento aprovado este mês
-        const unpaidUsers = await db.query(`
-            SELECT u.id, u.username, p.name 
-            FROM users u
-            JOIN people p ON u.person_id = p.id
+        // Busca membros que NÃO possuem pagamento aprovado este mês
+        const unpaidMembers = await db.query(`
+            SELECT p.id as person_id, p.name, p.phone, u.id as user_id, u.username
+            FROM people p
+            LEFT JOIN users u ON p.id = u.person_id
             WHERE p.id NOT IN (
                 SELECT person_id FROM payments 
                 WHERE month = $1 AND year = $2 AND status = 'approved'
             )
         `, [currentMonth, currentYear]);
 
-        console.log(`[CRON] Enviando lembretes para ${unpaidUsers.rows.length} usuários.`);
+        console.log(`[CRON] Enviando lembretes para ${unpaidMembers.rows.length} membros.`);
 
-        for (const user of unpaidUsers.rows) {
-            const title = 'Lembrete de Mensalidade';
-            const content = `Olá ${user.name || user.username}, lembramos que a mensalidade deste mês ainda está pendente. Regularize para nos ajudar a manter o clube!`;
+        // Busca configurações do WhatsApp
+        const waResult = await db.query('SELECT * FROM whatsapp_settings LIMIT 1');
+        const waSettings = waResult.rows[0];
+        const waEnabled = waSettings && waSettings.enabled;
+        
+        const getMonthNamePT = (monthNumber) => {
+            const months = [
+                'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+            ];
+            return months[monthNumber - 1] || '';
+        };
+        const currentMonthName = getMonthNamePT(currentMonth);
+
+        for (let i = 0; i < unpaidMembers.rows.length; i++) {
+            const member = unpaidMembers.rows[i];
             
-            // Salva no banco
-            await db.query(`
-                INSERT INTO notifications (user_id, title, message, type)
-                VALUES ($1, $2, $3, 'automated_reminder')
-            `, [user.id, title, content]);
+            // 1. Envia notificações internas do sistema e push se o membro tiver um usuário vinculado
+            if (member.user_id) {
+                const title = 'Lembrete de Mensalidade';
+                const content = `Olá ${member.name || member.username}, lembramos que a mensalidade deste mês ainda está pendente. Regularize para nos ajudar a manter o clube!`;
+                
+                // Salva no banco de notificações do sistema
+                await db.query(`
+                    INSERT INTO notifications (user_id, title, message, type)
+                    VALUES ($1, $2, $3, 'automated_reminder')
+                `, [member.user_id, title, content]);
 
-            // Envia Push (Notificação para Celular)
-            const pushResult = await db.query('SELECT subscription_data FROM push_subscriptions WHERE user_id = $1', [user.id]);
-            const payload = JSON.stringify({ title, body: content });
+                // Envia Push (Notificação para Celular)
+                const pushResult = await db.query('SELECT subscription_data FROM push_subscriptions WHERE user_id = $1', [member.user_id]);
+                const payload = JSON.stringify({ title, body: content });
 
-            pushResult.rows.forEach(sub => {
-                webPush.sendNotification(JSON.parse(sub.subscription_data), payload).catch(err => {
-                    if (err.statusCode === 410) {
-                        db.query('DELETE FROM push_subscriptions WHERE subscription_data = $1', [sub.subscription_data]);
-                    }
+                pushResult.rows.forEach(sub => {
+                    webPush.sendNotification(JSON.parse(sub.subscription_data), payload).catch(err => {
+                        if (err.statusCode === 410 || err.statusCode === 404) {
+                            db.query('DELETE FROM push_subscriptions WHERE subscription_data = $1', [sub.subscription_data]);
+                        }
+                    });
                 });
-            });
+            }
+
+            // 2. Envia WhatsApp se habilitado e o membro tiver telefone cadastrado
+            if (waEnabled && member.phone) {
+                const normalizedPhone = normalizePhoneNumber(member.phone);
+                if (normalizedPhone) {
+                    // Substitui variáveis do template
+                    const waMessage = waSettings.reminder_template
+                        .replace(/{nome}/g, member.name)
+                        .replace(/{mensalidade}/g, currentMonthName)
+                        .replace(/{mes}/g, currentMonthName);
+                    
+                    console.log(`[CRON-WA] Agendando WhatsApp para ${member.name} (${normalizedPhone}) em segundo plano.`);
+                    // Envia assincronamente com um delay progressivo para evitar bloqueios por spam (ex: 2 segundos de intervalo)
+                    setTimeout(async () => {
+                        console.log(`[CRON-WA] Enviando lembrete de WhatsApp para ${member.name}...`);
+                        await sendWhatsAppMessage(waSettings.base_url, waSettings.instance_id, waSettings.api_key, normalizedPhone, waMessage);
+                    }, i * 2000); // 2 segundos de delay entre cada envio
+                }
+            }
         }
     } catch (err) {
         console.error('[CRON] Erro no processamento automático:', err);

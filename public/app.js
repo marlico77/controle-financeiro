@@ -103,6 +103,8 @@ window.copyPix = (element, text) => {
     }, 2000);
 };
 
+
+
 // Nomes completos dos meses em português
 const months = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -3618,6 +3620,7 @@ const editPerson = (id) => {
     document.getElementById('p-unit').value = person.unit || '';
     document.getElementById('p-birth').value = person.birth_date || '';
     document.getElementById('p-cpf').value = formatCPF(person.cpf || '');
+    document.getElementById('p-phone').value = person.phone || '';
 
     // Configura seção de credenciais de login para Admin
     const credentialsSection = document.getElementById('admin-only-credentials');
@@ -3794,6 +3797,7 @@ document.getElementById('person-form').onsubmit = async (e) => {
         unit: document.getElementById('p-unit').value,
         birth_date: document.getElementById('p-birth').value,
         cpf: document.getElementById('p-cpf').value,
+        phone: document.getElementById('p-phone').value.trim(),
         username: document.getElementById('u-username').value,
         password: document.getElementById('u-password').value,
         role: document.getElementById('u-role').value
@@ -4012,6 +4016,31 @@ document.getElementById('event-payment-form').onsubmit = async (e) => {
 
 
 // --- Inicialização e Máscaras de Input ---
+
+// Máscara em tempo real para o campo de Telefone/WhatsApp
+const formatPhone = (value) => {
+    if (!value) return '';
+    let cleaned = value.replace(/\D/g, '');
+    if (cleaned.length > 11) cleaned = cleaned.slice(0, 11);
+    
+    if (cleaned.length > 10) {
+        return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+    } else if (cleaned.length > 6) {
+        return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+    } else if (cleaned.length > 2) {
+        return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+    } else if (cleaned.length > 0) {
+        return `(${cleaned}`;
+    }
+    return '';
+};
+
+const pPhone = document.getElementById('p-phone');
+if (pPhone) {
+    pPhone.addEventListener('input', (e) => {
+        e.target.value = formatPhone(e.target.value);
+    });
+}
 
 // Máscara em tempo real para o campo de CPF
 const pCpf = document.getElementById('p-cpf');
@@ -4820,9 +4849,211 @@ function calculateProfileAge(birthDate) {
     return age + (age === 1 ? ' ano' : ' anos');
 }
 
+// --- Gerenciador do Painel do WhatsApp (W-API) ---
+const initWhatsAppForm = () => {
+    const tabSystem = document.getElementById('tab-system-messages');
+    const tabWhatsapp = document.getElementById('tab-whatsapp-messages');
+    const containerSystem = document.getElementById('system-messages-container');
+    const containerWhatsapp = document.getElementById('whatsapp-messages-container');
+    const configForm = document.getElementById('whatsapp-config-form');
+    const sendForm = document.getElementById('whatsapp-send-form');
+
+    if (!tabSystem || !tabWhatsapp) return;
+
+    // Função auxiliar para carregar configurações do WhatsApp do backend
+    const loadWhatsAppSettings = async () => {
+        try {
+            const settings = await apiFetch('/api/whatsapp/settings');
+            if (settings) {
+                document.getElementById('wa-base-url').value = settings.base_url || '';
+                document.getElementById('wa-instance-id').value = settings.instance_id || '';
+                document.getElementById('wa-api-key').value = settings.api_key || '';
+                document.getElementById('wa-enabled').checked = !!settings.enabled;
+                document.getElementById('wa-template').value = settings.reminder_template || '';
+            }
+        } catch (err) {
+            console.error('[WA] Erro ao carregar configurações:', err);
+        }
+    };
+
+    // Alternar para aba Avisos do Sistema
+    tabSystem.onclick = () => {
+        tabSystem.classList.add('active');
+        tabSystem.style.color = 'var(--accent-color)';
+        tabSystem.style.borderBottom = '2px solid var(--accent-color)';
+        
+        tabWhatsapp.classList.remove('active');
+        tabWhatsapp.style.color = 'var(--text-dim)';
+        tabWhatsapp.style.borderBottom = 'none';
+
+        containerSystem.style.display = 'block';
+        containerWhatsapp.style.display = 'none';
+    };
+
+    // Alternar para aba WhatsApp (W-API)
+    tabWhatsapp.onclick = () => {
+        tabWhatsapp.classList.add('active');
+        tabWhatsapp.style.color = 'var(--accent-color)';
+        tabWhatsapp.style.borderBottom = '2px solid var(--accent-color)';
+        
+        tabSystem.classList.remove('active');
+        tabSystem.style.color = 'var(--text-dim)';
+        tabSystem.style.borderBottom = 'none';
+
+        containerSystem.style.display = 'none';
+        containerWhatsapp.style.display = 'block';
+
+        // Carrega configurações e membros
+        loadWhatsAppSettings();
+        renderWhatsAppMembers();
+    };
+
+    // Salvar configurações do W-API
+    if (configForm) {
+        configForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const configData = {
+                base_url: document.getElementById('wa-base-url').value.trim(),
+                instance_id: document.getElementById('wa-instance-id').value.trim(),
+                api_key: document.getElementById('wa-api-key').value.trim(),
+                enabled: document.getElementById('wa-enabled').checked,
+                reminder_template: document.getElementById('wa-template').value
+            };
+
+            try {
+                await apiFetch('/api/whatsapp/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(configData)
+                });
+                showAlert('Configurações do WhatsApp salvas com sucesso!', 'Sucesso');
+            } catch (err) {
+                console.error('[WA] Erro ao salvar configurações:', err);
+                showAlert('Erro ao salvar configurações: ' + err.message, 'Erro');
+            }
+        };
+    }
+
+    // Filtragem de busca na lista de membros do WhatsApp
+    const searchInput = document.getElementById('wa-msg-search');
+    if (searchInput) {
+        searchInput.oninput = (e) => {
+            const term = e.target.value.toLowerCase();
+            document.querySelectorAll('#wa-members-checkbox-container .checkbox-item').forEach(item => {
+                const search = item.getAttribute('data-search') || '';
+                item.style.display = search.includes(term) ? 'flex' : 'none';
+            });
+        };
+    }
+
+    // Lógica do botão "Selecionar Todos"
+    const selectAll = document.getElementById('wa-msg-select-all');
+    if (selectAll) {
+        selectAll.onchange = (e) => {
+            const isChecked = e.target.checked;
+            document.querySelectorAll('#wa-members-checkbox-container input[type="checkbox"]').forEach(cb => {
+                if (cb.parentElement.style.display !== 'none') {
+                    cb.checked = isChecked;
+                }
+            });
+        };
+    }
+
+    // Enviar mensagem manual via WhatsApp
+    if (sendForm) {
+        sendForm.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const checkboxes = document.querySelectorAll('#wa-members-checkbox-container input[type="checkbox"]:checked');
+            const selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+            if (selectedIds.length === 0) {
+                showAlert('Por favor, selecione pelo menos um membro.', 'Aviso');
+                return;
+            }
+
+            const message = document.getElementById('wa-msg-content').value;
+
+            try {
+                const res = await apiFetch('/api/whatsapp/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        personIds: selectedIds,
+                        message
+                    })
+                });
+                
+                showAlert(res.message || 'Envio iniciado com sucesso!', 'Sucesso');
+                document.getElementById('wa-msg-content').value = '';
+                // Desmarca todos os checkboxes e o selecionar todos
+                document.querySelectorAll('#wa-msg-target-list input[type="checkbox"]').forEach(cb => cb.checked = false);
+            } catch (err) {
+                console.error('[WA] Erro ao enviar:', err);
+                showAlert('Erro ao enviar mensagem: ' + err.message, 'Erro');
+            }
+        };
+    }
+};
+
+// Renderiza a lista de membros no painel do WhatsApp
+async function renderWhatsAppMembers() {
+    const container = document.getElementById('wa-members-checkbox-container');
+    if (!container) return;
+
+    container.innerHTML = '<p style="text-align: center; padding: 10px; color: var(--text-dim);">Carregando membros...</p>';
+
+    try {
+        const people = await apiFetch('/api/people');
+        people.sort((a, b) => a.name.localeCompare(b.name));
+
+        container.innerHTML = '';
+        people.forEach(p => {
+            const searchText = `${p.name} ${p.unit || ''}`.toLowerCase();
+            const item = document.createElement('div');
+            item.className = 'checkbox-item';
+            item.setAttribute('data-search', searchText);
+            item.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-bottom: 1px solid rgba(0,0,0,0.03); cursor: pointer;';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `wa-user-${p.id}`;
+            checkbox.value = p.id;
+            checkbox.style.cssText = 'width: 18px; height: 18px; cursor: pointer;';
+            
+            // Desabilita se não tiver telefone cadastrado
+            if (!p.phone) {
+                checkbox.disabled = true;
+                item.style.opacity = '0.6';
+            }
+
+            const label = document.createElement('label');
+            label.htmlFor = `wa-user-${p.id}`;
+            
+            let phoneLabel = p.phone ? `<span style="color: #25D366; font-weight: 600;">${escapeHTML(p.phone)}</span>` : '<span style="color: var(--error-color); font-weight: 500;">Sem Telefone</span>';
+            label.innerHTML = `${escapeHTML(p.name)} <br> <small style="color: var(--text-dim)">${escapeHTML(p.unit || 'Sem Unidade')} | ${phoneLabel}</small>`;
+            label.style.cssText = 'margin: 0; cursor: pointer; font-size: 0.9rem; flex-grow: 1; user-select: none;';
+
+            item.onclick = (e) => {
+                if (e.target !== checkbox && e.target !== label && !checkbox.disabled) {
+                    checkbox.checked = !checkbox.checked;
+                }
+            };
+
+            item.appendChild(checkbox);
+            item.appendChild(label);
+            container.appendChild(item);
+        });
+    } catch (err) {
+        console.error('Erro ao carregar membros para WhatsApp:', err);
+        container.innerHTML = '<p style="color: var(--error-color); padding: 10px;">Erro ao carregar lista de membros.</p>';
+    }
+}
+
 // Inicializações finais de módulos persistentes
 initializeNotifications();
 initMessageForm();
+initWhatsAppForm();
 
 // --- Lógica do Módulo Galeria ---
 async function fetchGallery() {
