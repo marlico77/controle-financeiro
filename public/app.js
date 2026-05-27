@@ -4897,6 +4897,9 @@ const initWhatsAppForm = () => {
         document.getElementById('wa-schedule-list-panel').style.display = (isAdmin || isSecretary) ? 'block' : 'none';
         document.getElementById('wa-manual-panel').style.display = (isAdmin || isSecretary) ? 'block' : 'none';
 
+        // Default to "Agendar Mensagens" sub-tab on main tab click
+        switchWaSubTab('wa-tab-schedule');
+
         if (isMaster) {
             loadWhatsAppSettings();
         }
@@ -4905,6 +4908,46 @@ const initWhatsAppForm = () => {
         }
         renderWhatsAppMembers();
     };
+
+    // --- Sub-menu WhatsApp navigation logic ---
+    const waTabSchedule = document.getElementById('wa-tab-schedule');
+    const waTabSend = document.getElementById('wa-tab-send');
+    const waTabPanel = document.getElementById('wa-tab-panel');
+    
+    const waContentSchedule = document.getElementById('wa-content-schedule');
+    const waContentSend = document.getElementById('wa-content-send');
+    const waContentPanel = document.getElementById('wa-content-panel');
+
+    const switchWaSubTab = (activeTabId) => {
+        const subTabs = [
+            { id: 'wa-tab-schedule', btn: waTabSchedule, content: waContentSchedule },
+            { id: 'wa-tab-send', btn: waTabSend, content: waContentSend },
+            { id: 'wa-tab-panel', btn: waTabPanel, content: waContentPanel }
+        ];
+
+        subTabs.forEach(t => {
+            if (t.btn && t.content) {
+                if (t.id === activeTabId) {
+                    t.btn.classList.add('active');
+                    t.btn.style.color = 'var(--accent-color)';
+                    t.btn.style.borderBottom = '2px solid var(--accent-color)';
+                    t.btn.style.borderTop = 'none';
+                    t.btn.style.borderLeft = 'none';
+                    t.btn.style.borderRight = 'none';
+                    t.content.style.display = 'block';
+                } else {
+                    t.btn.classList.remove('active');
+                    t.btn.style.color = 'var(--text-dim)';
+                    t.btn.style.borderBottom = 'none';
+                    t.content.style.display = 'none';
+                }
+            }
+        });
+    };
+
+    if (waTabSchedule) waTabSchedule.onclick = () => switchWaSubTab('wa-tab-schedule');
+    if (waTabSend) waTabSend.onclick = () => switchWaSubTab('wa-tab-send');
+    if (waTabPanel) waTabPanel.onclick = () => switchWaSubTab('wa-tab-panel');
 
     // Salvar configurações do W-API
     if (configForm) {
