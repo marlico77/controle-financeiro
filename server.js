@@ -568,6 +568,19 @@ const initDB = async () => {
             console.log('[DB] Seeding default whatsapp settings.');
         }
 
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS scheduled_reminders (
+                id SERIAL PRIMARY KEY,
+                message TEXT NOT NULL,
+                scheduled_at TIMESTAMPTZ NOT NULL,
+                target_type VARCHAR(50) NOT NULL,
+                target_value TEXT,
+                status VARCHAR(20) DEFAULT 'pending',
+                error_message TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        `);
+
         // --- Criação de Índices de Performance ---
         // Essencial para manter o sistema rápido com o crescimento dos dados
         await db.query('CREATE INDEX IF NOT EXISTS idx_payments_year ON payments(year)');
@@ -1225,26 +1238,7 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Exclui um membro do sistema (Apenas Administrador Master)
-app.delete('/api/people/:id', authenticateToken, async (req, res) => {
-  if (req.user.username.toUpperCase() !== 'ADMINISTRADOR') {
-      return res.status(403).json({ error: 'Apenas o administrador master pode excluir registros.' });
-  }
 
-  try {
-    // Proteção: Impede a exclusão da conta do Administrador Master
-    const targetUser = await db.query('SELECT username FROM users WHERE person_id = $1', [req.params.id]);
-    if (targetUser.rows[0] && targetUser.rows[0].username.toUpperCase() === 'ADMINISTRADOR') {
-        return res.status(403).json({ error: 'O usuário administrador master não pode ser excluído.' });
-    }
-
-    await db.query('DELETE FROM people WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-    logAction(req, 'DELETE_PERSON', { id: req.params.id });
-  } catch{
-    res.status(500).json({ error: 'Erro ao deletar membro' });
-  }
-});
 
 // --- API de Eventos ---
 
@@ -2088,7 +2082,7 @@ const sendWhatsAppMessage = async (baseUrl, instanceId, apiKey, number, message)
 };
 
 app.get('/api/whatsapp/settings', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    if (req.user.role !== 'admin' || (req.user.username || '').toUpperCase() !== 'ADMINISTRADOR') return res.sendStatus(403);
     try {
         const result = await db.query('SELECT * FROM whatsapp_settings LIMIT 1');
         res.json(result.rows[0] || {});
@@ -2099,7 +2093,7 @@ app.get('/api/whatsapp/settings', authenticateToken, async (req, res) => {
 });
 
 app.post('/api/whatsapp/settings', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    if (req.user.role !== 'admin' || (req.user.username || '').toUpperCase() !== 'ADMINISTRADOR') return res.sendStatus(403);
     const { api_key, base_url, instance_id, enabled, reminder_template } = req.body || {};
     if (!api_key || !base_url || !instance_id || reminder_template === undefined) {
         return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
@@ -2116,6 +2110,75 @@ app.post('/api/whatsapp/settings', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('[WA] Erro ao salvar configurações:', err);
         res.status(500).json({ error: 'Erro ao salvar configurações' });
+    }
+});
+
+// --- API de Lembretes Agendados via WhatsApp ---
+
+app.get('/api/whatsapp/scheduled', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    try {
+        const result = await db.query('SELECT * FROM scheduled_reminders ORDER BY scheduled_at DESC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error('[WA] Erro ao buscar agendamentos:', err);
+        res.status(500).json({ error: 'Erro ao buscar agendamentos' });
+    }
+});
+
+app.post('/api/whatsapp/scheduled', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { message, date, time, target_type, target_value } = req.body || {};
+    
+    if (!message || !date || !time || !target_type) {
+        return res.status(400).json({ error: 'Parâmetros obrigatórios ausentes.' });
+    }
+    
+    try {
+        const scheduledAt = new Date(`${date}T${time}`);
+        if (isNaN(scheduledAt.getTime())) {
+            return res.status(400).json({ error: 'Data ou hora inválida.' });
+        }
+        
+        if (scheduledAt <= new Date()) {
+            return res.status(400).json({ error: 'O agendamento precisa ser para uma data e hora no futuro.' });
+        }
+        
+        const finalTargetValue = typeof target_value === 'object' ? JSON.stringify(target_value) : (target_value || null);
+        
+        await db.query(`
+            INSERT INTO scheduled_reminders (message, scheduled_at, target_type, target_value)
+            VALUES ($1, $2, $3, $4)
+        `, [message, scheduledAt, target_type, finalTargetValue]);
+        
+        logAction(req, 'CREATE_SCHEDULED_REMINDER', { scheduled_at: scheduledAt, target_type });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[WA] Erro ao agendar lembrete:', err);
+        res.status(500).json({ error: 'Erro ao agendar lembrete' });
+    }
+});
+
+app.delete('/api/whatsapp/scheduled/:id', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { id } = req.params;
+    
+    try {
+        const result = await db.query(`
+            DELETE FROM scheduled_reminders 
+            WHERE id = $1 AND status = 'pending'
+            RETURNING id
+        `, [id]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Agendamento não encontrado ou já enviado.' });
+        }
+        
+        logAction(req, 'DELETE_SCHEDULED_REMINDER', { id });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[WA] Erro ao cancelar agendamento:', err);
+        res.status(500).json({ error: 'Erro ao cancelar agendamento' });
     }
 });
 
@@ -2366,6 +2429,89 @@ cron.schedule('0 9 * * *', async () => {
             console.log('[CRON] Hoje é o 5º dia útil. Enviando lembretes.');
             sendPaymentReminders();
         }
+    }
+});
+
+// Agendamento CRON: Roda a cada minuto para verificar e disparar lembretes agendados
+cron.schedule('* * * * *', async () => {
+    try {
+        // Busca lembretes pendentes agendados para a data/hora atual ou passados que ainda não foram enviados
+        const pendingReminders = await db.query(`
+            SELECT * FROM scheduled_reminders 
+            WHERE status = 'pending' AND scheduled_at <= NOW()
+        `);
+        
+        if (pendingReminders.rows.length === 0) return;
+        
+        console.log(`[CRON-SCH] Encontrados ${pendingReminders.rows.length} lembretes pendentes para processar.`);
+        
+        // Busca configurações do WhatsApp
+        const waResult = await db.query('SELECT * FROM whatsapp_settings LIMIT 1');
+        const waSettings = waResult.rows[0];
+        
+        if (!waSettings) {
+            console.error('[CRON-SCH] Configurações de WhatsApp não encontradas. Abortando.');
+            return;
+        }
+        
+        for (const reminder of pendingReminders.rows) {
+            try {
+                // Atualiza status para processing para evitar duplicidade de disparos
+                await db.query('UPDATE scheduled_reminders SET status = $1 WHERE id = $2', ['processing', reminder.id]);
+                
+                let targets = [];
+                
+                if (reminder.target_type === 'all') {
+                    const result = await db.query('SELECT id, name, phone FROM people WHERE phone IS NOT NULL');
+                    targets = result.rows;
+                } else if (reminder.target_type === 'unit') {
+                    const result = await db.query('SELECT id, name, phone FROM people WHERE phone IS NOT NULL AND LOWER(unit) = LOWER($1)', [reminder.target_value]);
+                    targets = result.rows;
+                } else if (reminder.target_type === 'selected') {
+                    const personIds = JSON.parse(reminder.target_value);
+                    const result = await db.query('SELECT id, name, phone FROM people WHERE phone IS NOT NULL AND id = ANY($1::int[])', [personIds]);
+                    targets = result.rows;
+                }
+                
+                if (targets.length === 0) {
+                    await db.query('UPDATE scheduled_reminders SET status = $1, error_message = $2 WHERE id = $3', ['sent', 'Nenhum contato encontrado com telefone cadastrado.', reminder.id]);
+                    continue;
+                }
+                
+                console.log(`[CRON-SCH] Processando lembrete ID ${reminder.id} para ${targets.length} contatos.`);
+                
+                // Envia as mensagens em segundo plano
+                (async () => {
+                    for (let i = 0; i < targets.length; i++) {
+                        const target = targets[i];
+                        const normalizedPhone = normalizePhoneNumber(target.phone);
+                        if (normalizedPhone) {
+                            // Substitui {nome} se presente na mensagem personalizada
+                            const customMessage = reminder.message.replace(/{nome}/g, target.name);
+                            await sendWhatsAppMessage(waSettings.base_url, waSettings.instance_id, waSettings.api_key, normalizedPhone, customMessage);
+                        }
+                        
+                        if (i < targets.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 1500)); // Delay seguro de 1.5s entre disparos
+                        }
+                    }
+                    
+                    // Finalizado com sucesso
+                    await db.query('UPDATE scheduled_reminders SET status = $1 WHERE id = $2', ['sent', reminder.id]);
+                    console.log(`[CRON-SCH] Finalizado com sucesso o envio do lembrete ID ${reminder.id}.`);
+                })().catch(async (err) => {
+                    console.error(`[CRON-SCH] Erro na fila do lembrete ID ${reminder.id}:`, err);
+                    await db.query('UPDATE scheduled_reminders SET status = $1, error_message = $2 WHERE id = $3', ['error', err.message, reminder.id]);
+                });
+                
+            } catch (innerErr) {
+                console.error(`[CRON-SCH] Erro no processamento individual do lembrete ID ${reminder.id}:`, innerErr);
+                await db.query('UPDATE scheduled_reminders SET status = $1, error_message = $2 WHERE id = $3', ['error', innerErr.message, reminder.id]);
+            }
+        }
+        
+    } catch (err) {
+        console.error('[CRON-SCH] Erro geral no agendador:', err);
     }
 });
 

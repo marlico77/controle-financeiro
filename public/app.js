@@ -1070,7 +1070,7 @@ async function checkAuth() {
                 if (navItems.people) navItems.people.style.display = 'none';
                 if (navItems.outflows) navItems.outflows.style.display = 'none';
                 if (navItems.sales) navItems.sales.style.display = 'none';
-                if (navItems.messages) navItems.messages.style.display = 'none';
+                if (navItems.messages) navItems.messages.style.display = isSecretary ? 'flex' : 'none';
                 if (navItems.logs) navItems.logs.style.display = 'none';
 
                 // Secretário tem acesso aos relatórios e autorizações; membro comum e social media não
@@ -1129,7 +1129,7 @@ async function checkAuth() {
             }
 
             // Bloqueia abas administrativas gerais para não-admins
-            if (!isAdmin && (state.activeTab === 'people' || state.activeTab === 'outflows' || state.activeTab === 'sales' || state.activeTab === 'messages')) {
+            if (!isAdmin && (state.activeTab === 'people' || state.activeTab === 'outflows' || state.activeTab === 'sales' || (state.activeTab === 'messages' && !isSecretary))) {
                 state.activeTab = 'dashboard';
                 setStorageItem('activeTab', 'dashboard', !!localStorage.getItem('token'));
             }
@@ -3595,7 +3595,6 @@ document.getElementById('add-person-btn').onclick = () => {
     document.getElementById('person-modal-title').textContent = 'Novo Membro';
     document.getElementById('p-id').value = '';
     document.getElementById('person-form').reset();
-    document.getElementById('delete-member-btn').style.display = 'none';
 
     // Controle de exibição da seção de credenciais (apenas Admin pode ver/gerenciar senhas)
     const credentialsSection = document.getElementById('admin-only-credentials');
@@ -3642,11 +3641,7 @@ const editPerson = (id) => {
     const age = calculateAge(person.birth_date);
     document.getElementById('p-age').value = age;
 
-    // Apenas o administrador master tem o poder de excluir membros definitivamente
-    const deleteBtn = document.getElementById('delete-member-btn');
-    if (deleteBtn) {
-        deleteBtn.style.display = (state.username && state.username.toUpperCase() === 'ADMINISTRADOR') ? 'block' : 'none';
-    }
+
 
     personModal.style.display = 'flex';
 };
@@ -3770,17 +3765,7 @@ if (forceChangeForm) {
     };
 }
 
-// Botão de excluir membro (disponível no modal de edição para Administrador Master)
-document.getElementById('delete-member-btn').onclick = async () => {
-    const id = document.getElementById('p-id').value;
-    if (id && await showConfirm('Tem certeza? Isso excluirá todos os pagamentos vinculados a este membro.')) {
-        try {
-            await apiFetch(`/api/people/${id}`, { method: 'DELETE' });
-            personModal.style.display = 'none';
-            await loadInitialData();
-        } catch{ showStatus('Erro ao excluir membro', 'error'); }
-    }
-};
+
 
 
 
@@ -4903,8 +4888,21 @@ const initWhatsAppForm = () => {
         containerSystem.style.display = 'none';
         containerWhatsapp.style.display = 'block';
 
-        // Carrega configurações e membros
-        loadWhatsAppSettings();
+        const isAdmin = state.role === 'admin';
+        const isSecretary = state.role === 'secretário';
+        const isMaster = isAdmin && (state.username || '').toUpperCase() === 'ADMINISTRADOR';
+
+        document.getElementById('wa-config-panel').style.display = isMaster ? 'block' : 'none';
+        document.getElementById('wa-schedule-panel').style.display = (isAdmin || isSecretary) ? 'block' : 'none';
+        document.getElementById('wa-schedule-list-panel').style.display = (isAdmin || isSecretary) ? 'block' : 'none';
+        document.getElementById('wa-manual-panel').style.display = (isAdmin || isSecretary) ? 'block' : 'none';
+
+        if (isMaster) {
+            loadWhatsAppSettings();
+        }
+        if (isAdmin || isSecretary) {
+            fetchScheduledReminders();
+        }
         renderWhatsAppMembers();
     };
 
@@ -4994,22 +4992,264 @@ const initWhatsAppForm = () => {
             }
         };
     }
+
+    // Listar Lembretes Agendados
+    const fetchScheduledReminders = async () => {
+        const tbody = document.getElementById('wa-schedule-list-body');
+        if (!tbody) return;
+
+        try {
+            const reminders = await apiFetch('/api/whatsapp/scheduled');
+            if (!reminders || reminders.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-dim);">Nenhum agendamento encontrado.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // Certifique-se de que a lista de membros esteja carregada para busca de nomes
+            if (!state.people || state.people.length === 0) {
+                state.people = await apiFetch('/api/people');
+            }
+
+            tbody.innerHTML = '';
+            reminders.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
+
+                // 1. Data/Hora
+                const dateCell = document.createElement('td');
+                dateCell.style.padding = '12px 15px';
+                const formattedDate = new Date(r.scheduled_at).toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                dateCell.textContent = formattedDate;
+
+                // 2. Destino
+                const targetCell = document.createElement('td');
+                targetCell.style.padding = '12px 15px';
+                if (r.target_type === 'all') {
+                    targetCell.textContent = 'Todos os Membros';
+                } else if (r.target_type === 'unit') {
+                    targetCell.innerHTML = `Unidade: <strong>${escapeHTML(r.target_value)}</strong>`;
+                } else if (r.target_type === 'selected') {
+                    try {
+                        const ids = JSON.parse(r.target_value);
+                        if (Array.isArray(ids)) {
+                            const names = ids.map(id => {
+                                const person = state.people.find(p => parseInt(p.id) === parseInt(id));
+                                return person ? person.name : `Membro #${id}`;
+                            });
+                            const listStr = names.join(', ');
+                            const shortStr = names.length > 2 
+                                ? `${names.slice(0, 2).join(', ')} e mais ${names.length - 2}`
+                                : listStr;
+                            targetCell.innerHTML = `<span title="${escapeHTML(listStr)}" style="cursor: help;">${escapeHTML(shortStr)} (${ids.length})</span>`;
+                        } else {
+                            targetCell.textContent = 'Selecionados';
+                        }
+                    } catch {
+                        targetCell.textContent = 'Selecionados';
+                    }
+                } else {
+                    targetCell.textContent = r.target_type;
+                }
+
+                // 3. Mensagem
+                const msgCell = document.createElement('td');
+                msgCell.style.padding = '12px 15px';
+                const shortMsg = r.message.length > 50 ? r.message.substring(0, 50) + '...' : r.message;
+                msgCell.innerHTML = `<span title="${escapeHTML(r.message)}" style="cursor: help;">${escapeHTML(shortMsg)}</span>`;
+
+                // 4. Status
+                const statusCell = document.createElement('td');
+                statusCell.style.padding = '12px 15px';
+                let badgeStyle = '';
+                let statusText = '';
+                let titleAttr = '';
+
+                if (r.status === 'pending') {
+                    badgeStyle = 'background: #fff3cd; color: #856404;';
+                    statusText = 'Pendente';
+                } else if (r.status === 'sent') {
+                    badgeStyle = 'background: #d4edda; color: #155724;';
+                    statusText = 'Enviado';
+                } else if (r.status === 'processing') {
+                    badgeStyle = 'background: #cce5ff; color: #004085;';
+                    statusText = 'Processando';
+                } else {
+                    badgeStyle = 'background: #f8d7da; color: #721c24;';
+                    statusText = 'Erro';
+                    if (r.error_message) {
+                        titleAttr = `title="${escapeHTML(r.error_message)}" style="cursor: help;"`;
+                    }
+                }
+                statusCell.innerHTML = `<span ${titleAttr} style="${badgeStyle} padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; display: inline-block;">${statusText}</span>`;
+
+                // 5. Ações
+                const actionCell = document.createElement('td');
+                actionCell.style.cssText = 'padding: 12px 15px; text-align: center;';
+                if (r.status === 'pending') {
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.className = 'btn-danger btn-small';
+                    cancelBtn.textContent = 'Cancelar';
+                    cancelBtn.style.cssText = 'padding: 4px 8px; font-size: 0.75rem; min-height: auto; margin: 0;';
+                    cancelBtn.onclick = () => deleteScheduledReminder(r.id);
+                    actionCell.appendChild(cancelBtn);
+                } else {
+                    actionCell.textContent = '-';
+                }
+
+                tr.appendChild(dateCell);
+                tr.appendChild(targetCell);
+                tr.appendChild(msgCell);
+                tr.appendChild(statusCell);
+                tr.appendChild(actionCell);
+                tbody.appendChild(tr);
+            });
+        } catch (err) {
+            console.error('[WA] Erro ao carregar agendamentos:', err);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem; color: var(--error-color);">Erro ao carregar lembretes agendados.</td>
+                </tr>
+            `;
+        }
+    };
+
+    // Cancelar Lembrete Agendado
+    const deleteScheduledReminder = async (id) => {
+        if (!confirm('Deseja realmente cancelar este agendamento?')) return;
+
+        try {
+            await apiFetch(`/api/whatsapp/scheduled/${id}`, {
+                method: 'DELETE'
+            });
+            showAlert('Agendamento cancelado com sucesso!', 'Sucesso');
+            fetchScheduledReminders();
+        } catch (err) {
+            console.error('[WA] Erro ao cancelar:', err);
+            showAlert('Erro ao cancelar agendamento: ' + err.message, 'Erro');
+        }
+    };
+
+    // Formulário de Agendamento
+    const scheduleForm = document.getElementById('whatsapp-schedule-form');
+    const schTargetType = document.getElementById('wa-sch-target-type');
+    const schUnitContainer = document.getElementById('wa-sch-unit-container');
+    const schMembersContainer = document.getElementById('wa-sch-members-container');
+
+    if (schTargetType) {
+        schTargetType.onchange = (e) => {
+            const val = e.target.value;
+            if (val === 'unit') {
+                schUnitContainer.style.display = 'block';
+                schMembersContainer.style.display = 'none';
+            } else if (val === 'selected') {
+                schUnitContainer.style.display = 'none';
+                schMembersContainer.style.display = 'block';
+            } else {
+                schUnitContainer.style.display = 'none';
+                schMembersContainer.style.display = 'none';
+            }
+        };
+    }
+
+    // Busca/Filtro no painel de agendamento
+    const schSearchInput = document.getElementById('wa-sch-search');
+    if (schSearchInput) {
+        schSearchInput.oninput = (e) => {
+            const term = e.target.value.toLowerCase();
+            document.querySelectorAll('#wa-sch-checkbox-container .checkbox-item').forEach(item => {
+                const search = item.getAttribute('data-search') || '';
+                item.style.display = search.includes(term) ? 'flex' : 'none';
+            });
+        };
+    }
+
+    if (scheduleForm) {
+        scheduleForm.onsubmit = async (e) => {
+            e.preventDefault();
+
+            const targetType = schTargetType.value;
+            const message = document.getElementById('wa-sch-message').value.trim();
+            const date = document.getElementById('wa-sch-date').value;
+            const time = document.getElementById('wa-sch-time').value;
+
+            let targetValue = null;
+            if (targetType === 'unit') {
+                targetValue = document.getElementById('wa-sch-unit-name').value.trim();
+                if (!targetValue) {
+                    showAlert('Por favor, informe o nome da unidade.', 'Aviso');
+                    return;
+                }
+            } else if (targetType === 'selected') {
+                const checkboxes = document.querySelectorAll('#wa-sch-checkbox-container input[type="checkbox"]:checked');
+                const selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+                if (selectedIds.length === 0) {
+                    showAlert('Por favor, selecione pelo menos um membro.', 'Aviso');
+                    return;
+                }
+                targetValue = selectedIds;
+            }
+
+            try {
+                await apiFetch('/api/whatsapp/scheduled', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message,
+                        date,
+                        time,
+                        target_type: targetType,
+                        target_value: targetValue
+                    })
+                });
+
+                showAlert('Lembrete agendado com sucesso!', 'Sucesso');
+                scheduleForm.reset();
+                if (schTargetType) schTargetType.value = 'all';
+                if (schUnitContainer) schUnitContainer.style.display = 'none';
+                if (schMembersContainer) schMembersContainer.style.display = 'none';
+                document.querySelectorAll('#wa-sch-checkbox-container input[type="checkbox"]').forEach(cb => cb.checked = false);
+                
+                fetchScheduledReminders();
+            } catch (err) {
+                console.error('[WA] Erro ao agendar lembrete:', err);
+                showAlert('Erro ao agendar lembrete: ' + err.message, 'Erro');
+            }
+        };
+    }
 };
 
 // Renderiza a lista de membros no painel do WhatsApp
 async function renderWhatsAppMembers() {
     const container = document.getElementById('wa-members-checkbox-container');
+    const schContainer = document.getElementById('wa-sch-checkbox-container');
     if (!container) return;
 
     container.innerHTML = '<p style="text-align: center; padding: 10px; color: var(--text-dim);">Carregando membros...</p>';
+    if (schContainer) {
+        schContainer.innerHTML = '<p style="text-align: center; padding: 10px; color: var(--text-dim);">Carregando membros...</p>';
+    }
 
     try {
         const people = await apiFetch('/api/people');
         people.sort((a, b) => a.name.localeCompare(b.name));
 
         container.innerHTML = '';
+        if (schContainer) schContainer.innerHTML = '';
+
         people.forEach(p => {
             const searchText = `${p.name} ${p.unit || ''}`.toLowerCase();
+            
+            // 1. Manual Checklist Item
             const item = document.createElement('div');
             item.className = 'checkbox-item';
             item.setAttribute('data-search', searchText);
@@ -5021,7 +5261,6 @@ async function renderWhatsAppMembers() {
             checkbox.value = p.id;
             checkbox.style.cssText = 'width: 18px; height: 18px; cursor: pointer;';
             
-            // Desabilita se não tiver telefone cadastrado
             if (!p.phone) {
                 checkbox.disabled = true;
                 item.style.opacity = '0.6';
@@ -5043,10 +5282,47 @@ async function renderWhatsAppMembers() {
             item.appendChild(checkbox);
             item.appendChild(label);
             container.appendChild(item);
+
+            // 2. Schedule Checklist Item
+            if (schContainer) {
+                const schItem = document.createElement('div');
+                schItem.className = 'checkbox-item';
+                schItem.setAttribute('data-search', searchText);
+                schItem.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-bottom: 1px solid rgba(0,0,0,0.03); cursor: pointer;';
+
+                const schCheckbox = document.createElement('input');
+                schCheckbox.type = 'checkbox';
+                schCheckbox.id = `wa-sch-user-${p.id}`;
+                schCheckbox.value = p.id;
+                schCheckbox.style.cssText = 'width: 18px; height: 18px; cursor: pointer;';
+
+                if (!p.phone) {
+                    schCheckbox.disabled = true;
+                    schItem.style.opacity = '0.6';
+                }
+
+                const schLabel = document.createElement('label');
+                schLabel.htmlFor = `wa-sch-user-${p.id}`;
+                schLabel.innerHTML = `${escapeHTML(p.name)} <br> <small style="color: var(--text-dim)">${escapeHTML(p.unit || 'Sem Unidade')} | ${phoneLabel}</small>`;
+                schLabel.style.cssText = 'margin: 0; cursor: pointer; font-size: 0.9rem; flex-grow: 1; user-select: none;';
+
+                schItem.onclick = (e) => {
+                    if (e.target !== schCheckbox && e.target !== schLabel && !schCheckbox.disabled) {
+                        schCheckbox.checked = !schCheckbox.checked;
+                    }
+                };
+
+                schItem.appendChild(schCheckbox);
+                schItem.appendChild(schLabel);
+                schContainer.appendChild(schItem);
+            }
         });
     } catch (err) {
         console.error('Erro ao carregar membros para WhatsApp:', err);
         container.innerHTML = '<p style="color: var(--error-color); padding: 10px;">Erro ao carregar lista de membros.</p>';
+        if (schContainer) {
+            schContainer.innerHTML = '<p style="color: var(--error-color); padding: 10px;">Erro ao carregar lista de membros.</p>';
+        }
     }
 }
 

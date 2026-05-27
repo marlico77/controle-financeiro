@@ -844,9 +844,9 @@
 
                     <!-- WhatsApp Messages Container -->
                     <div id="whatsapp-messages-container" style="display: none;">
-                        <div class="grid-layout">
-                            <!-- Column 1: Configuração do W-API -->
-                            <div class="glass-card" style="padding: 2rem;">
+                        <div id="wa-panels-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; align-items: start;">
+                            <!-- Panel 1: Configuração do W-API (Admin Master Only) -->
+                            <div class="glass-card" id="wa-config-panel" style="padding: 2rem; display: none;">
                                 <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; font-size: 1.3rem;">Configurações W-API</h3>
                                 <form id="whatsapp-config-form">
                                     <div class="input-group">
@@ -882,8 +882,65 @@
                                 </form>
                             </div>
 
-                            <!-- Column 2: Envio Manual de Whatsapp -->
-                            <div class="glass-card" style="padding: 2rem;">
+                            <!-- Panel 2: Agendar Lembrete Automático (Admin & Secretary) -->
+                            <div class="glass-card" id="wa-schedule-panel" style="padding: 2rem; display: none;">
+                                <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; font-size: 1.3rem;">Agendar Lembrete Automático</h3>
+                                <form id="whatsapp-schedule-form">
+                                    <div class="input-group">
+                                        <label for="wa-sch-target-type">Enviar para:</label>
+                                        <select id="wa-sch-target-type" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #ffffff;">
+                                            <option value="all">Todos os Membros</option>
+                                            <option value="unit">Por Unidade</option>
+                                            <option value="selected">Membros Selecionados</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Dynamic Container for Unit Selection -->
+                                    <div class="input-group" id="wa-sch-unit-container" style="display: none; margin-top: 1rem;">
+                                        <label for="wa-sch-unit-name">Nome da Unidade</label>
+                                        <input type="text" id="wa-sch-unit-name" placeholder="Ex: Unidade Norte" style="width: 100%;">
+                                    </div>
+
+                                    <!-- Dynamic Container for Member Selection -->
+                                    <div class="input-group" id="wa-sch-members-container" style="display: none; margin-top: 1rem;">
+                                        <label>Selecione os Membros:</label>
+                                        <div class="search-container" style="position: relative; margin-bottom: 0.8rem;">
+                                            <input type="text" id="wa-sch-search" placeholder="Pesquisar membro..." 
+                                                   style="width: 100%; padding: 10px 15px 10px 40px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.02);">
+                                            <span class="search-icon" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); display: flex; align-items: center;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                                                </svg>
+                                            </span>
+                                        </div>
+                                        <div style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #ffffff;">
+                                            <div id="wa-sch-checkbox-container" style="padding: 5px;">
+                                                <!-- Populated by JS -->
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="input-group" style="margin-top: 1.5rem;">
+                                        <label for="wa-sch-message">Mensagem do Lembrete</label>
+                                        <textarea id="wa-sch-message" rows="4" required style="width: 100%; min-height: 80px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem;" placeholder="Digite a mensagem do lembrete..."></textarea>
+                                        <small style="color: var(--text-dim); display: block; margin-top: 0.3rem; font-size: 0.8rem;">Variável disponível: <code>{nome}</code></small>
+                                    </div>
+                                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
+                                        <div class="input-group" style="flex: 1; min-width: 140px; margin: 0;">
+                                            <label for="wa-sch-date">Data de Envio</label>
+                                            <input type="date" id="wa-sch-date" required>
+                                        </div>
+                                        <div class="input-group" style="flex: 1; min-width: 100px; margin: 0;">
+                                            <label for="wa-sch-time">Horário</label>
+                                            <input type="time" id="wa-sch-time" required>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn-primary" style="width: 100%; font-weight: 700; margin-top: 1.5rem; height: 46px;">Agendar Lembrete</button>
+                                </form>
+                            </div>
+
+                            <!-- Panel 3: Envio Manual de WhatsApp (Admin & Secretary) -->
+                            <div class="glass-card" id="wa-manual-panel" style="padding: 2rem;">
                                 <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; font-size: 1.3rem;">Enviar Mensagem via WhatsApp</h3>
                                 <form id="whatsapp-send-form">
                                     <div class="input-group">
@@ -903,7 +960,7 @@
                                                 <label for="wa-msg-select-all" style="font-weight: 800; margin: 0; cursor: pointer; color: var(--accent-color);">Todos os Membros selecionados</label>
                                             </div>
                                             <div id="wa-members-checkbox-container" style="padding: 0 5px;">
-                                                <!-- Populated by JS with people -->
+                                                <!-- Populated by JS -->
                                             </div>
                                         </div>
                                     </div>
@@ -913,6 +970,32 @@
                                     </div>
                                     <button type="submit" class="btn-primary" style="width: 100%; font-weight: 700; margin-top: 1.5rem; height: 46px;">Enviar pelo WhatsApp</button>
                                 </form>
+                            </div>
+                        </div>
+
+                        <!-- Panel 4: Lembretes Agendados Table (Admin & Secretary) -->
+                        <div class="glass-card table-container" id="wa-schedule-list-panel" style="margin-top: 2rem; padding: 0; display: none;">
+                            <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                                <h4 style="margin: 0; font-size: 1.1rem; color: var(--accent-color);">Lembretes Agendados</h4>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table" style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="border-bottom: 2px solid var(--border-color); text-align: left; background: rgba(0,0,0,0.02);">
+                                            <th style="padding: 12px 15px; font-weight: 700;">Data/Hora Agendamento</th>
+                                            <th style="padding: 12px 15px; font-weight: 700;">Destino</th>
+                                            <th style="padding: 12px 15px; font-weight: 700;">Mensagem</th>
+                                            <th style="padding: 12px 15px; font-weight: 700;">Status</th>
+                                            <th style="padding: 12px 15px; font-weight: 700; text-align: center;">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="wa-schedule-list-body">
+                                        <!-- Populated by JS -->
+                                        <tr>
+                                            <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-dim);">Nenhum agendamento encontrado.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -1391,8 +1474,6 @@
                     </div>
                     <div class="modal-actions">
                         <button type="submit" class="btn-primary">Salvar</button>
-                        <button type="button" id="delete-member-btn" class="btn-danger"
-                            style="display: none; width: 100%; margin-top: 1rem;">Excluir Membro Permanente</button>
                     </div>
                 </form>
             </div>
