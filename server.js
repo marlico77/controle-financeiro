@@ -581,6 +581,15 @@ const initDB = async () => {
             )
         `);
 
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS whatsapp_message_senders (
+                id SERIAL PRIMARY KEY,
+                message_id VARCHAR(255) NOT NULL UNIQUE,
+                sender_name VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+
         // --- Criação de Índices de Performance ---
         // Essencial para manter o sistema rápido com o crescimento dos dados
         await db.query('CREATE INDEX IF NOT EXISTS idx_payments_year ON payments(year)');
@@ -2230,6 +2239,406 @@ app.post('/api/whatsapp/send', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('[WA] Erro na rota de envio:', err);
         res.status(500).json({ error: 'Erro ao processar envio' });
+    }
+});
+
+// --- API de Chat Integrado via WhatsApp Proxy ---
+
+const getWhatsAppSettings = async () => {
+    const result = await db.query('SELECT * FROM whatsapp_settings LIMIT 1');
+    return result.rows[0];
+};
+
+const getBaseDomain = (url) => {
+    if (!url) return '';
+    const match = url.match(/^(https?:\/\/[^\/]+)/);
+    return match ? match[1] : '';
+};
+
+const getSenderFirstName = async (user) => {
+    if (user.personId) {
+        const res = await db.query('SELECT name FROM people WHERE id = $1', [user.personId]);
+        if (res.rows.length > 0 && res.rows[0].name) {
+            return res.rows[0].name.trim().split(' ')[0];
+        }
+    }
+    return (user.username || 'Sistema').trim().split(' ')[0];
+};
+
+app.get('/api/whatsapp/chats', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    try {
+        const settings = await getWhatsAppSettings();
+        if (!settings || !settings.api_key) {
+            return res.status(400).json({ error: 'Configurações de WhatsApp não encontradas.' });
+        }
+        const domain = getBaseDomain(settings.base_url);
+        const url = `${domain}/api/v1/instances/${settings.instance_id}/chats`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'x-api-key': settings.api_key,
+                'Authorization': `Bearer ${settings.api_key}`
+            }
+        });
+        
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
+        }
+        
+        const data = await response.json();
+        res.json(data);
+    } catch (err) {
+        console.error('[WA-PROXY] Erro ao buscar chats:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/whatsapp/chats/:chatId/messages', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { chatId } = req.params;
+    const limit = req.query.limit || 50;
+    try {
+        const settings = await getWhatsAppSettings();
+        if (!settings || !settings.api_key) {
+            return res.status(400).json({ error: 'Configurações de WhatsApp não encontradas.' });
+        }
+        const domain = getBaseDomain(settings.base_url);
+        const url = `${domain}/api/v1/instances/${settings.instance_id}/chats/${chatId}/messages?limit=${limit}`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'x-api-key': settings.api_key,
+                'Authorization': `Bearer ${settings.api_key}`
+            }
+        });
+        
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
+        }
+        
+        const messages = await response.json();
+        
+        if (Array.isArray(messages) && messages.length > 0) {
+            const messageIds = messages.map(m => m.id).filter(Boolean);
+            if (messageIds.length > 0) {
+                try {
+                    const sendersResult = await db.query(
+                        'SELECT message_id, sender_name FROM whatsapp_message_senders WHERE message_id = ANY($1)',
+                        [messageIds]
+                    );
+                    const sendersMap = {};
+                    sendersResult.rows.forEach(row => {
+                        sendersMap[row.message_id] = row.sender_name;
+                    });
+                    messages.forEach(m => {
+                        if (sendersMap[m.id]) {
+                            m.senderSystemName = sendersMap[m.id];
+                        }
+                    });
+                } catch (dbErr) {
+                    console.error('[WA-PROXY] Erro ao buscar nomes dos remetentes no banco:', dbErr.message);
+                }
+            }
+        }
+        
+        res.json(messages);
+    } catch (err) {
+        console.error('[WA-PROXY] Erro ao buscar mensagens:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/whatsapp/chats/:chatId/avatar', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { chatId } = req.params;
+    try {
+        const settings = await getWhatsAppSettings();
+        if (!settings || !settings.api_key) {
+            return res.sendStatus(404);
+        }
+        const domain = getBaseDomain(settings.base_url);
+        const url = `${domain}/api/v1/instances/${settings.instance_id}/chats/${chatId}/avatar`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'x-api-key': settings.api_key,
+                'Authorization': `Bearer ${settings.api_key}`
+            }
+        });
+        
+        if (!response.ok) {
+            return res.redirect('https://via.placeholder.com/150?text=No+Avatar');
+        }
+        
+        const contentType = response.headers.get('content-type') || 'image/jpeg';
+        res.setHeader('Content-Type', contentType);
+        
+        const buffer = await response.arrayBuffer();
+        res.send(Buffer.from(buffer));
+    } catch (err) {
+        console.error('[WA-PROXY] Erro ao buscar avatar:', err.message);
+        res.redirect('https://via.placeholder.com/150?text=No+Avatar');
+    }
+});
+
+app.get('/api/whatsapp/media/:messageId', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { messageId } = req.params;
+    const { chatId } = req.query;
+    try {
+        const settings = await getWhatsAppSettings();
+        if (!settings || !settings.api_key) {
+            return res.status(400).json({ error: 'Configurações de WhatsApp não encontradas.' });
+        }
+        const domain = getBaseDomain(settings.base_url);
+        const url = `${domain}/api/v1/instances/${settings.instance_id}/messages/${messageId}/media?chatId=${chatId}`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'x-api-key': settings.api_key,
+                'Authorization': `Bearer ${settings.api_key}`
+            }
+        });
+        
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
+        }
+        
+        const contentType = response.headers.get('content-type') || 'application/octet-stream';
+        res.setHeader('Content-Type', contentType);
+        
+        const contentDisposition = response.headers.get('content-disposition');
+        if (contentDisposition) {
+            res.setHeader('Content-Disposition', contentDisposition);
+        }
+        
+        const buffer = await response.arrayBuffer();
+        res.send(Buffer.from(buffer));
+    } catch (err) {
+        console.error('[WA-PROXY] Erro ao buscar mídia:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/whatsapp/send-text', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { chatId, message } = req.body || {};
+    if (!chatId || !message) {
+        return res.status(400).json({ error: 'Parâmetros chatId e message são obrigatórios.' });
+    }
+    
+    const targetNumber = (chatId.includes('@g.us') || chatId.includes('@lid')) ? chatId : chatId.split('@')[0];
+    
+    try {
+        const settings = await getWhatsAppSettings();
+        if (!settings || !settings.api_key) {
+            return res.status(400).json({ error: 'Configurações de WhatsApp não encontradas.' });
+        }
+        const domain = getBaseDomain(settings.base_url);
+        const url = `${domain}/api/v1/instances/${settings.instance_id}/send-text`;
+        
+        const senderName = await getSenderFirstName(req.user);
+        const formattedMessage = `*${senderName}*:\n${message}`;
+        
+        console.log(`[WA-PROXY] Enviando texto para chatId: ${chatId}, targetNumber: ${targetNumber}`);
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': settings.api_key,
+                'Authorization': `Bearer ${settings.api_key}`
+            },
+            body: JSON.stringify({ number: targetNumber, message: formattedMessage })
+        });
+        
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Salva mapeamento do remetente no banco de dados
+        const msgId = data.messageId || data.id || (data.message && data.message.id) || (data.key && data.key.id) || (data.data && data.data.id);
+        if (msgId) {
+            try {
+                await db.query(
+                    'INSERT INTO whatsapp_message_senders (message_id, sender_name) VALUES ($1, $2) ON CONFLICT (message_id) DO NOTHING',
+                    [msgId, senderName]
+                );
+            } catch (dbErr) {
+                console.error('[WA-PROXY] Erro ao salvar remetente no banco:', dbErr.message);
+            }
+        }
+        
+        res.json(data);
+    } catch (err) {
+        console.error(`[WA-PROXY] Erro ao enviar mensagem de texto para chatId: ${chatId}, targetNumber: ${targetNumber}:`, err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/whatsapp/send-media', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { chatId, media, fileName, caption } = req.body || {};
+    if (!chatId || !media) {
+        return res.status(400).json({ error: 'Parâmetros chatId e media são obrigatórios.' });
+    }
+    
+    const targetNumber = (chatId.includes('@g.us') || chatId.includes('@lid')) ? chatId : chatId.split('@')[0];
+    
+    try {
+        const settings = await getWhatsAppSettings();
+        if (!settings || !settings.api_key) {
+            return res.status(400).json({ error: 'Configurações de WhatsApp não encontradas.' });
+        }
+        const domain = getBaseDomain(settings.base_url);
+        const url = `${domain}/api/v1/instances/${settings.instance_id}/send-media`;
+        
+        const senderName = await getSenderFirstName(req.user);
+        const formattedCaption = caption ? `*${senderName}*:\n${caption}` : `*${senderName}*`;
+        
+        console.log(`[WA-PROXY] Enviando mídia para chatId: ${chatId}, targetNumber: ${targetNumber}`);
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': settings.api_key,
+                'Authorization': `Bearer ${settings.api_key}`
+            },
+            body: JSON.stringify({ number: targetNumber, media, fileName, caption: formattedCaption })
+        });
+        
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Salva mapeamento do remetente no banco de dados
+        const msgId = data.messageId || data.id || (data.message && data.message.id) || (data.key && data.key.id) || (data.data && data.data.id);
+        if (msgId) {
+            try {
+                await db.query(
+                    'INSERT INTO whatsapp_message_senders (message_id, sender_name) VALUES ($1, $2) ON CONFLICT (message_id) DO NOTHING',
+                    [msgId, senderName]
+                );
+            } catch (dbErr) {
+                console.error('[WA-PROXY] Erro ao salvar remetente no banco:', dbErr.message);
+            }
+        }
+        
+        res.json(data);
+    } catch (err) {
+        console.error(`[WA-PROXY] Erro ao enviar mídia para chatId: ${chatId}, targetNumber: ${targetNumber}:`, err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/whatsapp/chats/:chatId/seen', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { chatId } = req.params;
+    try {
+        const settings = await getWhatsAppSettings();
+        if (!settings || !settings.api_key) {
+            return res.status(400).json({ error: 'Configurações de WhatsApp não encontradas.' });
+        }
+        const domain = getBaseDomain(settings.base_url);
+        const url = `${domain}/api/v1/instances/${settings.instance_id}/chats/${chatId}/seen`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'x-api-key': settings.api_key,
+                'Authorization': `Bearer ${settings.api_key}`
+            }
+        });
+        
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
+        }
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[WA-PROXY] Erro ao marcar como lido:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/whatsapp/chats/:chatId/messages/:messageId', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    const { chatId, messageId } = req.params;
+    try {
+        const settings = await getWhatsAppSettings();
+        if (!settings || !settings.api_key) {
+            return res.status(400).json({ error: 'Configurações de WhatsApp não encontradas.' });
+        }
+        const domain = getBaseDomain(settings.base_url);
+        const url = `${domain}/api/v1/instances/${settings.instance_id}/chats/${chatId}/messages/${messageId}`;
+        
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'x-api-key': settings.api_key,
+                'Authorization': `Bearer ${settings.api_key}`
+            }
+        });
+        
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
+        }
+        
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[WA-PROXY] Erro ao revogar mensagem:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/whatsapp/chat-sse', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    
+    try {
+        const settings = await getWhatsAppSettings();
+        if (!settings || !settings.api_key) {
+            return res.status(400).json({ error: 'Configurações de WhatsApp não encontradas.' });
+        }
+        const domain = getBaseDomain(settings.base_url);
+        const sseUrl = `${domain}/api/v1/instances/${settings.instance_id}/chat-sse?api_key=${settings.api_key}`;
+        
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders();
+        
+        const https = require('https');
+        const http = require('http');
+        const client = sseUrl.startsWith('https') ? https : http;
+        
+        const sseReq = client.get(sseUrl, (sseRes) => {
+            sseRes.pipe(res);
+        });
+        
+        sseReq.on('error', (err) => {
+            console.error('[WA-PROXY] Erro no request SSE:', err.message);
+            res.end();
+        });
+        
+        req.on('close', () => {
+            sseReq.destroy();
+        });
+    } catch (err) {
+        console.error('[WA-PROXY] Erro no canal SSE:', err.message);
+        res.end();
     }
 });
 

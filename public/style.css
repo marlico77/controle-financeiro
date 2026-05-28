@@ -2434,4 +2434,23 @@ input:checked + .slider:before {
     }
 }
 
+/* Custom premium scrollbar for WhatsApp chat panels */
+#wa-chat-list::-webkit-scrollbar,
+#wa-chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+#wa-chat-list::-webkit-scrollbar-track,
+#wa-chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+#wa-chat-list::-webkit-scrollbar-thumb,
+#wa-chat-messages::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+}
+#wa-chat-list::-webkit-scrollbar-thumb:hover,
+#wa-chat-messages::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
 
