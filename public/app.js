@@ -5741,10 +5741,18 @@ window.renderWaMessages = function(messages) {
             border-top-right-radius: ${isOut ? '0' : '8px'};
             border-top-left-radius: ${isOut ? '8px' : '0'};`;
 
+        const activeChat = window.allChats.find(c => c.id === window.activeChatId);
+        const isGroup = activeChat ? activeChat.isGroup : (window.activeChatId && (window.activeChatId.endsWith('@g.us') || window.activeChatId.includes('@g.us')));
+
         if (isOut && msg.senderSystemName) {
             const senderSpan = document.createElement('div');
             senderSpan.style.cssText = 'font-weight: 700; font-size: 0.75rem; color: var(--accent-color); margin-bottom: 4px; display: block;';
             senderSpan.textContent = msg.senderSystemName;
+            content.appendChild(senderSpan);
+        } else if (!isOut && isGroup && msg.senderName) {
+            const senderSpan = document.createElement('div');
+            senderSpan.style.cssText = 'font-weight: 700; font-size: 0.75rem; color: #128c7e; margin-bottom: 4px; display: block;';
+            senderSpan.textContent = msg.senderName;
             content.appendChild(senderSpan);
         }
 
