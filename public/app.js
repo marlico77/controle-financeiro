@@ -5547,6 +5547,11 @@ window.initWhatsAppChat = async function() {
     if (activeScreen) activeScreen.style.display = 'none';
     window.activeChatId = null;
 
+    const chatContainer = document.querySelector('.whatsapp-web-chat');
+    if (chatContainer) {
+        chatContainer.classList.remove('show-chat');
+    }
+
     await window.loadWaChats();
     window.connectWaSSE();
     window.setupChatListeners();
@@ -5665,6 +5670,11 @@ window.selectWaChat = async function(chat) {
     const activeScreen = document.getElementById('wa-chat-active');
     if (welcomeScreen) welcomeScreen.style.display = 'none';
     if (activeScreen) activeScreen.style.display = 'flex';
+
+    const chatContainer = document.querySelector('.whatsapp-web-chat');
+    if (chatContainer) {
+        chatContainer.classList.add('show-chat');
+    }
 
     const activeName = document.getElementById('wa-active-name');
     const activeAvatar = document.getElementById('wa-active-avatar');
@@ -5926,6 +5936,23 @@ window.setupChatListeners = function() {
 
     if (sendBtn) {
         sendBtn.onclick = () => window.sendWaTextMessage();
+    }
+
+    const backBtn = document.getElementById('wa-chat-back');
+    if (backBtn) {
+        backBtn.onclick = () => {
+            const chatContainer = document.querySelector('.whatsapp-web-chat');
+            if (chatContainer) {
+                chatContainer.classList.remove('show-chat');
+            }
+            window.activeChatId = null;
+            window.renderWaChatsList(window.allChats);
+            
+            const welcomeScreen = document.getElementById('wa-chat-welcome');
+            const activeScreen = document.getElementById('wa-chat-active');
+            if (welcomeScreen) welcomeScreen.style.display = 'flex';
+            if (activeScreen) activeScreen.style.display = 'none';
+        };
     }
 
     if (attachBtn && fileInput) {

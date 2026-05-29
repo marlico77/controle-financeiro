@@ -2453,4 +2453,58 @@ input:checked + .slider:before {
     background: rgba(0, 0, 0, 0.3);
 }
 
+/* Responsive WhatsApp Web Chat for mobile */
+@media (max-width: 768px) {
+    .whatsapp-web-chat {
+        height: 600px !important;
+        flex-direction: column;
+    }
+    
+    .whatsapp-web-chat .chat-sidebar {
+        width: 100% !important;
+        min-width: 100% !important;
+        display: flex !important;
+        border-right: none !important;
+    }
+    
+    .whatsapp-web-chat .chat-window {
+        width: 100% !important;
+        min-width: 100% !important;
+        display: none !important;
+    }
+    
+    /* When active chat is shown */
+    .whatsapp-web-chat.show-chat .chat-sidebar {
+        display: none !important;
+    }
+    
+    .whatsapp-web-chat.show-chat .chat-window {
+        display: flex !important;
+    }
+    
+    /* Hide welcome screen on mobile to focus on sidebar */
+    #wa-chat-welcome {
+        display: none !important;
+    }
+    
+    /* Back button display */
+    #wa-chat-back {
+        display: inline-flex !important;
+    }
+    
+    /* Small layout polish for mobile */
+    .whatsapp-web-chat .chat-header {
+        padding: 8px 12px !important;
+    }
+    
+    .whatsapp-web-chat .chat-footer {
+        padding: 8px 12px !important;
+    }
+    
+    .whatsapp-web-chat #wa-chat-messages {
+        padding: 12px !important;
+        gap: 8px !important;
+    }
+}
+
 
