@@ -421,9 +421,99 @@ async function generateEventReport() {
     if (!eventId) return showStatus('Selecione um evento primeiro.', 'info');
 
     try {
-        // Busca os detalhes completos do evento via API
         const data = await apiFetch(`/api/events/${eventId}/details`);
         const { event, participants, payments } = data; // Desestrutura a resposta
+
+        if (filterType === 'individual') {
+            const participantId = document.getElementById('report-event-member-select').value;
+            if (!participantId) return showStatus('Selecione um participante primeiro.', 'info');
+
+            const participant = participants.find(p => p.id == participantId);
+            if (!participant) return showStatus('Participante não encontrado no evento.', 'error');
+
+            const personPayments = (payments || []).filter(pay => pay.person_id == participantId);
+            const totalPaid = personPayments.filter(p => p.status === 'approved').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+            
+            let contentHtml = '';
+            if (event.payment_type === 'unico') {
+                const displayPayment = personPayments[personPayments.length - 1];
+                const statusLabel = displayPayment ? (displayPayment.status === 'approved' ? 'PAGO' : (displayPayment.status === 'rejected' ? 'RECUSADO' : 'PENDENTE')) : 'PENDENTE';
+                const paymentDate = displayPayment && displayPayment.updated_at ? new Date(displayPayment.updated_at).toLocaleDateString('pt-BR') : '-';
+                
+                contentHtml = `
+                    <h3>Detalhamento do Pagamento Único</h3>
+                    <div class="report-table-wrapper">
+                        <table class="report-table">
+                            <thead>
+                                <tr><th>Membro</th><th>Unidade</th><th>Status de Pagamento</th><th>Valor Pago</th><th>Data</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>${participant.name}</strong></td>
+                                    <td>${participant.unit || 'Sem Unidade'}</td>
+                                    <td><span class="grid-status-label status-${displayPayment ? displayPayment.status : 'none'}" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">${statusLabel}</span></td>
+                                    <td>R$ ${totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                    <td>${paymentDate}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+                const monthMap = {};
+                personPayments.forEach(pay => {
+                    if (pay.month) monthMap[Number(pay.month)] = pay;
+                });
+
+                contentHtml = `
+                    <h3>Histórico de Parcelas</h3>
+                    <div class="report-table-wrapper">
+                        <table class="report-table">
+                            <thead>
+                                <tr><th>Parcela/Mês</th><th>Status</th><th>Valor</th><th>Data</th></tr>
+                            </thead>
+                            <tbody>
+                                ${months.map((m, idx) => {
+                                    const pay = monthMap[idx + 1];
+                                    return `
+                                        <tr>
+                                            <td>${m}</td>
+                                            <td>${pay ? (pay.status === 'approved' ? 'PAGO' : pay.status === 'pending' ? 'PENDENTE' : 'RECUSADO') : 'NÃO REALIZADO'}</td>
+                                            <td>${pay ? 'R$ ' + parseFloat(pay.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '-'}</td>
+                                            <td>${pay && pay.updated_at ? new Date(pay.updated_at).toLocaleDateString('pt-BR') : '-'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            let html = `
+                <div class="report-header">
+                    <img src="logo.png">
+                    <h1 style="margin: 0; font-size: 1.5rem;">Extrato do Evento - Participante</h1>
+                    <p style="margin: 5px 0 0 0;">Evento: <strong>${event.name}</strong> | Data: ${event.date ? new Date(event.date + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}</p>
+                    <p style="margin: 5px 0 0 0;">Participante: <strong>${participant.name}</strong> | Unidade: ${participant.unit || 'N/A'}</p>
+                </div>
+                <div class="report-summary-box">
+                    <div><span class="label">Total Pago no Evento</span><span class="value">R$ ${totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                    <div><span class="label">Tipo de Pagamento</span><span class="value">${event.payment_type === 'unico' ? 'Pagamento Único' : 'Parcelamento Mensal'}</span></div>
+                </div>
+                ${contentHtml}
+            `;
+
+            const printable = document.getElementById('report-printable');
+            const modal = document.getElementById('report-modal');
+            if (printable && modal) {
+                printable.innerHTML = html;
+                modal.style.display = 'flex';
+                showStatus('Extrato do evento gerado!', 'success');
+            }
+            return;
+        }
 
         // Calcula o total arrecadado no evento (apenas pagamentos aprovados)
         let totalArrecadado = (payments || []).filter(p => p.status === 'approved').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
@@ -617,17 +707,76 @@ function toggleReportFields() {
     const type = typeSelect.value;
     const memberField = document.getElementById('report-field-member'); // Campo de seleção de membro
     const eventFields = document.getElementById('report-fields-event'); // Campo de seleção de evento
+    const eventMemberField = document.getElementById('report-field-event-member'); // Campo de seleção de participante do evento
+    
     if (memberField) memberField.style.display = type === 'member' ? 'block' : 'none';
     if (eventFields) eventFields.style.display = type === 'event' ? 'block' : 'none';
+    
+    if (eventFields && type === 'event') {
+        const eventFilter = document.getElementById('report-event-filter').value;
+        if (eventMemberField) {
+            eventMemberField.style.display = eventFilter === 'individual' ? 'block' : 'none';
+        }
+    } else {
+        if (eventMemberField) eventMemberField.style.display = 'none';
+    }
 }
 window.toggleReportFields = toggleReportFields;
+
+async function updateEventMembersSelect() {
+    const eventId = document.getElementById('report-event-select').value;
+    const eventFilter = document.getElementById('report-event-filter').value;
+    const eventMemberSelect = document.getElementById('report-event-member-select');
+    
+    if (!eventMemberSelect) return;
+    
+    if (!eventId || eventFilter !== 'individual') {
+        eventMemberSelect.innerHTML = '<option value="">Selecione um Participante</option>';
+        return;
+    }
+    
+    eventMemberSelect.innerHTML = '<option value="">Carregando participantes...</option>';
+    
+    try {
+        const data = await apiFetch(`/api/events/${eventId}/details`);
+        const { participants } = data;
+        
+        eventMemberSelect.innerHTML = '<option value="">Selecione um Participante</option>' +
+            (participants || []).map(p => `<option value="${p.id}">${escapeHTML(p.name)}</option>`).join('');
+    } catch (err) {
+        console.error('[REPORT] Erro ao carregar participantes do evento:', err);
+        eventMemberSelect.innerHTML = '<option value="">Erro ao carregar participantes</option>';
+    }
+}
+window.updateEventMembersSelect = updateEventMembersSelect;
 
 // Inicializa os ouvintes de eventos (listeners) para botões de relatórios e autorizações
 const initGeneratorListeners = () => {
     console.log('[INIT] Inicializando listeners de relatórios e autorizações');
 
     const typeSelect = document.getElementById('report-type-select');
-    if (typeSelect) typeSelect.onchange = toggleReportFields; // Monitora mudança no tipo de relatório
+    if (typeSelect) {
+        typeSelect.onchange = () => {
+            toggleReportFields();
+            updateEventMembersSelect();
+        };
+    }
+
+    const eventSelect = document.getElementById('report-event-select');
+    if (eventSelect) {
+        eventSelect.onchange = () => {
+            toggleReportFields();
+            updateEventMembersSelect();
+        };
+    }
+
+    const eventFilter = document.getElementById('report-event-filter');
+    if (eventFilter) {
+        eventFilter.onchange = () => {
+            toggleReportFields();
+            updateEventMembersSelect();
+        };
+    }
 
     // Botão para abrir o seletor de relatórios
     const openSelectorBtn = document.getElementById('open-report-selector-btn');
