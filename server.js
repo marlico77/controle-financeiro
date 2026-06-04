@@ -562,7 +562,7 @@ const initDB = async () => {
                     'http://localhost:8000',
                     'instancia-principal',
                     false,
-                    'Olá {nome}, tudo bem? Lembramos que a mensalidade do mês de {mensalidade} está pendente. Por favor, regularize assim que possível para nos ajudar com as atividades do clube! Obrigado.'
+                    'Olá {nome}, tudo bem? Lembramos que a sua mensalidade de {mes} no valor de R$ {valor} está pendente. Você pode efetuar o pagamento via PIX para a chave: jdboavista.ap@adventistas.org. Após realizar o pagamento, por favor, envie o comprovante acessando o sistema. Agradecemos o seu apoio!\n\n_Este é um lembrete automático enviado pelo sistema financeiro do Clube._'
                 )
             `);
             console.log('[DB] Seeding default whatsapp settings.');
@@ -992,6 +992,30 @@ app.post('/api/people/import', authenticateToken, upload.single('file'), async (
   } finally {
     client.release();
   }
+});
+
+// Busca lista de membros inadimplentes de mensalidade por mês e ano
+app.get('/api/payments/unpaid', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    
+    const month = parseInt(req.query.month) || (new Date().getMonth() + 1);
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+    
+    try {
+        const result = await db.query(`
+            SELECT p.id, p.name, p.phone, p.unit
+            FROM people p
+            WHERE p.id NOT IN (
+                SELECT person_id FROM payments 
+                WHERE month = $1 AND year = $2 AND status = 'approved'
+            )
+            ORDER BY p.name ASC
+        `, [month, year]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('[API] Erro ao buscar inadimplentes:', err);
+        res.status(500).json({ error: 'Erro ao buscar inadimplentes.' });
+    }
 });
 
 // --- API de Pagamentos de Mensalidades ---
@@ -2224,7 +2248,8 @@ app.post('/api/whatsapp/send', authenticateToken, async (req, res) => {
                 
                 if (normalizedPhone) {
                     console.log(`[WA] [${i+1}/${targets.length}] Enviando para ${target.name} (${normalizedPhone})...`);
-                    await sendWhatsAppMessage(settings.base_url, settings.instance_id, settings.api_key, normalizedPhone, message);
+                    const customMessage = message.replace(/{nome}/g, target.name);
+                    await sendWhatsAppMessage(settings.base_url, settings.instance_id, settings.api_key, normalizedPhone, customMessage);
                 } else {
                     console.warn(`[WA] Telefone inválido para ${target.name}: ${target.phone}`);
                 }
@@ -2785,7 +2810,9 @@ const sendPaymentReminders = async () => {
                     const waMessage = waSettings.reminder_template
                         .replace(/{nome}/g, member.name)
                         .replace(/{mensalidade}/g, currentMonthName)
-                        .replace(/{mes}/g, currentMonthName);
+                        .replace(/{mes}/g, currentMonthName)
+                        .replace(/{valor}/g, '20,00')
+                        .replace(/{pix}/g, 'jdboavista.ap@adventistas.org');
                     
                     console.log(`[CRON-WA] Agendando WhatsApp para ${member.name} (${normalizedPhone}) em segundo plano.`);
                     // Envia assincronamente com um delay progressivo para evitar bloqueios por spam (ex: 2 segundos de intervalo)

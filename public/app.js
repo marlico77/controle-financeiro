@@ -4997,9 +4997,277 @@ const initWhatsAppForm = () => {
     const containerSystem = document.getElementById('system-messages-container');
     const containerWhatsapp = document.getElementById('whatsapp-messages-container');
     const configForm = document.getElementById('whatsapp-config-form');
-    const sendForm = document.getElementById('whatsapp-send-form');
 
     if (!tabSystem || !tabWhatsapp) return;
+
+    // --- Lógica do Painel de Cobranças ---
+    const billingForm = document.getElementById('whatsapp-billing-form');
+    const billMonthSelect = document.getElementById('wa-bill-month');
+    const billValueInput = document.getElementById('wa-bill-value');
+    const billPixInput = document.getElementById('wa-bill-pix');
+    const billTemplateTextarea = document.getElementById('wa-bill-template');
+    const billPreviewDiv = document.getElementById('wa-bill-preview');
+    const billSearchInput = document.getElementById('wa-bill-search');
+    const billSelectAllCheckbox = document.getElementById('wa-bill-select-all');
+    const billMembersBody = document.getElementById('wa-bill-members-body');
+    const billCountText = document.getElementById('wa-bill-count-text');
+
+    const defaultBillingTemplate = 'Olá {nome}, tudo bem? Lembramos que a sua mensalidade de {mes} no valor de R$ {valor} está pendente. Você pode efetuar o pagamento via PIX para a chave: {pix}. Após realizar o pagamento, por favor, envie o comprovante acessando o sistema. Agradecemos o seu apoio!\n\n_Este é um lembrete automático enviado pelo sistema financeiro do Clube._';
+
+    if (billTemplateTextarea) {
+        billTemplateTextarea.value = defaultBillingTemplate;
+    }
+
+    let unpaidMembersList = [];
+
+    const getMonthNamePT = (monthNumber) => {
+        const months = [
+            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+        ];
+        return months[monthNumber - 1] || '';
+    };
+
+    if (billMonthSelect) {
+        const currentMonth = new Date().getMonth() + 1;
+        billMonthSelect.value = currentMonth.toString();
+    }
+
+    const updateBillingPreview = () => {
+        try {
+            if (!billPreviewDiv || !billTemplateTextarea) return;
+            
+            let template = billTemplateTextarea.value || '';
+            const selectedMonthVal = billMonthSelect ? parseInt(billMonthSelect.value || (new Date().getMonth() + 1)) : (new Date().getMonth() + 1);
+            const monthName = getMonthNamePT(selectedMonthVal);
+            
+            let rawValue = 20.00;
+            if (billValueInput && billValueInput.value !== '') {
+                rawValue = parseFloat(billValueInput.value);
+                if (isNaN(rawValue)) rawValue = 0;
+            }
+            const valueVal = rawValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            const pixVal = (billPixInput && billPixInput.value) ? billPixInput.value.trim() : 'jdboavista.ap@adventistas.org';
+
+            let targetName = 'João Silva';
+            const checkedBox = document.querySelector('.wa-bill-member-cb:checked');
+            if (checkedBox) {
+                const firstId = checkedBox.value;
+                const member = unpaidMembersList.find(m => m.id.toString() === firstId.toString());
+                if (member) targetName = member.name;
+            } else if (unpaidMembersList && unpaidMembersList.length > 0) {
+                targetName = unpaidMembersList[0].name;
+            }
+
+            const previewText = template
+                .replace(/{nome}/g, targetName)
+                .replace(/{mes}/g, monthName)
+                .replace(/{valor}/g, valueVal)
+                .replace(/{pix}/g, pixVal);
+
+            billPreviewDiv.textContent = previewText;
+        } catch (err) {
+            console.error('[Billing] Erro ao gerar preview:', err);
+            if (billPreviewDiv) {
+                billPreviewDiv.textContent = 'Erro ao gerar pré-visualização. Verifique os campos.';
+            }
+        }
+    };
+
+    // Gera o preview inicial
+    updateBillingPreview();
+
+    const loadBillingDebtors = async () => {
+        if (!billMembersBody) return;
+        
+        billMembersBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-dim);">Carregando devedores...</td></tr>';
+        if (billCountText) billCountText.textContent = 'Carregando...';
+
+        try {
+            const selectedMonthVal = billMonthSelect ? billMonthSelect.value : (new Date().getMonth() + 1);
+            const currentYear = new Date().getFullYear();
+
+            const debtors = await apiFetch(`/api/payments/unpaid?month=${selectedMonthVal}&year=${currentYear}`);
+            unpaidMembersList = debtors || [];
+            
+            renderBillingDebtors();
+        } catch (err) {
+            console.error('[Billing] Erro ao carregar inadimplentes:', err);
+            billMembersBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--error-color);">Erro ao carregar inadimplentes.</td></tr>';
+            if (billCountText) billCountText.textContent = 'Erro ao carregar lista.';
+        }
+    };
+
+    const renderBillingDebtors = () => {
+        if (!billMembersBody) return;
+        
+        const searchTerm = billSearchInput ? billSearchInput.value.toLowerCase() : '';
+        const filtered = unpaidMembersList.filter(m => {
+            return m.name.toLowerCase().includes(searchTerm) || (m.unit && m.unit.toLowerCase().includes(searchTerm));
+        });
+
+        if (filtered.length === 0) {
+            billMembersBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-dim);">Nenhum membro inadimplente encontrado.</td></tr>';
+            if (billCountText) billCountText.textContent = '0 membros encontrados';
+            if (billSelectAllCheckbox) billSelectAllCheckbox.checked = false;
+            updateBillingPreview();
+            return;
+        }
+
+        billMembersBody.innerHTML = filtered.map(m => {
+            const hasPhone = !!m.phone;
+            const disabledAttr = hasPhone ? '' : 'disabled';
+            const opacityStyle = hasPhone ? '' : 'style="opacity: 0.6;"';
+            const phoneBadge = hasPhone 
+                ? `<span style="color: #25D366; font-weight: 600;">${escapeHTML(m.phone)}</span>`
+                : `<span style="color: var(--error-color); font-weight: 500;">Sem Telefone</span>`;
+
+            return `
+                <tr ${opacityStyle} class="billing-member-row" data-search="${escapeHTML(m.name.toLowerCase())} ${escapeHTML((m.unit || '').toLowerCase())}">
+                    <td style="padding: 12px 15px; text-align: center;">
+                        <input type="checkbox" value="${m.id}" ${disabledAttr} class="wa-bill-member-cb" style="width: 18px; height: 18px; cursor: ${hasPhone ? 'pointer' : 'not-allowed'};" ${hasPhone ? 'checked' : ''}>
+                    </td>
+                    <td style="padding: 12px 15px;"><strong>${escapeHTML(m.name)}</strong></td>
+                    <td style="padding: 12px 15px;">${escapeHTML(m.unit || '-')}</td>
+                    <td style="padding: 12px 15px;">${phoneBadge}</td>
+                </tr>
+            `;
+        }).join('');
+
+        document.querySelectorAll('#wa-bill-members-body tr').forEach(row => {
+            row.onclick = (e) => {
+                const cb = row.querySelector('.wa-bill-member-cb');
+                if (cb && !cb.disabled && e.target !== cb) {
+                    cb.checked = !cb.checked;
+                    updateBillingPreview();
+                    updateSelectAllState();
+                }
+            };
+        });
+
+        document.querySelectorAll('.wa-bill-member-cb').forEach(cb => {
+            cb.onchange = () => {
+                updateBillingPreview();
+                updateSelectAllState();
+            };
+        });
+
+        updateSelectAllState();
+    };
+
+    const updateSelectAllState = () => {
+        const checkboxes = document.querySelectorAll('.wa-bill-member-cb:not(:disabled)');
+        const checked = document.querySelectorAll('.wa-bill-member-cb:checked');
+        if (billSelectAllCheckbox) {
+            billSelectAllCheckbox.checked = checkboxes.length > 0 && checkboxes.length === checked.length;
+        }
+        if (billCountText) {
+            billCountText.textContent = `${unpaidMembersList.length} inadimplentes (${checked.length} selecionados para envio)`;
+        }
+        updateBillingPreview();
+    };
+
+    if (billMonthSelect) {
+        billMonthSelect.onchange = () => {
+            loadBillingDebtors();
+        };
+    }
+    if (billValueInput) billValueInput.oninput = updateBillingPreview;
+    if (billPixInput) billPixInput.oninput = updateBillingPreview;
+    if (billTemplateTextarea) billTemplateTextarea.oninput = updateBillingPreview;
+
+    if (billSearchInput) {
+        billSearchInput.oninput = (e) => {
+            const term = e.target.value.toLowerCase();
+            document.querySelectorAll('#wa-bill-members-body tr.billing-member-row').forEach(row => {
+                const search = row.getAttribute('data-search') || '';
+                row.style.display = search.includes(term) ? '' : 'none';
+            });
+            updateSelectAllState();
+        };
+    }
+
+    if (billSelectAllCheckbox) {
+        billSelectAllCheckbox.onchange = (e) => {
+            const isChecked = e.target.checked;
+            document.querySelectorAll('.wa-bill-member-cb:not(:disabled)').forEach(cb => {
+                if (cb.closest('tr').style.display !== 'none') {
+                    cb.checked = isChecked;
+                }
+            });
+            updateBillingPreview();
+            updateSelectAllState();
+        };
+    }
+
+    if (billingForm) {
+        billingForm.onsubmit = async (e) => {
+            e.preventDefault();
+
+            const checkedBoxes = document.querySelectorAll('.wa-bill-member-cb:checked');
+            const selectedIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+
+            if (selectedIds.length === 0) {
+                showAlert('Por favor, selecione pelo menos um membro com telefone válido para envio.', 'Aviso');
+                return;
+            }
+
+            const template = billTemplateTextarea.value;
+            const selectedMonthVal = billMonthSelect ? parseInt(billMonthSelect.value) : (new Date().getMonth() + 1);
+            const monthName = getMonthNamePT(selectedMonthVal);
+            const valueVal = billValueInput ? parseFloat(billValueInput.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '20,00';
+            const pixVal = billPixInput ? billPixInput.value.trim() : 'jdboavista.ap@adventistas.org';
+
+            const message = template
+                .replace(/{mes}/g, monthName)
+                .replace(/{valor}/g, valueVal)
+                .replace(/{pix}/g, pixVal);
+
+            const schDate = document.getElementById('wa-bill-date').value;
+            const schTime = document.getElementById('wa-bill-time').value;
+            const isScheduled = schDate && schTime;
+
+            try {
+                const submitBtn = billingForm.querySelector('button[type="submit"]');
+                if (submitBtn) submitBtn.disabled = true;
+
+                if (isScheduled) {
+                    await apiFetch('/api/whatsapp/scheduled', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message,
+                            date: schDate,
+                            time: schTime,
+                            target_type: 'selected',
+                            target_value: selectedIds
+                        })
+                    });
+                    showAlert('Cobranças agendadas com sucesso!', 'Sucesso');
+                    document.getElementById('wa-bill-date').value = '';
+                    document.getElementById('wa-bill-time').value = '';
+                } else {
+                    const res = await apiFetch('/api/whatsapp/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            personIds: selectedIds,
+                            message
+                        })
+                    });
+                    showAlert(res.message || 'Envio de cobranças iniciado com sucesso!', 'Sucesso');
+                }
+
+                loadBillingDebtors();
+            } catch (err) {
+                console.error('[Billing] Erro ao disparar cobranças:', err);
+                showAlert('Erro ao disparar cobranças: ' + err.message, 'Erro');
+            } finally {
+                const submitBtn = billingForm.querySelector('button[type="submit"]');
+                if (submitBtn) submitBtn.disabled = false;
+            }
+        };
+    }
 
     // Função auxiliar para carregar configurações do WhatsApp do backend
     const loadWhatsAppSettings = async () => {
@@ -5051,9 +5319,7 @@ const initWhatsAppForm = () => {
         document.getElementById('wa-config-panel').style.display = isMaster ? 'block' : 'none';
         document.getElementById('wa-schedule-panel').style.display = (isAdmin || isSecretary) ? 'block' : 'none';
         document.getElementById('wa-schedule-list-panel').style.display = (isAdmin || isSecretary) ? 'block' : 'none';
-        document.getElementById('wa-manual-panel').style.display = (isAdmin || isSecretary) ? 'block' : 'none';
 
-        // Default to "Agendar Mensagens" sub-tab on main tab click
         switchWaSubTab('wa-tab-schedule');
 
         if (isMaster) {
@@ -5081,7 +5347,6 @@ const initWhatsAppForm = () => {
             { id: 'wa-tab-panel', btn: waTabPanel, content: waContentPanel }
         ];
 
-        // Fechar SSE ao sair da aba do chat
         if (activeTabId !== 'wa-tab-panel' && window.waEventSource) {
             console.log('[WA-SSE] Fechando SSE por mudança de aba.');
             window.waEventSource.close();
@@ -5103,6 +5368,9 @@ const initWhatsAppForm = () => {
                         if (typeof window.initWhatsAppChat === 'function') {
                             window.initWhatsAppChat();
                         }
+                    }
+                    if (activeTabId === 'wa-tab-send') {
+                        loadBillingDebtors();
                     }
                 } else {
                     t.btn.classList.remove('active');
@@ -5144,67 +5412,6 @@ const initWhatsAppForm = () => {
         };
     }
 
-    // Filtragem de busca na lista de membros do WhatsApp
-    const searchInput = document.getElementById('wa-msg-search');
-    if (searchInput) {
-        searchInput.oninput = (e) => {
-            const term = e.target.value.toLowerCase();
-            document.querySelectorAll('#wa-members-checkbox-container .checkbox-item').forEach(item => {
-                const search = item.getAttribute('data-search') || '';
-                item.style.display = search.includes(term) ? 'flex' : 'none';
-            });
-        };
-    }
-
-    // Lógica do botão "Selecionar Todos"
-    const selectAll = document.getElementById('wa-msg-select-all');
-    if (selectAll) {
-        selectAll.onchange = (e) => {
-            const isChecked = e.target.checked;
-            document.querySelectorAll('#wa-members-checkbox-container input[type="checkbox"]').forEach(cb => {
-                if (cb.parentElement.style.display !== 'none') {
-                    cb.checked = isChecked;
-                }
-            });
-        };
-    }
-
-    // Enviar mensagem manual via WhatsApp
-    if (sendForm) {
-        sendForm.onsubmit = async (e) => {
-            e.preventDefault();
-            
-            const checkboxes = document.querySelectorAll('#wa-members-checkbox-container input[type="checkbox"]:checked');
-            const selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-
-            if (selectedIds.length === 0) {
-                showAlert('Por favor, selecione pelo menos um membro.', 'Aviso');
-                return;
-            }
-
-            const message = document.getElementById('wa-msg-content').value;
-
-            try {
-                const res = await apiFetch('/api/whatsapp/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        personIds: selectedIds,
-                        message
-                    })
-                });
-                
-                showAlert(res.message || 'Envio iniciado com sucesso!', 'Sucesso');
-                document.getElementById('wa-msg-content').value = '';
-                // Desmarca todos os checkboxes e o selecionar todos
-                document.querySelectorAll('#wa-msg-target-list input[type="checkbox"]').forEach(cb => cb.checked = false);
-            } catch (err) {
-                console.error('[WA] Erro ao enviar:', err);
-                showAlert('Erro ao enviar mensagem: ' + err.message, 'Erro');
-            }
-        };
-    }
-
     // Listar Lembretes Agendados
     const fetchScheduledReminders = async () => {
         const tbody = document.getElementById('wa-schedule-list-body');
@@ -5221,7 +5428,6 @@ const initWhatsAppForm = () => {
                 return;
             }
 
-            // Certifique-se de que a lista de membros esteja carregada para busca de nomes
             if (!state.people || state.people.length === 0) {
                 state.people = await apiFetch('/api/people');
             }
@@ -5444,9 +5650,9 @@ const initWhatsAppForm = () => {
 async function renderWhatsAppMembers() {
     const container = document.getElementById('wa-members-checkbox-container');
     const schContainer = document.getElementById('wa-sch-checkbox-container');
-    if (!container) return;
+    if (!container && !schContainer) return;
 
-    container.innerHTML = '<p style="text-align: center; padding: 10px; color: var(--text-dim);">Carregando membros...</p>';
+    if (container) container.innerHTML = '<p style="text-align: center; padding: 10px; color: var(--text-dim);">Carregando membros...</p>';
     if (schContainer) {
         schContainer.innerHTML = '<p style="text-align: center; padding: 10px; color: var(--text-dim);">Carregando membros...</p>';
     }
@@ -5455,45 +5661,47 @@ async function renderWhatsAppMembers() {
         const people = await apiFetch('/api/people');
         people.sort((a, b) => a.name.localeCompare(b.name));
 
-        container.innerHTML = '';
+        if (container) container.innerHTML = '';
         if (schContainer) schContainer.innerHTML = '';
 
         people.forEach(p => {
             const searchText = `${p.name} ${p.unit || ''}`.toLowerCase();
             
             // 1. Manual Checklist Item
-            const item = document.createElement('div');
-            item.className = 'checkbox-item';
-            item.setAttribute('data-search', searchText);
-            item.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-bottom: 1px solid rgba(0,0,0,0.03); cursor: pointer;';
+            if (container) {
+                const item = document.createElement('div');
+                item.className = 'checkbox-item';
+                item.setAttribute('data-search', searchText);
+                item.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-bottom: 1px solid rgba(0,0,0,0.03); cursor: pointer;';
 
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.id = `wa-user-${p.id}`;
-            checkbox.value = p.id;
-            checkbox.style.cssText = 'width: 18px; height: 18px; cursor: pointer;';
-            
-            if (!p.phone) {
-                checkbox.disabled = true;
-                item.style.opacity = '0.6';
-            }
-
-            const label = document.createElement('label');
-            label.htmlFor = `wa-user-${p.id}`;
-            
-            let phoneLabel = p.phone ? `<span style="color: #25D366; font-weight: 600;">${escapeHTML(p.phone)}</span>` : '<span style="color: var(--error-color); font-weight: 500;">Sem Telefone</span>';
-            label.innerHTML = `${escapeHTML(p.name)} <br> <small style="color: var(--text-dim)">${escapeHTML(p.unit || 'Sem Unidade')} | ${phoneLabel}</small>`;
-            label.style.cssText = 'margin: 0; cursor: pointer; font-size: 0.9rem; flex-grow: 1; user-select: none;';
-
-            item.onclick = (e) => {
-                if (e.target !== checkbox && e.target !== label && !checkbox.disabled) {
-                    checkbox.checked = !checkbox.checked;
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `wa-user-${p.id}`;
+                checkbox.value = p.id;
+                checkbox.style.cssText = 'width: 18px; height: 18px; cursor: pointer;';
+                
+                if (!p.phone) {
+                    checkbox.disabled = true;
+                    item.style.opacity = '0.6';
                 }
-            };
 
-            item.appendChild(checkbox);
-            item.appendChild(label);
-            container.appendChild(item);
+                const label = document.createElement('label');
+                label.htmlFor = `wa-user-${p.id}`;
+                
+                let phoneLabel = p.phone ? `<span style="color: #25D366; font-weight: 600;">${escapeHTML(p.phone)}</span>` : '<span style="color: var(--error-color); font-weight: 500;">Sem Telefone</span>';
+                label.innerHTML = `${escapeHTML(p.name)} <br> <small style="color: var(--text-dim)">${escapeHTML(p.unit || 'Sem Unidade')} | ${phoneLabel}</small>`;
+                label.style.cssText = 'margin: 0; cursor: pointer; font-size: 0.9rem; flex-grow: 1; user-select: none;';
+
+                item.onclick = (e) => {
+                    if (e.target !== checkbox && e.target !== label && !checkbox.disabled) {
+                        checkbox.checked = !checkbox.checked;
+                    }
+                };
+
+                item.appendChild(checkbox);
+                item.appendChild(label);
+                container.appendChild(item);
+            }
 
             // 2. Schedule Checklist Item
             if (schContainer) {
@@ -5515,6 +5723,7 @@ async function renderWhatsAppMembers() {
 
                 const schLabel = document.createElement('label');
                 schLabel.htmlFor = `wa-sch-user-${p.id}`;
+                let phoneLabel = p.phone ? `<span style="color: #25D366; font-weight: 600;">${escapeHTML(p.phone)}</span>` : '<span style="color: var(--error-color); font-weight: 500;">Sem Telefone</span>';
                 schLabel.innerHTML = `${escapeHTML(p.name)} <br> <small style="color: var(--text-dim)">${escapeHTML(p.unit || 'Sem Unidade')} | ${phoneLabel}</small>`;
                 schLabel.style.cssText = 'margin: 0; cursor: pointer; font-size: 0.9rem; flex-grow: 1; user-select: none;';
 
@@ -5531,7 +5740,7 @@ async function renderWhatsAppMembers() {
         });
     } catch (err) {
         console.error('Erro ao carregar membros para WhatsApp:', err);
-        container.innerHTML = '<p style="color: var(--error-color); padding: 10px;">Erro ao carregar lista de membros.</p>';
+        if (container) container.innerHTML = '<p style="color: var(--error-color); padding: 10px;">Erro ao carregar lista de membros.</p>';
         if (schContainer) {
             schContainer.innerHTML = '<p style="color: var(--error-color); padding: 10px;">Erro ao carregar lista de membros.</p>';
         }

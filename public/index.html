@@ -976,41 +976,117 @@
                             </div>
                         </div>
 
-                        <!-- Sub-tab Content: Enviar Mensagens -->
+                        <!-- Sub-tab Content: Enviar Mensagens (Painel de Cobranças) -->
                         <div id="wa-content-send" style="display: none;">
-                            <div style="max-width: 600px; margin: 0 auto;">
-                                <!-- Panel 3: Envio Manual de WhatsApp (Admin & Secretary) -->
-                                <div class="glass-card" id="wa-manual-panel" style="padding: 2rem; display: none;">
-                                    <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; font-size: 1.3rem;">Enviar Mensagem via WhatsApp</h3>
-                                    <form id="whatsapp-send-form">
-                                        <div class="input-group">
-                                            <label>Enviar para:</label>
-                                            <div class="search-container" style="position: relative; margin-bottom: 0.8rem;">
-                                                <input type="text" id="wa-msg-search" placeholder="Pesquisar membro..." 
-                                                       style="width: 100%; padding: 10px 15px 10px 40px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.02);">
-                                                <span class="search-icon" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); display: flex; align-items: center;">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
-                                                    </svg>
-                                                </span>
+                            <div class="grid-2" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; align-items: start;">
+                                
+                                <!-- Coluna da Esquerda: Configurações, Mensagem e Preview -->
+                                <div class="glass-card" style="padding: 2rem;">
+                                    <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; font-size: 1.3rem; display: flex; align-items: center; gap: 8px; margin-top: 0;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                                            <path d="M12.136.326A1.5 1.5 0 0 1 14 1.78V3h.5A1.5 1.5 0 0 1 16 4.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 13.5v-9A1.5 1.5 0 0 1 1.5 3H2V1.78a1.5 1.5 0 0 1 1.864-1.454zM3 3h9v-.22a.5.5 0 0 0-.118-.326L11.5 2H4.5l-.382.454A.5.5 0 0 0 4 2.78zm11 1.5H1.5v9h13z"/>
+                                        </svg>
+                                        Parâmetros da Cobrança
+                                    </h3>
+                                    <form id="whatsapp-billing-form">
+                                        <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                            <div class="input-group" style="margin: 0;">
+                                                <label for="wa-bill-month">Mês de Referência</label>
+                                                <select id="wa-bill-month" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #ffffff;">
+                                                    <option value="1">Janeiro</option>
+                                                    <option value="2">Fevereiro</option>
+                                                    <option value="3">Março</option>
+                                                    <option value="4">Abril</option>
+                                                    <option value="5">Maio</option>
+                                                    <option value="6">Junho</option>
+                                                    <option value="7">Julho</option>
+                                                    <option value="8">Agosto</option>
+                                                    <option value="9">Setembro</option>
+                                                    <option value="10">Outubro</option>
+                                                    <option value="11">Novembro</option>
+                                                    <option value="12">Dezembro</option>
+                                                </select>
                                             </div>
-                                            <div id="wa-msg-target-list" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #ffffff; position: relative;">
-                                                <div class="checkbox-item" style="display: flex; align-items: center; gap: 10px; padding: 12px; border-bottom: 2px solid var(--border-color); position: sticky; top: 0; background: #ffffff; z-index: 10;">
-                                                    <input type="checkbox" id="wa-msg-select-all" style="width: 18px; height: 18px; cursor: pointer;">
-                                                    <label for="wa-msg-select-all" style="font-weight: 800; margin: 0; cursor: pointer; color: var(--accent-color);">Todos os Membros selecionados</label>
-                                                </div>
-                                                <div id="wa-members-checkbox-container" style="padding: 0 5px;">
-                                                    <!-- Populated by JS -->
-                                                </div>
+                                            <div class="input-group" style="margin: 0;">
+                                                <label for="wa-bill-value">Valor (R$)</label>
+                                                <input type="number" id="wa-bill-value" value="20.00" step="0.01" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
                                             </div>
                                         </div>
-                                        <div class="input-group" style="margin-top: 1.5rem;">
-                                            <label for="wa-msg-content">Conteúdo da Mensagem</label>
-                                            <textarea id="wa-msg-content" required placeholder="Digite sua mensagem aqui..." style="width: 100%; min-height: 120px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;"></textarea>
+
+                                        <div class="input-group" style="margin-bottom: 1rem;">
+                                            <label for="wa-bill-pix">Chave PIX para Pagamento</label>
+                                            <input type="text" id="wa-bill-pix" value="jdboavista.ap@adventistas.org" placeholder="Chave PIX..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
                                         </div>
-                                        <button type="submit" class="btn-primary" style="width: 100%; font-weight: 700; margin-top: 1.5rem; height: 46px;">Enviar pelo WhatsApp</button>
+
+                                        <div class="input-group" style="margin-bottom: 1rem;">
+                                            <label for="wa-bill-template">Modelo de Mensagem</label>
+                                            <textarea id="wa-bill-template" rows="5" required style="width: 100%; min-height: 100px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; resize: vertical;"></textarea>
+                                            <small style="color: var(--text-dim); display: block; margin-top: 0.3rem; font-size: 0.8rem;">Tags: <code>{nome}</code>, <code>{mes}</code>, <code>{valor}</code>, <code>{pix}</code></small>
+                                        </div>
+
+                                        <!-- Preview Box -->
+                                        <div class="input-group" style="margin-bottom: 1.5rem;">
+                                            <label>Pré-visualização (Primeiro Destinatário)</label>
+                                            <div id="wa-bill-preview" style="background: #efeae2; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; font-size: 0.9rem; line-height: 1.4; color: #111b21; white-space: pre-wrap; font-family: sans-serif; position: relative;">
+                                                <!-- Preview content here -->
+                                            </div>
+                                        </div>
+
+                                        <!-- Agendamento -->
+                                        <div style="border-top: 1px solid var(--border-color); padding-top: 1.2rem; margin-top: 1rem;">
+                                            <h4 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--accent-color);">Agendar Envio (Opcional)</h4>
+                                            <div class="grid-2" style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1rem; margin-bottom: 1rem;">
+                                                <div class="input-group" style="margin: 0;">
+                                                    <label for="wa-bill-date">Data de Envio</label>
+                                                    <input type="date" id="wa-bill-date" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                                </div>
+                                                <div class="input-group" style="margin: 0;">
+                                                    <label for="wa-bill-time">Horário</label>
+                                                    <input type="time" id="wa-bill-time" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                                </div>
+                                            </div>
+                                            <small style="color: var(--text-dim); display: block; margin-bottom: 1rem; font-size: 0.8rem;">Deixe a data e hora em branco para realizar o envio imediatamente em segundo plano.</small>
+                                        </div>
+
+                                        <button type="submit" class="btn-primary" style="width: 100%; font-weight: 700; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178Z"/>
+                                            </svg>
+                                            <span id="wa-bill-submit-text">Disparar Cobranças</span>
+                                        </button>
                                     </form>
                                 </div>
+
+                                <!-- Coluna da Direita: Lista de Inadimplentes -->
+                                <div class="glass-card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+                                    <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.01);">
+                                        <div>
+                                            <h4 style="margin: 0; font-size: 1.1rem; color: var(--accent-color);">Inadimplentes da Mensalidade</h4>
+                                            <p style="margin: 3px 0 0 0; font-size: 0.8rem; color: var(--text-dim);" id="wa-bill-count-text">Buscando membros em débito...</p>
+                                        </div>
+                                        <div>
+                                            <input type="text" id="wa-bill-search" placeholder="Pesquisar..." style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem; width: 150px;">
+                                        </div>
+                                    </div>
+                                    <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
+                                        <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                                            <thead>
+                                                <tr style="border-bottom: 2px solid var(--border-color); text-align: left; position: sticky; top: 0; z-index: 1;">
+                                                    <th style="padding: 12px 15px; width: 45px; text-align: center; background: var(--card-bg, #ffffff);">
+                                                        <input type="checkbox" id="wa-bill-select-all" style="width: 18px; height: 18px; cursor: pointer;">
+                                                    </th>
+                                                    <th style="padding: 12px 15px; font-weight: 700; background: var(--card-bg, #ffffff);">Nome</th>
+                                                    <th style="padding: 12px 15px; font-weight: 700; background: var(--card-bg, #ffffff);">Unidade</th>
+                                                    <th style="padding: 12px 15px; font-weight: 700; background: var(--card-bg, #ffffff);">Telefone</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="wa-bill-members-body">
+                                                <!-- Populated dynamically by JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
 
