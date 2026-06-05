@@ -418,10 +418,10 @@ app.get('/api/time', (req, res) => {
     res.json({ timestamp: Date.now() });
 });
 
-// --- Sincronização: Criar Usuários para Novos Membros ---
+// --- Sincronização: Criar Usuários para Novos Membros e seus Responsáveis ---
 const syncMemberUsers = async () => {
     try {
-        // Busca pessoas cadastradas que ainda não possuem uma conta de usuário vinculada
+        // 1. Busca pessoas cadastradas que ainda não possuem uma conta de usuário vinculada
         const missingUsersResult = await db.query(`
             SELECT p.id, p.name 
             FROM people p 
@@ -430,37 +430,132 @@ const syncMemberUsers = async () => {
         `);
         const people = missingUsersResult.rows;
         
-        if (people.length === 0) return;
-
-        console.log(`[SYNC] Sincronizando ${people.length} novos membros para usuários...`);
         const defaultHash = await bcrypt.hash('tribo@2026', 10); // Senha padrão para novos acessos
 
-        for (const p of people) {
-            // Gera um username automático baseado em "nome.sobrenome"
-            const nameParts = p.name.trim().split(/\s+/);
-            const first = nameParts[0].toLowerCase();
-            const last = nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
-            
-            let baseUsername = (last ? `${first}.${last}` : first);
-            // Normaliza para remover acentos e caracteres especiais
-            baseUsername = baseUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-            
-            try {
-                // Tenta inserir o usuário; se o username já existir, não faz nada (DO NOTHING)
-                await db.query(
-                    'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT (username) DO NOTHING',
-                    [baseUsername, defaultHash, 'member', p.id]
-                );
-            } catch{
-                // Fallback: Se colidir username, anexa o ID da pessoa para garantir unicidade
-                await db.query(
-                    'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT DO NOTHING',
-                    [`${baseUsername}${p.id}`, defaultHash, 'member', p.id]
-                );
+        if (people.length > 0) {
+            console.log(`[SYNC] Sincronizando ${people.length} novos membros para usuários...`);
+            for (const p of people) {
+                // Gera um username automático baseado em "nome.sobrenome"
+                const nameParts = p.name.trim().split(/\s+/);
+                const first = nameParts[0].toLowerCase();
+                const last = nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
+                
+                let baseUsername = (last ? `${first}.${last}` : first);
+                // Normaliza para remover acentos e caracteres especiais
+                baseUsername = baseUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                
+                try {
+                    // Tenta inserir o usuário; se o username já existir, não faz nada (DO NOTHING)
+                    const insertResult = await db.query(
+                        'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT (username) DO NOTHING RETURNING id',
+                        [baseUsername, defaultHash, 'member', p.id]
+                    );
+                    
+                    if (insertResult.rowCount === 0) {
+                        // Fallback: Se colidir username, anexa o ID da pessoa para garantir unicidade
+                        await db.query(
+                            'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT DO NOTHING',
+                            [`${baseUsername}${p.id}`, defaultHash, 'member', p.id]
+                        );
+                        console.log(`[SYNC] Criado usuário fallback ${baseUsername}${p.id} devido a colisão.`);
+                    } else {
+                        console.log(`[SYNC] Criado usuário ${baseUsername} com sucesso.`);
+                    }
+                } catch (err) {
+                    console.error(`[SYNC] Erro ao cadastrar usuário ${baseUsername}:`, err);
+                }
             }
         }
+
+        // 2. Sincronização de Responsáveis para menores de idade da unidade Desbravador
+        // Busca membros Desbravadores com responsável preenchido e data de nascimento válida
+        const minorsResult = await db.query(`
+            SELECT id, name, responsible, birth_date 
+            FROM people 
+            WHERE LOWER(unit) = 'desbravador' 
+              AND responsible IS NOT NULL 
+              AND TRIM(responsible) <> ''
+              AND birth_date IS NOT NULL 
+              AND birth_date <> ''
+        `);
+        
+        const minors = minorsResult.rows;
+        const today = new Date();
+
+        for (const m of minors) {
+            // Calcula idade
+            const birth = new Date(m.birth_date);
+            if (isNaN(birth)) continue;
+            
+            let age = today.getFullYear() - birth.getFullYear();
+            const monthDiff = today.getMonth() - birth.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                age--;
+            }
+
+            // Apenas para menores de 18 anos
+            if (age >= 18) continue;
+
+            const parentName = m.responsible.trim();
+            
+            // Verifica se o responsável já está cadastrado na tabela de pessoas (people)
+            let parentId = null;
+            const parentSearch = await db.query(
+                'SELECT id FROM people WHERE LOWER(TRIM(name)) = LOWER($1)',
+                [parentName]
+            );
+
+            if (parentSearch.rows.length > 0) {
+                parentId = parentSearch.rows[0].id;
+            } else {
+                // Cadastra o responsável em 'people'
+                const parentInsert = await db.query(
+                    "INSERT INTO people (name, unit) VALUES ($1, 'Responsável') RETURNING id",
+                    [parentName]
+                );
+                parentId = parentInsert.rows[0].id;
+                console.log(`[SYNC-RESP] Cadastrado responsável ${parentName} em people com ID ${parentId}`);
+            }
+
+            // Verifica se o responsável já possui uma conta de usuário
+            const userSearch = await db.query(
+                'SELECT id FROM users WHERE person_id = $1',
+                [parentId]
+            );
+
+            if (userSearch.rows.length === 0) {
+                // Gera username nome.sobrenome para o responsável
+                const nameParts = parentName.split(/\s+/);
+                const first = nameParts[0].toLowerCase();
+                const last = nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
+                
+                let baseUsername = (last ? `${first}.${last}` : first);
+                baseUsername = baseUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+                try {
+                    const insertResult = await db.query(
+                        "INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, 'responsible', $3, TRUE) ON CONFLICT (username) DO NOTHING RETURNING id",
+                        [baseUsername, defaultHash, parentId]
+                    );
+                    
+                    if (insertResult.rowCount === 0) {
+                        const fallbackUsername = `${baseUsername}${parentId}`;
+                        await db.query(
+                            "INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, 'responsible', $3, TRUE) ON CONFLICT DO NOTHING",
+                            [fallbackUsername, defaultHash, parentId]
+                        );
+                        console.log(`[SYNC-RESP] Criado usuário fallback ${fallbackUsername} para responsável ${parentName} devido a colisão.`);
+                    } else {
+                        console.log(`[SYNC-RESP] Criado usuário ${baseUsername} para responsável ${parentName}`);
+                    }
+                } catch (err) {
+                    console.error(`[SYNC-RESP] Erro ao cadastrar responsável ${parentName}:`, err);
+                }
+            }
+        }
+
     } catch (err) {
-        console.error('Error syncing members:', err);
+        console.error('Error syncing members and responsibles:', err);
     }
 };
 
@@ -857,11 +952,29 @@ app.get('/api/people', authenticateToken, async (req, res) => {
       return res.json(result.rows);
     }
     
+    // Responsável vê seus próprios dados e os dados de todos os seus filhos
+    if (req.user.role === 'responsible') {
+      if (!req.user.personId) return res.json([]);
+      const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
+      if (parentResult.rows.length === 0) return res.json([]);
+      const parentName = parentResult.rows[0].name.trim();
+      
+      const result = await db.query(`
+        SELECT p.*, u.username, u.role, u.id as u_id
+        FROM people p
+        LEFT JOIN users u ON p.id = u.person_id
+        WHERE p.id = $1 OR (p.responsible IS NOT NULL AND LOWER(TRIM(p.responsible)) = LOWER($2))
+        ORDER BY p.name ASC
+      `, [req.user.personId, parentName]);
+      return res.json(result.rows);
+    }
+
     // Usuários comuns (membros) só podem ver seus próprios dados
     if (!req.user.personId) return res.json([]);
     const result = await db.query('SELECT * FROM people WHERE id = $1', [req.user.personId]);
     res.json(result.rows);
-  } catch{
+  } catch (err) {
+    console.error('Error fetching people:', err);
     res.status(500).json({ error: 'Erro ao buscar dados' });
   }
 });
@@ -916,6 +1029,7 @@ app.post('/api/people', authenticateToken, async (req, res) => {
       }
 
       await client.query('COMMIT'); // Finaliza transação com sucesso
+      syncMemberUsers(); // Sincroniza em segundo plano (cria acessos normais e de responsáveis)
       logAction(req, 'CREATE_PERSON', { id: personId, name, unit }); // Log de auditoria
       res.json({ id: personId, name, username: finalUsernameUsed });
   } catch (err) {
@@ -1032,11 +1146,29 @@ app.get('/api/payments', authenticateToken, async (req, res) => {
       return res.json(result.rows);
     }
 
+    // Responsável vê seus próprios pagamentos e os de seus filhos
+    if (req.user.role === 'responsible') {
+      if (!req.user.personId) return res.json([]);
+      const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
+      if (parentResult.rows.length === 0) return res.json([]);
+      const parentName = parentResult.rows[0].name.trim();
+      
+      const result = await db.query(`
+        SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason 
+        FROM payments 
+        WHERE (person_id = $1 OR person_id IN (
+            SELECT id FROM people WHERE responsible IS NOT NULL AND LOWER(TRIM(responsible)) = LOWER($2)
+        )) AND year = $3
+      `, [req.user.personId, parentName, targetYear]);
+      return res.json(result.rows);
+    }
+
     // Membro vê apenas os seus próprios pagamentos
     if (!req.user.personId) return res.json([]);
     const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason FROM payments WHERE person_id = $1 AND year = $2', [req.user.personId, targetYear]);
     res.json(result.rows);
-  } catch{
+  } catch (err) {
+    console.error('Error fetching payments:', err);
     res.status(500).json({ error: 'Erro ao buscar pagamentos' });
   }
 });
@@ -1059,6 +1191,26 @@ app.post('/api/payments', authenticateToken, blockSabbathUploads, upload.single(
   
   if (!person_id || (!month && !months) || !year || !amount) {
     return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
+  }
+
+  // Validação de segurança: Membro comum só paga pra si, responsável paga pra si ou filhos
+  if (req.user.role !== 'admin') {
+      if (parseInt(person_id) !== req.user.personId) {
+          if (req.user.role === 'responsible') {
+              const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
+              if (parentResult.rows.length > 0) {
+                  const parentName = parentResult.rows[0].name.trim();
+                  const childCheck = await db.query('SELECT 1 FROM people WHERE id = $1 AND responsible IS NOT NULL AND LOWER(TRIM(responsible)) = LOWER($2)', [person_id, parentName]);
+                  if (childCheck.rows.length === 0) {
+                      return res.status(403).json({ error: 'Você não tem permissão para realizar pagamentos para este membro.' });
+                  }
+              } else {
+                  return res.status(403).json({ error: 'Você não tem permissão para realizar pagamentos para este membro.' });
+              }
+          } else {
+              return res.status(403).json({ error: 'Você não tem permissão para realizar pagamentos para este membro.' });
+          }
+      }
   }
 
   // Se 'months' for enviado, trata como pagamento em lote. Senão, mês único.
@@ -1208,13 +1360,29 @@ app.delete('/api/payments/:id', authenticateToken, async (req, res) => {
 // Atualiza dados cadastrais de um membro (Admin ou o próprio usuário)
 app.put('/api/people/:id', authenticateToken, async (req, res) => {
   try {
-    let { name, responsible, birth_date, cpf, unit, phone, username, password, role } = req.body || {};
+    let { name, responsible, birth_date, cpf, unit, phone, username, password, role, responsiblePassword } = req.body || {};
     // Normaliza username para evitar erros de digitação e acentuação
     if (username) username = username.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const { id } = req.params;
     
-    // Verifica permissão: Admin pode tudo, usuário só pode editar a si mesmo
-    if (req.user.role !== 'admin' && parseInt(id) !== req.user.personId) {
+    // Verifica permissão: Admin pode tudo, usuário só pode editar a si mesmo ou seu filho (caso seja responsável)
+    let hasPermission = false;
+    if (req.user.role === 'admin') {
+        hasPermission = true;
+    } else if (parseInt(id) === req.user.personId) {
+        hasPermission = true;
+    } else if (req.user.role === 'responsible') {
+        const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
+        if (parentResult.rows.length > 0) {
+            const parentName = parentResult.rows[0].name.trim();
+            const childCheck = await db.query('SELECT 1 FROM people WHERE id = $1 AND responsible IS NOT NULL AND LOWER(TRIM(responsible)) = LOWER($2)', [id, parentName]);
+            if (childCheck.rows.length > 0) {
+                hasPermission = true;
+            }
+        }
+    }
+
+    if (!hasPermission) {
         return res.sendStatus(403);
     }
 
@@ -1223,6 +1391,9 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
     // Atualiza tabela people
     const updateResult = await db.query('UPDATE people SET name = $1, responsible = $2, birth_date = $3, cpf = $4, unit = $5, phone = $6 WHERE id = $7', 
       [name, responsible || null, birth_date || null, cpf || null, unit || null, phone || null, id]);
+    
+    // Sincroniza em segundo plano caso a alteração mude o responsável ou nascimento
+    syncMemberUsers();
     
     if (updateResult.rowCount === 0) {
       return res.status(404).json({ error: 'Membro não encontrado' });
@@ -1258,6 +1429,24 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
                     } else {
                         await db.query('UPDATE users SET username = $1 WHERE id = $2', [username, existingUser.id]);
                     }
+                }
+            }
+        }
+    }
+
+    // Se for Admin alterando credenciais de acesso do responsável
+    if (req.user.role === 'admin' && responsiblePassword && responsible) {
+        const respPersonCheck = await db.query('SELECT id FROM people WHERE LOWER(TRIM(name)) = LOWER($1)', [responsible.trim()]);
+        if (respPersonCheck.rows.length > 0) {
+            const respPersonId = respPersonCheck.rows[0].id;
+            const respUserCheck = await db.query('SELECT id, username FROM users WHERE person_id = $1', [respPersonId]);
+            if (respUserCheck.rows.length > 0) {
+                const respUser = respUserCheck.rows[0];
+                if (respUser.username.toUpperCase() !== 'ADMINISTRADOR' || req.user.username.toUpperCase() === 'ADMINISTRADOR') {
+                    const salt = bcrypt.genSaltSync(10);
+                    const hash = bcrypt.hashSync(responsiblePassword, salt);
+                    await db.query('UPDATE users SET password_hash = $1, must_change_password = TRUE WHERE id = $2', [hash, respUser.id]);
+                    console.log(`[AUTH] Senha do responsável (${responsible}) resetada com sucesso pelo admin.`);
                 }
             }
         }
@@ -1378,6 +1567,38 @@ app.get('/api/events', authenticateToken, async (req, res) => {
                 ORDER BY e.date ASC
             `;
             params = [req.user.personId || 0];
+        } else if (req.user.role === 'responsible') {
+            // Responsável vê eventos em que ele ou seus filhos participam
+            queryText = `
+                WITH participant_counts AS (
+                    SELECT event_id, COUNT(*) as count 
+                    FROM event_participants 
+                    GROUP BY event_id
+                ),
+                unit_stats AS (
+                    SELECT uc.event_id, jsonb_object_agg(COALESCE(uc.unit, 'S/U'), uc.count) as unit_counts
+                    FROM (
+                        SELECT ep.event_id, p.unit, COUNT(*) as count
+                        FROM event_participants ep
+                        JOIN people p ON ep.person_id = p.id
+                        GROUP BY ep.event_id, p.unit
+                    ) uc
+                    GROUP BY uc.event_id
+                )
+                SELECT DISTINCT e.*,
+                       COALESCE(pc.count, 0) as total_participants,
+                       COALESCE(us.unit_counts, '{}'::jsonb) as unit_counts,
+                       TRUE as is_participant
+                FROM events e
+                LEFT JOIN participant_counts pc ON e.id = pc.event_id
+                LEFT JOIN unit_stats us ON e.id = us.event_id
+                JOIN event_participants ep ON e.id = ep.event_id
+                WHERE ep.person_id = $1 OR ep.person_id IN (
+                    SELECT id FROM people WHERE responsible IS NOT NULL AND LOWER(TRIM(responsible)) = LOWER((SELECT name FROM people WHERE id = $1))
+                )
+                ORDER BY e.date ASC
+            `;
+            params = [req.user.personId];
         } else {
             // Membro vê apenas se está inscrito ou não no evento
             queryText = `
@@ -1476,10 +1697,26 @@ app.get('/api/events/:id/details', authenticateToken, async (req, res) => {
         const event = eventResult.rows[0];
         if (!event) return res.status(404).json({ error: 'Evento não encontrado' });
 
-        // Membros só podem ver detalhes de eventos em que estão inscritos
+        // Membros e responsáveis só podem ver detalhes de eventos em que eles ou seus filhos estão inscritos
         if (req.user.role !== 'admin' && req.user.role !== 'secretário') {
-            const participantResult = await db.query('SELECT 1 FROM event_participants WHERE event_id = $1 AND person_id = $2', [id, req.user.personId]);
-            if (participantResult.rows.length === 0) return res.sendStatus(403);
+            let isAllowed = false;
+            if (req.user.role === 'responsible') {
+                const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
+                if (parentResult.rows.length > 0) {
+                    const parentName = parentResult.rows[0].name.trim();
+                    const checkResult = await db.query(`
+                        SELECT 1 FROM event_participants ep
+                        WHERE ep.event_id = $1 AND (ep.person_id = $2 OR ep.person_id IN (
+                            SELECT id FROM people WHERE responsible IS NOT NULL AND LOWER(TRIM(responsible)) = LOWER($3)
+                        ))
+                    `, [id, req.user.personId, parentName]);
+                    if (checkResult.rows.length > 0) isAllowed = true;
+                }
+            } else {
+                const participantResult = await db.query('SELECT 1 FROM event_participants WHERE event_id = $1 AND person_id = $2', [id, req.user.personId]);
+                if (participantResult.rows.length > 0) isAllowed = true;
+            }
+            if (!isAllowed) return res.sendStatus(403);
         }
 
         let participants, payments;
@@ -1494,6 +1731,28 @@ app.get('/api/events/:id/details', authenticateToken, async (req, res) => {
             `, [id]);
             participants = pResult.rows;
             const payResult = await db.query('SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, rejection_reason FROM event_payments WHERE event_id = $1', [id]);
+            payments = payResult.rows;
+        } else if (req.user.role === 'responsible') {
+            // Responsável vê a si e a seus filhos inscritos, com seus respectivos pagamentos
+            const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
+            const parentName = parentResult.rows[0]?.name?.trim() || '';
+
+            const pResult = await db.query(`
+                SELECT p.id, p.name, p.unit 
+                FROM people p
+                JOIN event_participants ep ON p.id = ep.person_id
+                WHERE ep.event_id = $1 AND (p.id = $2 OR (p.responsible IS NOT NULL AND LOWER(TRIM(p.responsible)) = LOWER($3)))
+                ORDER BY p.name ASC
+            `, [id, req.user.personId, parentName]);
+            participants = pResult.rows;
+
+            const payResult = await db.query(`
+                SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, rejection_reason 
+                FROM event_payments 
+                WHERE event_id = $1 AND (person_id = $2 OR person_id IN (
+                    SELECT id FROM people WHERE responsible IS NOT NULL AND LOWER(TRIM(responsible)) = LOWER($3)
+                ))
+            `, [id, req.user.personId, parentName]);
             payments = payResult.rows;
         } else {
             // Membro vê apenas seus próprios dados e pagamentos vinculados ao evento
@@ -1546,6 +1805,29 @@ app.get('/api/event-payments', authenticateToken, async (req, res) => {
             return res.json(result.rows);
         }
         
+        // Responsável vê pagamentos de eventos dele e dos filhos
+        if (req.user.role === 'responsible') {
+            if (!req.user.personId) return res.json([]);
+            const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
+            if (parentResult.rows.length === 0) return res.json([]);
+            const parentName = parentResult.rows[0].name.trim();
+
+            let sql = `
+                SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, rejection_reason 
+                FROM event_payments 
+                WHERE (person_id = $1 OR person_id IN (
+                    SELECT id FROM people WHERE responsible IS NOT NULL AND LOWER(TRIM(responsible)) = LOWER($2)
+                ))
+            `;
+            let params = [req.user.personId, parentName];
+            if (event_id) { sql += ' AND event_id = $' + (params.length + 1); params.push(event_id); }
+            if (month) { sql += ' AND month = $' + (params.length + 1); params.push(month); }
+            if (year) { sql += ' AND year = $' + (params.length + 1); params.push(year); }
+
+            const result = await db.query(sql, params);
+            return res.json(result.rows);
+        }
+
         // Membro vê apenas os seus próprios pagamentos de eventos
         if (!req.user.personId) return res.json([]);
         let sql = 'SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, rejection_reason FROM event_payments WHERE person_id = $1';
@@ -1584,8 +1866,28 @@ app.post('/api/event-payments', authenticateToken, blockSabbathUploads, upload.s
     const receipt_filename = req.file ? `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
     const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
     
-    // Define quem é o dono do pagamento (Admin pode escolher o membro)
-    const effectivePersonId = req.user.role === 'admin' ? (person_id || req.user.personId) : req.user.personId;
+    // Define quem é o dono do pagamento (Admin/Responsável pode escolher o membro)
+    let effectivePersonId = req.user.personId;
+    if (req.user.role === 'admin') {
+        effectivePersonId = person_id || req.user.personId;
+    } else if (req.user.role === 'responsible' && person_id) {
+        if (parseInt(person_id) !== req.user.personId) {
+            const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
+            if (parentResult.rows.length > 0) {
+                const parentName = parentResult.rows[0].name.trim();
+                const childCheck = await db.query('SELECT 1 FROM people WHERE id = $1 AND responsible IS NOT NULL AND LOWER(TRIM(responsible)) = LOWER($2)', [person_id, parentName]);
+                if (childCheck.rows.length > 0) {
+                    effectivePersonId = person_id;
+                } else {
+                    return res.status(403).json({ error: 'Você não tem permissão para realizar pagamentos para este membro.' });
+                }
+            } else {
+                return res.status(403).json({ error: 'Você não tem permissão para realizar pagamentos para este membro.' });
+            }
+        } else {
+            effectivePersonId = person_id;
+        }
+    }
 
     if (!effectivePersonId) return res.status(400).json({ error: 'Membro não identificado.' });
     if (!event_id) return res.status(400).json({ error: 'Evento não identificado.' });

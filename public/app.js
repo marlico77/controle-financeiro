@@ -1683,10 +1683,10 @@ function populateReportSelects() {
     const memberSelect = document.getElementById('report-member-select');
     const eventSelect = document.getElementById('report-event-select');
 
-    // Preenche lista de membros
+    // Preenche lista de membros (filtrando responsáveis)
     if (memberSelect) {
         memberSelect.innerHTML = '<option value="">Selecione um Membro</option>' +
-            state.people.map(p => `<option value="${p.id}">${escapeHTML(p.name)}</option>`).join('');
+            state.people.filter(p => p.unit !== 'Responsável').map(p => `<option value="${p.id}">${escapeHTML(p.name)}</option>`).join('');
     }
 
     // Preenche lista de eventos
@@ -2480,8 +2480,12 @@ let renderEventDetailGrid = (participants, payments) => {
         paymentsByPerson[pid].push(pay);
     });
 
-    // Define quais participantes renderizar: Admin vê todos, membro/secretário vê apenas a si mesmo
-    const participantsToRender = state.role === 'admin' ? participants : participants.filter(p => p.id == state.personId);
+    // Define quais participantes renderizar: Admin vê todos, responsável vê apenas os filhos, membro/secretário vê apenas a si mesmo
+    const participantsToRender = state.role === 'admin'
+        ? participants
+        : (state.role === 'responsible'
+            ? participants.filter(p => p.id != state.personId)
+            : participants.filter(p => p.id == state.personId));
 
     const rows = [];
     participantsToRender.forEach(p => {
@@ -2558,8 +2562,8 @@ let renderEventDetailGrid = (participants, payments) => {
 
 // Abre o modal de pagamento de evento a partir da grade detalhada
 window.openEventPaymentModalFromGridIndex = (personId, month, paymentIndex = -1) => {
-    // Segurança: Somente o próprio membro ou Admins/Secretários podem registrar pagamentos
-    if (state.role !== 'admin' && state.role !== 'secretário' && parseInt(personId) !== parseInt(state.personId)) return;
+    // Segurança: Somente o próprio membro, responsável ou Admins/Secretários podem registrar pagamentos
+    if (state.role !== 'admin' && state.role !== 'secretário' && state.role !== 'responsible' && parseInt(personId) !== parseInt(state.personId)) return;
 
     // Recupera o pagamento do cache pelo index se ele existir
     const payment = paymentIndex >= 0 ? window._tempEventPayments[paymentIndex] : null;
@@ -2589,16 +2593,16 @@ const renderEventParticipantsChecklist = () => {
     const list = document.getElementById('event-participants-list');
     const unitFilter = document.getElementById('ev-unit-filter');
 
-    // Extrai as unidades únicas de todos os membros
-    const units = [...new Set(state.people.map(p => p.unit).filter(u => u))].sort();
+    // Extrai as unidades únicas de todos os membros (filtrando responsáveis)
+    const units = [...new Set(state.people.filter(p => p.unit !== 'Responsável').map(p => p.unit).filter(u => u))].sort();
     unitFilter.innerHTML = `
         <option value="">Selecionar</option>
         <option value="ALL">Todos os Membros</option>
         ${units.map(u => `<option value="${u}">Unidade: ${u}</option>`).join('')}
     `;
 
-    // Gera o HTML da lista de seleção
-    list.innerHTML = state.people.map(p => {
+    // Gera o HTML da lista de seleção (filtrando responsáveis)
+    list.innerHTML = state.people.filter(p => p.unit !== 'Responsável').map(p => {
         const searchText = `${p.name} ${p.unit || ''}`.toLowerCase();
         return `
             <div class="checklist-item" data-search="${searchText}" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0; font-size: 0.9rem;">
@@ -2614,7 +2618,7 @@ const openAddParticipantsModal = () => {
     const list = document.getElementById('add-participants-list');
     const existingIds = state.currentEventParticipants.map(p => p.id); // Quem já está no evento
     // Filtra membros que ainda não estão participando
-    const available = state.people.filter(p => !existingIds.includes(p.id));
+    const available = state.people.filter(p => p.unit !== 'Responsável' && !existingIds.includes(p.id));
 
     if (list) {
         list.innerHTML = available.map(p => {
@@ -2969,13 +2973,28 @@ const updateDashboardStats = () => {
             ['#e50914', '#111111', '#8b0000', '#228b22']
         );
     } else {
-        // Estatísticas simplificadas para membros comuns e secretários (painel pessoal)
-        const myPayments = state.payments.filter(p => p.person_id == state.personId && p.status === 'approved');
+        // Estatísticas simplificadas para membros comuns, secretários e responsáveis (painel pessoal/familiar)
+        const myPayments = (state.role === 'responsible')
+            ? state.payments.filter(p => p.person_id != state.personId && p.status === 'approved')
+            : state.payments.filter(p => p.person_id == state.personId && p.status === 'approved');
+            
+        const familyPeopleCount = (state.role === 'responsible') ? state.people.filter(p => p.id != state.personId).length : 1;
         const paidMonths = myPayments.length;
-        const pendingMonths = 12 - paidMonths;
+        const pendingMonths = (familyPeopleCount * 12) - paidMonths;
         const myTotalCash = myPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
         const totalCashElem = document.getElementById('stat-total-cash');
         if (totalCashElem) totalCashElem.textContent = `R$ ${myTotalCash.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
+        // Processa pagamentos de eventos do membro/família para exibir no card correspondente
+        let myEventsTotal = 0;
+        if (state.eventPayments) {
+            const myEventPayments = (state.role === 'responsible')
+                ? state.eventPayments.filter(p => p.person_id != state.personId && p.status === 'approved')
+                : state.eventPayments.filter(p => p.person_id == state.personId && p.status === 'approved');
+            myEventsTotal = myEventPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        }
+        const eventosStat = document.getElementById('stat-eventos');
+        if (eventosStat) eventosStat.textContent = `R$ ${myEventsTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
         // Gráfico de pizza mostrando progresso pessoal de pagamentos do ano
         renderPieChart(['Meses Pagos', 'Pendentes'], [paidMonths, pendingMonths], ['#e50914', '#111111']);
@@ -2997,8 +3016,12 @@ const renderEventDashboard = (participants, payments) => {
     const participantsMap = new Map();
     participants.forEach(p => participantsMap.set(p.id, p));
 
-    // Processa pagamentos apenas deste evento e para o usuário logado se não for Admin
-    const paymentsToProcess = state.role === 'admin' ? payments : payments.filter(p => p.person_id == state.personId);
+    // Processa pagamentos apenas deste evento e para o usuário logado/família se não for Admin
+    const paymentsToProcess = state.role === 'admin'
+        ? payments
+        : (state.role === 'responsible'
+            ? payments.filter(p => p.person_id != state.personId)
+            : payments.filter(p => p.person_id == state.personId));
     paymentsToProcess.forEach(p => {
         if (p.status !== 'approved') return;
         const amount = parseFloat(p.amount);
@@ -3071,7 +3094,11 @@ const renderMensalidadeDashboard = () => {
     const peopleMap = new Map();
     state.people.forEach(p => peopleMap.set(p.id, p));
 
-    const paymentsToProcess = state.role === 'admin' ? state.payments : state.payments.filter(p => p.person_id == state.personId);
+    const paymentsToProcess = state.role === 'admin'
+        ? state.payments
+        : (state.role === 'responsible'
+            ? state.payments.filter(p => p.person_id != state.personId)
+            : state.payments.filter(p => p.person_id == state.personId));
     paymentsToProcess.forEach(p => {
         if (p.status !== 'approved') return;
         const amount = parseFloat(p.amount);
@@ -3333,8 +3360,12 @@ function renderDashboard() {
         paymentsMap.set(key, p);
     });
 
-    // Define quais pessoas renderizar: Admin vê todos, membro/secretário vê apenas a si mesmo
-    const peopleToRender = state.role === 'admin' ? state.people : state.people.filter(p => p.id == state.personId);
+    // Define quais pessoas renderizar: Admin vê todos (exceto responsáveis), responsável vê apenas os filhos, membro/secretário vê apenas a si mesmo
+    const peopleToRender = state.role === 'admin'
+        ? state.people.filter(p => p.unit !== 'Responsável')
+        : (state.role === 'responsible'
+            ? state.people.filter(p => p.id != state.personId)
+            : state.people.filter(p => p.id == state.personId));
 
     // Pré-processa os dados dos membros com status de pagamento e totais
     const processedPeople = peopleToRender.map(person => {
@@ -3409,7 +3440,7 @@ function renderDashboard() {
 
             // Ao clicar na célula, abre o modal de pagamento se tiver permissão
             td.onclick = () => {
-                const canEdit = state.role === 'admin' || (state.personId && person.id == state.personId);
+                const canEdit = state.role === 'admin' || state.role === 'responsible' || (state.personId && person.id == state.personId);
                 if (canEdit) {
                     openPaymentModal(person, m, payment);
                 }
@@ -3473,6 +3504,7 @@ function renderPeople() {
     const searchQuery = document.getElementById('global-search')?.value.toLowerCase() || '';
 
     let processedPeople = state.people.filter(p => {
+        if (p.unit === 'Responsável') return false; // Oculta responsáveis da aba de membros
         const text = `${p.name} ${p.username || ''} ${p.unit || ''} ${p.responsible || ''} ${p.cpf || ''}`.toLowerCase();
         return text.includes(searchQuery);
     });
@@ -3760,6 +3792,13 @@ document.getElementById('add-person-btn').onclick = () => {
         document.getElementById('u-password').value = '';
     }
 
+    const respCredentialsSection = document.getElementById('responsible-credentials-section');
+    if (respCredentialsSection) {
+        respCredentialsSection.style.display = 'none';
+        document.getElementById('u-resp-username').value = '';
+        document.getElementById('u-resp-password').value = '';
+    }
+
     personModal.style.display = 'flex';
 };
 
@@ -3790,6 +3829,24 @@ const editPerson = (id) => {
             // Apenas o Admin Master (super usuário) pode mudar o nível de permissão (role)
             const isMaster = state.username && state.username.toUpperCase() === 'ADMINISTRADOR';
             roleSelect.disabled = !isMaster;
+        }
+    }
+
+    // Configura seção de credenciais do responsável
+    const respCredentialsSection = document.getElementById('responsible-credentials-section');
+    if (respCredentialsSection) {
+        const respPerson = (state.role === 'admin' && person.responsible)
+            ? state.people.find(p => p.name.trim().toLowerCase() === person.responsible.trim().toLowerCase())
+            : null;
+
+        if (respPerson && respPerson.username) {
+            respCredentialsSection.style.display = 'block';
+            document.getElementById('u-resp-username').value = respPerson.username;
+            document.getElementById('u-resp-password').value = '';
+        } else {
+            respCredentialsSection.style.display = 'none';
+            document.getElementById('u-resp-username').value = '';
+            document.getElementById('u-resp-password').value = '';
         }
     }
 
@@ -3941,7 +3998,8 @@ document.getElementById('person-form').onsubmit = async (e) => {
         phone: document.getElementById('p-phone').value.trim(),
         username: document.getElementById('u-username').value,
         password: document.getElementById('u-password').value,
-        role: document.getElementById('u-role').value
+        role: document.getElementById('u-role').value,
+        responsiblePassword: document.getElementById('u-resp-password') ? document.getElementById('u-resp-password').value : ''
     };
 
     // Validação: Exige pelo menos nome e um sobrenome
@@ -4128,8 +4186,8 @@ document.getElementById('event-payment-form').onsubmit = async (e) => {
     formData.append('year', document.getElementById('ep-year').value);
     formData.append('amount', document.getElementById('ep-amount').value);
 
-    // Se for Admin pagando por outro membro, injeta o ID correto da pessoa
-    if (state.role === 'admin' && state.tempPaymentPersonId) {
+    // Se for Admin/Secretário/Responsável pagando por outro membro, injeta o ID correto da pessoa
+    if ((state.role === 'admin' || state.role === 'secretário' || state.role === 'responsible') && state.tempPaymentPersonId) {
         formData.append('person_id', state.tempPaymentPersonId);
     }
 
