@@ -685,6 +685,20 @@ const initDB = async () => {
             )
         `);
 
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS whatsapp_queue (
+                id SERIAL PRIMARY KEY,
+                phone VARCHAR(50) NOT NULL,
+                message TEXT NOT NULL,
+                status VARCHAR(20) DEFAULT 'pending',
+                error_message TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                sent_at TIMESTAMPTZ
+            )
+        `);
+
+        await db.query('CREATE INDEX IF NOT EXISTS idx_wa_queue_status_created ON whatsapp_queue(status, created_at)');
+
         // --- Criação de Índices de Performance ---
         // Essencial para manter o sistema rápido com o crescimento dos dados
         await db.query('CREATE INDEX IF NOT EXISTS idx_payments_year ON payments(year)');
@@ -730,6 +744,8 @@ const initDB = async () => {
         }
 
         console.log('[DB] Tables and Performance Indices verified/created.');
+        // Inicia processamento da fila de WhatsApp caso haja pendências após inicialização
+        processWhatsAppQueue().catch(err => console.error('[WA-WORKER] Erro ao iniciar worker no boot:', err));
     } catch (err) {
         console.error('[DB] Error initializing tables:', err);
     }
@@ -2370,6 +2386,100 @@ app.post('/api/notifications/send', authenticateToken, async (req, res) => {
 
 // --- WhatsApp W-API Helpers & Endpoints ---
 
+const parseSpintax = (text) => {
+    if (!text) return '';
+    return text.replace(/\{([^{}]+)\}/g, (match, choicesStr) => {
+        if (choicesStr.includes('|')) {
+            const choices = choicesStr.split('|');
+            return choices[Math.floor(Math.random() * choices.length)];
+        }
+        return match;
+    });
+};
+
+let isProcessingWhatsAppQueue = false;
+let successCounter = 0;
+
+async function processWhatsAppQueue() {
+    if (isProcessingWhatsAppQueue) return;
+    isProcessingWhatsAppQueue = true;
+    
+    console.log('[WA-WORKER] Iniciando processamento da fila do WhatsApp...');
+    
+    try {
+        while (true) {
+            // Busca a próxima mensagem pendente
+            const nextMsgResult = await db.query(`
+                SELECT * FROM whatsapp_queue 
+                WHERE status = 'pending' 
+                ORDER BY created_at ASC, id ASC 
+                LIMIT 1
+            `);
+            
+            if (nextMsgResult.rows.length === 0) {
+                console.log('[WA-WORKER] Fila vazia. Finalizando processamento.');
+                break;
+            }
+            
+            const msg = nextMsgResult.rows[0];
+            
+            // Marca como em envio
+            await db.query('UPDATE whatsapp_queue SET status = $1 WHERE id = $2', ['sending', msg.id]);
+            
+            // Busca configurações
+            const settingsResult = await db.query('SELECT * FROM whatsapp_settings LIMIT 1');
+            const settings = settingsResult.rows[0];
+            
+            if (!settings) {
+                const errMsg = 'Configurações de WhatsApp não encontradas.';
+                console.error(`[WA-WORKER] ${errMsg}`);
+                await db.query('UPDATE whatsapp_queue SET status = $1, error_message = $2, sent_at = NOW() WHERE id = $3', ['error', errMsg, msg.id]);
+                break;
+            }
+            
+            console.log(`[WA-WORKER] Enviando mensagem ID ${msg.id} para ${msg.phone}...`);
+            const sendResult = await sendWhatsAppMessage(
+                settings.base_url, 
+                settings.instance_id, 
+                settings.api_key, 
+                msg.phone, 
+                msg.message
+            );
+            
+            let delay;
+            if (sendResult.success) {
+                await db.query('UPDATE whatsapp_queue SET status = $1, sent_at = NOW() WHERE id = $2', ['sent', msg.id]);
+                successCounter++;
+                console.log(`[WA-WORKER] Mensagem ID ${msg.id} enviada com sucesso. (Sucessos nesta sessão: ${successCounter})`);
+                
+                if (successCounter >= 15) {
+                    delay = Math.floor(Math.random() * (5 - 3 + 1) + 3) * 60 * 1000; // 3 a 5 minutos
+                    successCounter = 0; // Reseta o contador
+                    console.log(`[WA-WORKER] Pausa de descanso ativa: aguardando ${delay / 60000} minutos...`);
+                } else {
+                    delay = Math.floor(Math.random() * (60 - 35 + 1) + 35) * 1000; // 35 a 60 segundos
+                    console.log(`[WA-WORKER] Cooldown ativo: aguardando ${delay / 1000} segundos...`);
+                }
+            } else {
+                const errMsg = sendResult.error || 'Erro desconhecido.';
+                await db.query('UPDATE whatsapp_queue SET status = $1, error_message = $2, sent_at = NOW() WHERE id = $3', ['error', errMsg, msg.id]);
+                console.error(`[WA-WORKER] Erro ao enviar mensagem ID ${msg.id}: ${errMsg}`);
+                
+                // Em caso de erro, ainda aplica o cooldown de 35 a 60 segundos
+                delay = Math.floor(Math.random() * (60 - 35 + 1) + 35) * 1000;
+                console.log(`[WA-WORKER] Cooldown pós-erro ativo: aguardando ${delay / 1000} segundos...`);
+            }
+            
+            // Aguarda o cooldown/pausa antes da próxima mensagem
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    } catch (err) {
+        console.error('[WA-WORKER] Erro crítico no worker da fila:', err);
+    } finally {
+        isProcessingWhatsAppQueue = false;
+    }
+}
+
 const normalizePhoneNumber = (phone) => {
     if (!phone) return null;
     let cleaned = phone.replace(/\D/g, '');
@@ -2540,29 +2650,23 @@ app.post('/api/whatsapp/send', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Nenhum dos membros selecionados possui telefone cadastrado.' });
         }
         
-        res.json({ success: true, message: `Iniciado envio de ${targets.length} mensagens no WhatsApp em segundo plano.` });
-        
-        (async () => {
-            console.log(`[WA] Iniciando envio manual em massa de ${targets.length} mensagens.`);
-            for (let i = 0; i < targets.length; i++) {
-                const target = targets[i];
-                const normalizedPhone = normalizePhoneNumber(target.phone);
-                
-                if (normalizedPhone) {
-                    console.log(`[WA] [${i+1}/${targets.length}] Enviando para ${target.name} (${normalizedPhone})...`);
-                    const customMessage = message.replace(/{nome}/g, target.name);
-                    await sendWhatsAppMessage(settings.base_url, settings.instance_id, settings.api_key, normalizedPhone, customMessage);
-                } else {
-                    console.warn(`[WA] Telefone inválido para ${target.name}: ${target.phone}`);
-                }
-                
-                if (i < targets.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 1500));
-                }
+        // Insere as mensagens na fila do banco de dados
+        for (const target of targets) {
+            const normalizedPhone = normalizePhoneNumber(target.phone);
+            if (normalizedPhone) {
+                const customMessage = message.replace(/{nome}/g, target.name);
+                const finalMessage = parseSpintax(customMessage);
+                await db.query(
+                    'INSERT INTO whatsapp_queue (phone, message, status) VALUES ($1, $2, $3)',
+                    [normalizedPhone, finalMessage, 'pending']
+                );
             }
-            console.log(`[WA] Finalizado envio manual em massa de mensagens.`);
-        })().catch(err => console.error('[WA] Erro na fila de envio manual:', err));
+        }
         
+        // Acorda o worker da fila
+        processWhatsAppQueue().catch(err => console.error('[WA-WORKER] Erro ao acordar worker após envio manual:', err));
+        
+        res.json({ success: true, message: `Mensagens para ${targets.length} membros foram adicionadas à fila de envio do WhatsApp.` });
     } catch (err) {
         console.error('[WA] Erro na rota de envio:', err);
         res.status(500).json({ error: 'Erro ao processar envio' });
@@ -3108,23 +3212,26 @@ const sendPaymentReminders = async () => {
             if (waEnabled && member.phone) {
                 const normalizedPhone = normalizePhoneNumber(member.phone);
                 if (normalizedPhone) {
-                    // Substitui variáveis do template
+                    // Substitui variáveis do template e processa spintax
                     const waMessage = waSettings.reminder_template
                         .replace(/{nome}/g, member.name)
                         .replace(/{mensalidade}/g, currentMonthName)
                         .replace(/{mes}/g, currentMonthName)
                         .replace(/{valor}/g, '20,00')
                         .replace(/{pix}/g, 'jdboavista.ap@adventistas.org');
+                    const finalMessage = parseSpintax(waMessage);
                     
-                    console.log(`[CRON-WA] Agendando WhatsApp para ${member.name} (${normalizedPhone}) em segundo plano.`);
-                    // Envia assincronamente com um delay progressivo para evitar bloqueios por spam (ex: 2 segundos de intervalo)
-                    setTimeout(async () => {
-                        console.log(`[CRON-WA] Enviando lembrete de WhatsApp para ${member.name}...`);
-                        await sendWhatsAppMessage(waSettings.base_url, waSettings.instance_id, waSettings.api_key, normalizedPhone, waMessage);
-                    }, i * 2000); // 2 segundos de delay entre cada envio
+                    console.log(`[CRON-WA] Enfileirando lembrete de WhatsApp para ${member.name} (${normalizedPhone}).`);
+                    await db.query(
+                        'INSERT INTO whatsapp_queue (phone, message, status) VALUES ($1, $2, $3)',
+                        [normalizedPhone, finalMessage, 'pending']
+                    );
                 }
             }
         }
+        
+        // Acorda o worker da fila
+        processWhatsAppQueue().catch(err => console.error('[WA-WORKER] Erro ao acordar worker após lembretes automáticos:', err));
     } catch (err) {
         console.error('[CRON] Erro no processamento automático:', err);
     }
@@ -3172,6 +3279,9 @@ cron.schedule('0 9 * * *', async () => {
 
 // Agendamento CRON: Roda a cada minuto para verificar e disparar lembretes agendados
 cron.schedule('* * * * *', async () => {
+    // Garante que a fila do WhatsApp esteja ativa se houver envios pendentes
+    processWhatsAppQueue().catch(err => console.error('[CRON] Erro ao acordar worker da fila:', err));
+    
     try {
         // Busca lembretes pendentes agendados para a data/hora atual ou passados que ainda não foram enviados
         const pendingReminders = await db.query(`
@@ -3218,29 +3328,25 @@ cron.schedule('* * * * *', async () => {
                 
                 console.log(`[CRON-SCH] Processando lembrete ID ${reminder.id} para ${targets.length} contatos.`);
                 
-                // Envia as mensagens em segundo plano
-                (async () => {
-                    for (let i = 0; i < targets.length; i++) {
-                        const target = targets[i];
-                        const normalizedPhone = normalizePhoneNumber(target.phone);
-                        if (normalizedPhone) {
-                            // Substitui {nome} se presente na mensagem personalizada
-                            const customMessage = reminder.message.replace(/{nome}/g, target.name);
-                            await sendWhatsAppMessage(waSettings.base_url, waSettings.instance_id, waSettings.api_key, normalizedPhone, customMessage);
-                        }
-                        
-                        if (i < targets.length - 1) {
-                            await new Promise(resolve => setTimeout(resolve, 1500)); // Delay seguro de 1.5s entre disparos
-                        }
+                // Enfileira as mensagens na tabela whatsapp_queue
+                for (const target of targets) {
+                    const normalizedPhone = normalizePhoneNumber(target.phone);
+                    if (normalizedPhone) {
+                        const customMessage = reminder.message.replace(/{nome}/g, target.name);
+                        const finalMessage = parseSpintax(customMessage);
+                        await db.query(
+                            'INSERT INTO whatsapp_queue (phone, message, status) VALUES ($1, $2, $3)',
+                            [normalizedPhone, finalMessage, 'pending']
+                        );
                     }
-                    
-                    // Finalizado com sucesso
-                    await db.query('UPDATE scheduled_reminders SET status = $1 WHERE id = $2', ['sent', reminder.id]);
-                    console.log(`[CRON-SCH] Finalizado com sucesso o envio do lembrete ID ${reminder.id}.`);
-                })().catch(async (err) => {
-                    console.error(`[CRON-SCH] Erro na fila do lembrete ID ${reminder.id}:`, err);
-                    await db.query('UPDATE scheduled_reminders SET status = $1, error_message = $2 WHERE id = $3', ['error', err.message, reminder.id]);
-                });
+                }
+                
+                // Marca o agendamento como enviado (enfileirado com sucesso)
+                await db.query('UPDATE scheduled_reminders SET status = $1 WHERE id = $2', ['sent', reminder.id]);
+                console.log(`[CRON-SCH] Lembrete ID ${reminder.id} enfileirado com sucesso.`);
+                
+                // Acorda o worker da fila
+                processWhatsAppQueue().catch(err => console.error('[WA-WORKER] Erro ao acordar worker após agendamento:', err));
                 
             } catch (innerErr) {
                 console.error(`[CRON-SCH] Erro no processamento individual do lembrete ID ${reminder.id}:`, innerErr);
