@@ -3659,20 +3659,19 @@ const openPaymentModal = (person, month, payment = null) => {
     document.querySelectorAll('#p-months-grid input').forEach(i => i.checked = false);
     document.querySelectorAll('.month-grid-item').forEach(item => item.classList.remove('selected'));
 
-    // Se estiver editando um pagamento já existente
+    // Pré-seleciona o mês atual na grade de multi-meses (tanto para novos quanto para edições)
+    const gridInputs = document.querySelectorAll('#p-months-grid input');
+    gridInputs.forEach(inp => {
+        if (parseInt(inp.value) === parseInt(month)) {
+            inp.checked = true;
+            inp.parentElement.classList.add('selected');
+        }
+    });
+
     // Se estiver editando um pagamento já existente
     if (payment) {
         title.textContent = 'Gerenciar Pagamento';
         amountInput.value = payment.amount;
-
-        // Pré-seleciona o mês atual na grade de multi-meses para facilitar conversão
-        const gridInputs = document.querySelectorAll('#p-months-grid input');
-        gridInputs.forEach(inp => {
-            if (parseInt(inp.value) === parseInt(month)) {
-                inp.checked = true;
-                inp.parentElement.classList.add('selected');
-            }
-        });
 
         // Exibe o botão de visualizar comprovante se o arquivo existir
         if (payment.receipt_path) {
