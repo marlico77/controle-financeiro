@@ -1796,10 +1796,12 @@ tfoot td {
 }
 
 @media print { 
-    body, html { height: auto !important; min-height: 0 !important; background: white !important; }
+    @page { margin: 0; size: auto; } /* Remove as margens da página para ocultar cabeçalho e rodapé do navegador */
+    body, html { height: auto !important; min-height: 0 !important; background: white !important; margin: 0 !important; padding: 0 !important; }
     #app { display: none !important; }
     body * { visibility: hidden !important; } 
     #report-modal, #report-modal * { visibility: visible !important; } 
+    #report-modal-header, #report-modal-header * { display: none !important; visibility: hidden !important; }
     #report-modal { 
         position: relative !important; 
         left: 0 !important; 
@@ -1826,12 +1828,13 @@ tfoot td {
     } 
     #report-printable { 
         border: none !important; 
-        padding: 0 !important; 
+        padding: 2cm !important; /* Adiciona espaçamento interno para não colar nas bordas do papel */
         margin: 0 !important; 
         width: 100% !important; 
         height: auto !important; 
         min-height: 0 !important;
         overflow: visible !important; 
+        box-sizing: border-box !important;
     } 
     button, .close-modal, .btn-primary { display: none !important; } 
     table { page-break-inside: auto; } 
