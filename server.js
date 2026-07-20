@@ -2401,6 +2401,7 @@ let isProcessingWhatsAppQueue = false;
 let successCounter = 0;
 
 async function processWhatsAppQueue() {
+    return; // DESATIVADO TEMPORARIAMENTE
     if (isProcessingWhatsAppQueue) return;
     isProcessingWhatsAppQueue = true;
     

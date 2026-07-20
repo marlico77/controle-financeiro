@@ -5356,36 +5356,14 @@ const initWhatsAppForm = () => {
         containerWhatsapp.style.display = 'none';
     };
 
-    // Alternar para aba WhatsApp (W-API)
+    // Alternar para aba WhatsApp (W-API) - DESATIVADO TEMPORARIAMENTE
     tabWhatsapp.onclick = () => {
-        tabWhatsapp.classList.add('active');
-        tabWhatsapp.style.color = 'var(--accent-color)';
-        tabWhatsapp.style.borderBottom = '2px solid var(--accent-color)';
-        
-        tabSystem.classList.remove('active');
-        tabSystem.style.color = 'var(--text-dim)';
-        tabSystem.style.borderBottom = 'none';
-
-        containerSystem.style.display = 'none';
-        containerWhatsapp.style.display = 'block';
-
-        const isAdmin = state.role === 'admin';
-        const isSecretary = state.role === 'secretário';
-        const isMaster = isAdmin && (state.username || '').toUpperCase() === 'ADMINISTRADOR';
-
-        document.getElementById('wa-config-panel').style.display = isMaster ? 'block' : 'none';
-        document.getElementById('wa-schedule-panel').style.display = (isAdmin || isSecretary) ? 'block' : 'none';
-        document.getElementById('wa-schedule-list-panel').style.display = (isAdmin || isSecretary) ? 'block' : 'none';
-
-        switchWaSubTab('wa-tab-schedule');
-
-        if (isMaster) {
-            loadWhatsAppSettings();
+        const modal = document.getElementById('whatsapp-disabled-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+        } else {
+            alert('A funcionalidade do WhatsApp está temporariamente indisponível.');
         }
-        if (isAdmin || isSecretary) {
-            fetchScheduledReminders();
-        }
-        renderWhatsAppMembers();
     };
 
     // --- Sub-menu WhatsApp navigation logic ---
