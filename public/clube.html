@@ -13,6 +13,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css?v=208">
 
     <style>
@@ -226,36 +227,37 @@
 
         .presentation-card {
             background: rgba(28, 28, 28, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 20px;
-            padding: 3rem 2.5rem;
-            transition: all 0.4s ease;
+            padding: 3.5rem 2.5rem;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             display: flex;
             flex-direction: column;
             align-items: flex-start;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
 
         .presentation-card:hover {
-            transform: translateY(-8px);
-            border-color: rgba(229, 9, 20, 0.4);
+            transform: translateY(-10px);
+            border-color: var(--presentation-accent);
             background: rgba(35, 35, 35, 0.8);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
 
         .card-icon {
-            width: 55px;
-            height: 55px;
+            width: 50px;
+            height: 50px;
             border-radius: 14px;
             background: rgba(229, 9, 20, 0.15);
             color: var(--presentation-accent);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.8rem;
-            margin-bottom: 1.8rem;
-            border: 1px solid rgba(229, 9, 20, 0.3);
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(229, 9, 20, 0.2);
         }
 
         .presentation-card h3 {
@@ -1077,9 +1079,7 @@
         <div class="history-grid">
             <div class="presentation-card">
                 <div class="card-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M14.778.085A.5.5 0 0 1 15 .5V8a.5.5 0 0 1-.314.464L8.44 11.824a.5.5 0 0 1-.44 0L1.686 8.464A.5.5 0 0 1 1.372 8V.5a.5.5 0 0 1 .582-.49l5.792 1.158a.5.5 0 0 0 .195 0l5.792-1.158a.5.5 0 0 1 .245.075zM2.372 1.456V7.62l5.188 2.45 5.188-2.45V1.456l-5.188 1.038a.5.5 0 0 1-.195 0L2.372 1.456z"/>
-                    </svg>
+                    <i class="fa-solid fa-hands-holding-child"></i>
                 </div>
                 <h3>Nossa Missão</h3>
                 <p>Salvar do pecado e guiar no serviço. Trabalhamos para desenvolver o caráter de juvenis e adolescentes através de atividades práticas, civismo e amor ao próximo.</p>
@@ -1087,9 +1087,7 @@
 
             <div class="presentation-card">
                 <div class="card-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.25-11.75v5.5h4a.75.75 0 0 1 0 1.5h-4.75a.75.75 0 0 1-.75-.75v-6.25a.75.75 0 0 1 1.5 0z"/>
-                    </svg>
+                    <i class="fa-solid fa-shield-heart"></i>
                 </div>
                 <h3>Tribo de Davi</h3>
                 <p>Inspirados pela coragem e fidelidade do rei Davi, buscamos ser jovens segundo o coração de Deus, prontos para enfrentar os gigantes modernos com fé e determinação.</p>
@@ -1097,9 +1095,7 @@
 
             <div class="presentation-card">
                 <div class="card-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M11.5 0a.5.5 0 0 1 .5.5v1h2a.5.5 0 0 1 .5.5v12a.5.5 0 0 1-.5.5h-12a.5.5 0 0 1-.5-.5v-12a.5.5 0 0 1 .5-.5h2v-1a.5.5 0 0 1 1 0v1h6v-1a.5.5 0 0 1 .5-.5zm-9 3v1h11V3h-11zm11 2h-11v9h11V5z"/>
-                    </svg>
+                    <i class="fa-solid fa-campground"></i>
                 </div>
                 <h3>Nossas Atividades</h3>
                 <p>Acampamentos, especialidades práticas, nós e amarras, primeiros socorros, estudo da natureza e projetos comunitários que preparam o jovem para a vida.</p>
