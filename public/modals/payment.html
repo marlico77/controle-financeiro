@@ -1,0 +1,124 @@
+<!-- Payment Modal -->
+<div id="payment-modal" class="modal">
+    <div class="glass-card modal-content">
+        <span class="close-modal">&times;</span>
+        <h3 id="payment-modal-title">Registrar Pagamento</h3>
+        <form id="payment-form">
+            <input type="hidden" id="p-person-id">
+            <input type="hidden" id="p-month">
+            <div class="input-group" id="p-single-month-info">
+                <label>Mês de Referência</label>
+                <div class="info-tag" style="margin-top: 0.5rem;">
+                    Membro: <span id="p-member-name"></span> | Mês: <span id="p-month-name"></span>
+                </div>
+            </div>
+
+            <div class="toggle-wrapper">
+                <span>Este pagamento é referente a vários meses?</span>
+                <label class="switch">
+                    <input type="checkbox" id="p-multi-month-toggle"
+                        onchange="window.toggleMultiMonth?.(this.checked)">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+
+
+            <div id="p-multi-month-selector"
+                style="display: none; margin-bottom: 1.5rem; padding: 1.2rem; background: rgba(0,0,0,0.02); border: 1px solid var(--border-color); border-radius: 12px;">
+                <label
+                    style="display: block; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; color: var(--accent-color);">Selecione
+                    os meses incluídos:</label>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem;"
+                    id="p-months-grid">
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Jan <input
+                            type="checkbox" value="1"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Fev <input
+                            type="checkbox" value="2"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Mar <input
+                            type="checkbox" value="3"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Abr <input
+                            type="checkbox" value="4"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Mai <input
+                            type="checkbox" value="5"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Jun <input
+                            type="checkbox" value="6"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Jul <input
+                            type="checkbox" value="7"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Ago <input
+                            type="checkbox" value="8"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Set <input
+                            type="checkbox" value="9"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Out <input
+                            type="checkbox" value="10"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Nov <input
+                            type="checkbox" value="11"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Dez <input
+                            type="checkbox" value="12"></label>
+                </div>
+
+                <p style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-dim); text-align: center;">O
+                    valor total será dividido igualmente entre os meses selecionados.</p>
+            </div>
+
+            <div class="input-group">
+                <label for="amount">Valor Total (R$)</label>
+                <input type="number" id="amount" step="0.01" required placeholder="0,00">
+            </div>
+
+            
+            <div style="background: rgba(229, 9, 20, 0.05); border: 1px dashed var(--accent-color); border-radius: 8px; padding: 1.2rem; margin-bottom: 1.5rem; text-align: center;">
+                <h4 style="margin: 0 0 0.5rem 0; color: var(--accent-color); font-size: 1rem; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20" fill="currentColor"><path d="M306.4 356.5C311.8 351.1 321.1 351.1 326.5 356.5L403.5 433.5C417.7 447.7 436.6 455.5 456.6 455.5L471.7 455.5L374.6 552.6C344.3 582.1 295.1 582.1 264.8 552.6L167.3 455.2L176.6 455.2C196.6 455.2 215.5 447.4 229.7 433.2L306.4 356.5zM326.5 282.9C320.1 288.4 311.9 288.5 306.4 282.9L229.7 206.2C215.5 191.1 196.6 184.2 176.6 184.2L167.3 184.2L264.7 86.8C295.1 56.5 344.3 56.5 374.6 86.8L471.8 183.9L456.6 183.9C436.6 183.9 417.7 191.7 403.5 205.9L326.5 282.9zM176.6 206.7C190.4 206.7 203.1 212.3 213.7 222.1L290.4 298.8C297.6 305.1 307 309.6 316.5 309.6C325.9 309.6 335.3 305.1 342.5 298.8L419.5 221.8C429.3 212.1 442.8 206.5 456.6 206.5L494.3 206.5L552.6 264.8C582.9 295.1 582.9 344.3 552.6 374.6L494.3 432.9L456.6 432.9C442.8 432.9 429.3 427.3 419.5 417.5L342.5 340.5C328.6 326.6 304.3 326.6 290.4 340.6L213.7 417.2C203.1 427 190.4 432.6 176.6 432.6L144.8 432.6L86.8 374.6C56.5 344.3 56.5 295.1 86.8 264.8L144.8 206.7L176.6 206.7z"/></svg>
+                    Pague via PIX
+                </h4>
+                <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1rem; line-height: 1.4;">Faça o pagamento utilizando a chave abaixo e em seguida anexe o comprovante.</p>
+                <div style="background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.8rem; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem;">
+                    <span style="font-family: monospace; font-size: 0.95rem; font-weight: bold; color: var(--text-color); word-break: break-all; text-align: left; cursor: pointer;" onclick="window.copyPix(this, 'jdboavista.ap@adventistas.org')" id="pix-key-1" title="Clique para copiar">jdboavista.ap@adventistas.org</span>
+                    <button type="button" class="btn-secondary" onclick="window.copyPix(this, 'jdboavista.ap@adventistas.org')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; white-space: nowrap; margin: 0; transition: all 0.2s;">Copiar</button>
+                </div>
+            </div>
+
+
+            <div class="input-group">
+                <label for="receipt">Comprovante (PNG, JPG, PDF) - Opcional</label>
+                <input type="file" id="receipt" accept="image/*,.pdf">
+                <div id="view-receipt-container" style="margin-top: 0.5rem; display: none;">
+                    <a href="#" id="view-receipt-btn" target="_blank"
+                        style="color: var(--accent-color); font-size: 0.9rem; text-decoration: none;">Ver
+                        Comprovante Atual</a>
+                </div>
+            </div>
+            <div id="payment-error" class="error-msg"></div>
+
+            <!-- Member View: Rejection Reason -->
+            <div id="rejection-reason-container" class="reason-display" style="display: none;">
+                <h6>Correção Necessária</h6>
+                <p id="rejection-reason-text"></p>
+            </div>
+
+            <button type="submit" class="btn-primary" id="save-payment-btn">Salvar Pagamento</button>
+
+            <!-- Admin Actions -->
+            <div id="admin-payment-actions" class="modal-footer-actions" style="display: none;">
+                <button type="button" id="approve-payment-btn" class="btn-primary"
+                    style="flex: 1; background-color: #4caf50;">Aprovar</button>
+                <button type="button" id="reject-trigger-btn" class="btn-danger"
+                    style="flex: 1;">Rejeitar</button>
+            </div>
+
+            <!-- Admin: Rejection Reason Form -->
+            <div id="rejection-form" class="rejection-form">
+                <label for="reject-reason">Motivo da Rejeição</label>
+                <textarea id="reject-reason"
+                    placeholder="Descreva por que o pagamento foi recusado e o que deve ser corrigido..."></textarea>
+                <button type="button" id="confirm-reject-btn" class="btn-danger" style="width: 100%;">Confirmar
+                    Rejeição</button>
+                <button type="button" id="cancel-reject-btn" class="btn-text"
+                    style="width: 100%; margin-top: 0.5rem;">Voltar</button>
+            </div>
+
+            <button type="button" id="delete-payment-btn" class="btn-danger"
+                style="display: none; width: 100%; margin-top: 1rem;">Excluir Pagamento Permanentemente</button>
+        </form>
+    </div>
+</div>

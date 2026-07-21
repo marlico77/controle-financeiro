@@ -1,0 +1,18 @@
+<!-- Reports Page -->
+<div id="reports-page" class="tab-content" style="display: none;">
+    <div class="glass-card"
+        style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem; text-align: center;">
+        <div style="margin-bottom: 2rem;">
+            <h3 style="color: var(--accent-color); margin-bottom: 0.5rem; font-size: 1.8rem;">Central de
+                Relatórios</h3>
+            <p style="color: var(--text-dim);">Gere extratos detalhados de mensalidades, membros ou
+                eventos.</p>
+        </div>
+
+        <button id="open-report-selector-btn"
+            onclick="const m = document.getElementById('report-selector-modal'); if(m) m.style.display='flex'; window.toggleReportFields();"
+            class="btn-primary"
+            style="max-width: 300px; background: black; color: white; padding: 1.2rem 2rem; font-weight: 700;">Gerar
+            Novo Relatório</button>
+    </div>
+</div>

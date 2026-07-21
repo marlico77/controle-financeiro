@@ -1,0 +1,92 @@
+<!-- Event Payment Modal -->
+<div id="event-payment-modal" class="modal">
+    <div class="glass-card modal-content">
+        <span class="close-modal">&times;</span>
+        <h3 id="ep-modal-title">Pagar Evento</h3>
+        <form id="event-payment-form">
+            <input type="hidden" id="ep-event-id">
+            <div class="info-tag">
+                Evento: <span id="ep-event-name"></span>
+            </div>
+            <div id="ep-date-selection" style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="input-group" style="flex: 1;">
+                    <label for="ep-month">Mês</label>
+                    <select id="ep-month">
+                        <option value="1">Janeiro</option>
+                        <option value="2">Fevereiro</option>
+                        <option value="3">Março</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Maio</option>
+                        <option value="6">Junho</option>
+                        <option value="7">Julho</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
+                </div>
+                <div class="input-group" style="flex: 1;">
+                    <label for="ep-year">Ano</label>
+                    <select id="ep-year">
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="ep-amount">Valor (R$)</label>
+                <input type="number" id="ep-amount" step="0.01" required placeholder="0,00">
+            </div>
+            
+            <div style="background: rgba(229, 9, 20, 0.05); border: 1px dashed var(--accent-color); border-radius: 8px; padding: 1.2rem; margin-bottom: 1.5rem; text-align: center;">
+                <h4 style="margin: 0 0 0.5rem 0; color: var(--accent-color); font-size: 1rem; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20" fill="currentColor"><path d="M306.4 356.5C311.8 351.1 321.1 351.1 326.5 356.5L403.5 433.5C417.7 447.7 436.6 455.5 456.6 455.5L471.7 455.5L374.6 552.6C344.3 582.1 295.1 582.1 264.8 552.6L167.3 455.2L176.6 455.2C196.6 455.2 215.5 447.4 229.7 433.2L306.4 356.5zM326.5 282.9C320.1 288.4 311.9 288.5 306.4 282.9L229.7 206.2C215.5 191.1 196.6 184.2 176.6 184.2L167.3 184.2L264.7 86.8C295.1 56.5 344.3 56.5 374.6 86.8L471.8 183.9L456.6 183.9C436.6 183.9 417.7 191.7 403.5 205.9L326.5 282.9zM176.6 206.7C190.4 206.7 203.1 212.3 213.7 222.1L290.4 298.8C297.6 305.1 307 309.6 316.5 309.6C325.9 309.6 335.3 305.1 342.5 298.8L419.5 221.8C429.3 212.1 442.8 206.5 456.6 206.5L494.3 206.5L552.6 264.8C582.9 295.1 582.9 344.3 552.6 374.6L494.3 432.9L456.6 432.9C442.8 432.9 429.3 427.3 419.5 417.5L342.5 340.5C328.6 326.6 304.3 326.6 290.4 340.6L213.7 417.2C203.1 427 190.4 432.6 176.6 432.6L144.8 432.6L86.8 374.6C56.5 344.3 56.5 295.1 86.8 264.8L144.8 206.7L176.6 206.7z"/></svg>
+                    Pague via PIX
+                </h4>
+                <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1rem; line-height: 1.4;">Faça o pagamento utilizando a chave abaixo e em seguida anexe o comprovante.</p>
+                <div style="background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.8rem; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem;">
+                    <span style="font-family: monospace; font-size: 0.95rem; font-weight: bold; color: var(--text-color); word-break: break-all; text-align: left; cursor: pointer;" onclick="window.copyPix(this, 'jdboavista.ap@adventistas.org')" id="pix-key-2" title="Clique para copiar">jdboavista.ap@adventistas.org</span>
+                    <button type="button" class="btn-secondary" onclick="window.copyPix(this, 'jdboavista.ap@adventistas.org')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; white-space: nowrap; margin: 0; transition: all 0.2s;">Copiar</button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="ep-receipt">Comprovante</label>
+                <input type="file" id="ep-receipt" accept="image/*,.pdf">
+                <div id="ep-view-receipt-container" style="margin-top: 0.5rem; display: none;">
+                    <a href="#" id="ep-view-receipt-btn" target="_blank"
+                        style="color: var(--accent-color); font-size: 0.9rem; text-decoration: none;">Ver
+                        Comprovante Atual</a>
+                </div>
+            </div>
+            <div id="ep-rejection-container" class="reason-display" style="display: none; margin-bottom: 1rem;">
+                <h6>Correção Necessária</h6>
+                <p id="ep-rejection-text"></p>
+            </div>
+
+            <div id="ep-main-actions">
+                <button type="submit" id="ep-save-btn" class="btn-primary"
+                    style="background: black; color: white; width: 100%; padding: 0.8rem; border-radius: 4px; font-weight: 700; border: none; cursor: pointer; margin-bottom: 0.5rem;">Enviar
+                    Pagamento</button>
+                <button type="button" id="ep-delete-btn" class="btn-primary"
+                    style="background: var(--error-color); color: white; width: 100%; padding: 0.8rem; border-radius: 4px; font-weight: 700; border: none; cursor: pointer; display: none;">Remover
+                    Pagamento</button>
+            </div>
+
+            <div id="ep-admin-actions" class="modal-footer-actions"
+                style="display: none; gap: 0.5rem; margin-top: 0.5rem;">
+                <button type="button" id="ep-approve-btn" class="btn-primary"
+                    style="flex: 1; background-color: #4caf50;">Aprovar</button>
+                <button type="button" id="ep-reject-trigger-btn" class="btn-danger"
+                    style="flex: 1;">Rejeitar</button>
+            </div>
+
+            <div id="ep-rejection-form" class="rejection-form">
+                <textarea id="ep-reject-reason" placeholder="Motivo da rejeição..."></textarea>
+                <button type="button" id="ep-confirm-reject-btn" class="btn-danger"
+                    style="width: 100%;">Confirmar Rejeição</button>
+            </div>
+        </form>
+    </div>
+</div>

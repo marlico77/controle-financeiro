@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Financeiro Tribo">
+    <title>Financeiro Tribo</title>
+    <script>
+        // Lógica de Seleção Global - Injetada para garantir funcionamento imediato
+        window.selectMonth = (item) => {
+            if (window.event) {
+                window.event.preventDefault();
+                window.event.stopPropagation();
+            }
+            const input = item.querySelector('input');
+            if (input) {
+                input.checked = !input.checked;
+                item.classList.toggle('selected', input.checked);
+                console.log('[MONTH] Selecionado:', input.value, input.checked);
+            }
+        };
+        window.toggleMultiMonth = (isChecked) => {
+            const selector = document.getElementById('p-multi-month-selector');
+            const singleInfo = document.getElementById('p-single-month-info');
+            if (selector) {
+                selector.style.display = isChecked ? 'block' : 'none';
+                if (isChecked) selector.classList.add('animate-slide-down');
+            }
+            if (singleInfo) singleInfo.style.display = isChecked ? 'none' : 'block';
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#e50914">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="logo.png">
+    <link rel="stylesheet" href="style.css?v=212">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="dark-theme">
+    <!-- Splash Screen de Carregamento -->
+    <div id="splash-screen" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; opacity: 1;">
+        <script type="module" src="https://cdn.jsdelivr.net/npm/ldrs/dist/auto/dotPulse.js"></script>
+        <l-dot-pulse size="43" speed="1.3" color="#e50914"></l-dot-pulse>
+    </div>
+    <div id="app">
+        <div id="toast-container" class="toast-container"></div>
+
+        
+        <!-- Login Page Container -->
+        <div id="view-login-container"></div>
+
+        <!-- Main Dashboard Section (Hidden by default) -->
+        <section id="main-section" style="display: flex;">
+            <!-- Mobile Header (Visible only on mobile via CSS) -->
+            <div class="mobile-header">
+                <img src="logo.png" alt="Logo" class="logo-img">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button id="mobile-logout-btn" class="btn-text"
+                        style="display: flex; align-items: center; justify-content: center; position: relative; padding: 0.5rem 1rem; min-width: 100px; color: #888;">
+                        <span style="position: absolute; left: 10px; display: flex; align-items: center;">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"
+                                style="width: 18px; height: 18px; transform: scale(-1, 1); fill: currentColor;">
+                                <path
+                                    d="M136.5 88C136.5 57.1 161.6 32 192.5 32C223.4 32 248.5 57.1 248.5 88C248.5 118.9 223.4 144 192.5 144C161.6 144 136.5 118.9 136.5 88zM128.5 269.3L105.9 291.9C99.9 297.9 96.5 306 96.5 314.5L96.5 352C96.5 369.7 82.2 384 64.5 384C46.8 384 32.5 369.7 32.5 352L32.5 314.5C32.5 289 42.6 264.6 60.6 246.6L95.7 211.5C118.5 188.7 149.3 175.9 181.5 175.9C218.4 175.9 253.3 192.7 276.3 221.5L294.3 244C300.4 251.6 309.6 256 319.3 256L352.5 256C370.2 256 384.5 270.3 384.5 288C384.5 305.7 370.2 320 352.5 320L319.3 320C290.1 320 262.6 306.7 244.3 284L240.5 279.3L240.5 394.5L275 424.1C292.7 439.3 304.3 460.3 307.6 483.4L320.2 571.5C322.7 589 310.5 605.2 293 607.7C275.5 610.2 259.3 598 256.8 580.5L244.2 492.4C243.1 484.7 239.2 477.7 233.3 472.6L162 411.5C140.7 393.3 128.5 366.6 128.5 338.6L128.5 269.3zM128.6 435C131 437.3 133.4 439.6 136 441.8L182 481.2L179.8 488.8C175.3 504.5 166.9 518.8 155.4 530.3L87.1 598.6C74.6 611.1 54.3 611.1 41.8 598.6C29.3 586.1 29.3 565.8 41.8 553.3L110.1 485C113.9 481.2 116.7 476.4 118.2 471.2L128.6 435zM537.5 409C528.1 418.4 512.9 418.4 503.6 409C494.3 399.6 494.2 384.4 503.6 375.1L534.6 344.1L432.5 344.1C419.2 344.1 408.5 333.4 408.5 320.1C408.5 306.8 419.2 296.1 432.5 296.1L534.6 296.1L503.6 265.1C494.2 255.7 494.2 240.5 503.6 231.2C513 221.9 528.2 221.8 537.5 231.2L609.5 303.2C618.9 312.6 618.9 327.8 609.5 337.1L537.5 409.1z" />
+                            </svg>
+                        </span>
+                        Sair
+                    </button>
+                </div>
+            </div>
+
+            <nav class="sidebar">
+                <div class="sidebar-header">
+                    <div class="logo">
+                        <img src="logo.png" alt="Logo" class="logo-img">
+                    </div>
+                    <div class="user-profile">
+                        <div class="user-info">
+                            <p id="user-name-display" class="user-name">Carregando...</p>
+                            <!-- Role badge hidden as requested -->
+                            <span id="user-role-badge" style="display: none;"></span>
+                        </div>
+                    </div>
+                </div>
+                <ul class="nav-links">
+                    <li data-target="dashboard" class="active">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                                <path
+                                    d="M128 128C128 110.3 113.7 96 96 96C78.3 96 64 110.3 64 128L64 464C64 508.2 99.8 544 144 544L544 544C561.7 544 576 529.7 576 512C576 494.3 561.7 480 544 480L144 480C135.2 480 128 472.8 128 464L128 128zM534.6 214.6C547.1 202.1 547.1 181.8 534.6 169.3C522.1 156.8 501.8 156.8 489.3 169.3L384 274.7L326.6 217.4C314.1 204.9 293.8 204.9 281.3 217.4L185.3 313.4C172.8 325.9 172.8 346.2 185.3 358.7C197.8 371.2 218.1 371.2 230.6 358.7L304 285.3L361.4 342.7C373.9 355.2 394.2 355.2 406.7 342.7L534.7 214.7z" />
+                            </svg>
+                        </span>Dashboard
+                    </li>
+                    <li data-target="mensalidade">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                                <path
+                                    d="M544 72C544 58.7 533.3 48 520 48L418.2 48C404.9 48 394.2 58.7 394.2 72C394.2 85.3 404.9 96 418.2 96L462.1 96L350.8 207.3L255.7 125.8C246.7 118.1 233.5 118.1 224.5 125.8L112.5 221.8C102.4 230.4 101.3 245.6 109.9 255.6C118.5 265.6 133.7 266.8 143.7 258.2L240.1 175.6L336.5 258.2C346 266.4 360.2 265.8 369.1 256.9L496.1 129.9L496.1 173.8C496.1 187.1 506.8 197.8 520.1 197.8C533.4 197.8 544.1 187.1 544.1 173.8L544 72zM112 320C85.5 320 64 341.5 64 368L64 528C64 554.5 85.5 576 112 576L528 576C554.5 576 576 554.5 576 528L576 368C576 341.5 554.5 320 528 320L112 320zM159.3 376C155.9 396.1 140.1 412 119.9 415.4C115.5 416.1 111.9 412.5 111.9 408.1L111.9 376.1C111.9 371.7 115.5 368.1 119.9 368.1L151.9 368.1C156.3 368.1 160 371.7 159.2 376.1zM159.3 520.1C160 524.5 156.4 528.1 152 528.1L120 528.1C115.6 528.1 112 524.5 112 520.1L112 488.1C112 483.7 115.6 480 120 480.8C140.1 484.2 156 500 159.4 520.2zM520 480.7C524.4 480 528 483.6 528 488L528 520C528 524.4 524.4 528 520 528L488 528C483.6 528 479.9 524.4 480.7 520C484.1 499.9 499.9 484 520.1 480.6zM480.7 376C480 371.6 483.6 368 488 368L520 368C524.4 368 528 371.6 528 376L528 408C528 412.4 524.4 416.1 520 415.3C499.9 411.9 484 396.1 480.6 375.9zM256 448C256 412.7 284.7 384 320 384C355.3 384 384 412.7 384 448C384 483.3 355.3 512 320 512C284.7 512 256 483.3 256 448z" />
+                            </svg>
+                        </span>Mensalidades
+                    </li>
+                    <li data-target="events">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                                <path
+                                    d="M216 64C229.3 64 240 74.7 240 88L240 128L400 128L400 88C400 74.7 410.7 64 424 64C437.3 64 448 74.7 448 88L448 128L480 128C515.3 128 544 156.7 544 192L544 480C544 515.3 515.3 544 480 544L160 544C124.7 544 96 515.3 96 480L96 192C96 156.7 124.7 128 160 128L192 128L192 88C192 74.7 202.7 64 216 64zM216 176L160 176C151.2 176 144 183.2 144 192L144 240L496 240L496 192C496 183.2 488.8 176 480 176L216 176zM144 288L144 480C144 488.8 151.2 496 160 496L480 496C488.8 496 496 488.8 496 480L496 288L144 288z" />
+                            </svg>
+                        </span>Eventos
+                    </li>
+                    <li data-target="sales" id="nav-sales" style="display: none;">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 640 640"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+                                <path
+                                    d="M320 32C373 32 416 75 416 128C416 181 373 224 320 224C267 224 224 181 224 128C224 75 267 32 320 32zM80 368C80 297.9 127 236.6 197.1 203.1C222.4 244.4 268 272 320 272C375.7 272 424.1 240.3 448 194C463.8 182.7 483.1 176 504 176L523.5 176C533.9 176 541.5 185.8 539 195.9L521.9 264.2C531.8 276.6 540.1 289.9 546.3 304L568 304C581.3 304 592 314.7 592 328L592 440C592 453.3 581.3 464 568 464L528 464C511.5 486 489.5 503.6 464 514.7L464 544C464 561.7 449.7 576 432 576L399 576C384.7 576 372.2 566.5 368.2 552.8L361.1 528L278.8 528L271.7 552.8C267.8 566.5 255.3 576 241 576L208 576C190.3 576 176 561.7 176 544L176 514.7C119.5 490 80 433.6 80 368zM456 384C469.3 384 480 373.3 480 360C480 346.7 469.3 336 456 336C442.7 336 432 346.7 432 360C432 373.3 442.7 384 456 384z" />
+                            </svg>
+                        </span>Vendas
+                    </li>
+                    <li data-target="outflows" id="nav-outflows" style="display: none;">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"
+                                style="width: 20px; height: 20px; fill: currentColor;"><!--!Font Awesome Pro v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2026 Fonticons, Inc.-->
+                                <path
+                                    d="M192 96C156.7 96 128 124.7 128 160L128 384C128 419.3 156.7 448 192 448L544 448C579.3 448 608 419.3 608 384L608 160C608 124.7 579.3 96 544 96L192 96zM368 192C412.2 192 448 227.8 448 272C448 316.2 412.2 352 368 352C323.8 352 288 316.2 288 272C288 227.8 323.8 192 368 192zM192 216L192 168C192 163.6 195.6 160 200 160L248 160C252.4 160 256.1 163.6 255.5 168C251.9 197 228.9 219.9 200 223.5C195.6 224 192 220.4 192 216zM192 328C192 323.6 195.6 319.9 200 320.5C229 324.1 251.9 347.1 255.5 376C256 380.4 252.4 384 248 384L200 384C195.6 384 192 380.4 192 376L192 328zM536 223.5C507 219.9 484.1 196.9 480.5 168C480 163.6 483.6 160 488 160L536 160C540.4 160 544 163.6 544 168L544 216C544 220.4 540.4 224.1 536 223.5zM544 328L544 376C544 380.4 540.4 384 536 384L488 384C483.6 384 479.9 380.4 480.5 376C484.1 347 507.1 324.1 536 320.5C540.4 320 544 323.6 544 328zM80 216C80 202.7 69.3 192 56 192C42.7 192 32 202.7 32 216L32 480C32 515.3 60.7 544 96 544L488 544C501.3 544 512 533.3 512 520C512 506.7 501.3 496 488 496L96 496C87.2 496 80 488.8 80 480L80 216z" />
+                            </svg>
+                        </span>Despesas
+                    </li>
+                    <li data-target="people">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                                <path
+                                    d="M320 64C355.3 64 384 92.7 384 128C384 163.3 355.3 192 320 192C284.7 192 256 163.3 256 128C256 92.7 284.7 64 320 64zM416 376C416 401 403.3 423 384 435.9L384 528C384 554.5 362.5 576 336 576L304 576C277.5 576 256 554.5 256 528L256 435.9C236.7 423 224 401 224 376L224 336C224 283 267 240 320 240C373 240 416 283 416 336L416 376zM160 96C190.9 96 216 121.1 216 152C216 182.9 190.9 208 160 208C129.1 208 104 182.9 104 152C104 121.1 129.1 96 160 96zM176 336L176 368C176 400.5 188.1 430.1 208 452.7L208 528C208 529.2 208 530.5 208.1 531.7C199.6 539.3 188.4 544 176 544L144 544C117.5 544 96 522.5 96 496L96 439.4C76.9 428.4 64 407.7 64 384L64 352C64 299 107 256 160 256C172.7 256 184.8 258.5 195.9 262.9C183.3 284.3 176 309.3 176 336zM432 528L432 452.7C451.9 430.2 464 400.5 464 368L464 336C464 309.3 456.7 284.4 444.1 262.9C455.2 258.4 467.3 256 480 256C533 256 576 299 576 352L576 384C576 407.7 563.1 428.4 544 439.4L544 496C544 522.5 522.5 544 496 544L464 544C451.7 544 440.4 539.4 431.9 531.7C431.9 530.5 432 529.2 432 528zM480 96C510.9 96 536 121.1 536 152C536 182.9 510.9 208 480 208C449.1 208 424 182.9 424 152C424 121.1 449.1 96 480 96z" />
+                            </svg>
+                        </span>Membros
+                    </li>
+                    <li data-target="reports">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                                <path
+                                    d="M192 112L304 112L304 200C304 239.8 336.2 272 376 272L464 272L464 512C464 520.8 456.8 528 448 528L192 528C183.2 528 176 520.8 176 128C176 119.2 183.2 112 192 112zM352 131.9L444.1 224L376 224C362.7 224 352 213.3 352 200L352 131.9zM192 64C156.7 64 128 92.7 128 128L128 512C128 547.3 156.7 576 192 576L448 576C483.3 576 512 547.3 512 512L512 250.5C512 233.5 505.3 217.2 493.3 205.2L370.7 82.7C358.7 70.7 342.5 64 325.5 64L192 64zM291.2 329.6C283.2 319 268.2 316.8 257.6 324.8C247 332.8 244.8 347.8 252.8 358.4L290 408L252.8 457.6C244.8 468.2 247 483.2 257.6 491.2C268.2 499.2 283.2 497 291.2 486.4L320 448L348.8 486.4C356.8 497 371.8 499.2 382.4 491.2C393 483.2 395.2 468.2 387.2 457.6L350 408L387.2 358.4C395.2 347.8 393 332.8 382.4 324.8C371.8 316.8 356.8 319 348.8 329.6L320 368L291.2 329.6z" />
+                            </svg>
+                        </span>Relatórios
+                    </li>
+                    <li data-target="authorizations" id="nav-authorizations" style="display: none;">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                                <path
+                                    d="M192 64C156.7 64 128 92.7 128 128L128 512C128 547.3 156.7 576 192 576L448 576C483.3 576 512 547.3 512 512L512 128C512 92.7 483.3 64 448 64L192 64zM240 176L400 176C413.3 176 424 186.7 424 200C424 213.3 413.3 224 400 224L240 224C226.7 224 216 213.3 216 200C216 186.7 226.7 176 240 176zM240 272L400 272C413.3 272 424 282.7 424 296C424 309.3 413.3 320 400 320L240 320C226.7 320 216 309.3 216 296C216 282.7 226.7 272 240 272zM240 368L336 368C349.3 368 360 378.7 360 392C360 405.3 349.3 416 336 416L240 416C226.7 416 216 405.3 216 392C216 378.7 226.7 368 240 368z" />
+                            </svg>
+                        </span>Autorizações
+                    </li>
+                    <li data-target="messages" id="nav-messages" style="display: none;">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                                <path d="M112 128C85.5 128 64 149.5 64 176C64 191.1 71.1 205.3 83.2 214.4L291.2 370.4C308.3 383.2 331.7 383.2 348.8 370.4L556.8 214.4C568.9 205.3 576 191.1 576 176C576 149.5 554.5 128 528 128L112 128zM64 260L64 448C64 483.3 92.7 512 128 512L512 512C547.3 512 576 483.3 576 448L576 260L377.6 408.8C343.5 434.4 296.5 434.4 262.4 408.8L64 260z"/>
+                            </svg>
+                        </span>Mensagens
+                    </li>
+                    <li data-target="logs" id="nav-logs" style="display: none;">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"
+                                style="width: 20px; height: 20px; fill: currentColor;">
+                                <path
+                                    d="M224 160C224 107 267 64 320 64C373 64 416 107 416 160L416 163.6C416 179.3 403.3 192 387.6 192L252.5 192C236.8 192 224.1 179.3 224.1 163.6L224.1 160zM569.6 172.8C580.2 186.9 577.3 207 563.2 217.6L465.4 290.9C470.7 299.8 474.7 309.6 477.2 320L576 320C593.7 320 608 334.3 608 352C608 369.7 593.7 384 576 384L480 384L480 416C480 418.6 479.9 421.3 479.8 423.9L563.2 486.4C577.3 497 580.2 517.1 569.6 531.2C559 545.3 538.9 548.2 524.8 537.6L461.7 490.3C438.5 534.5 395.2 566.5 344 574.2L344 344C344 330.7 333.3 320 320 320C306.7 320 296 330.7 296 344L296 574.2C244.8 566.5 201.5 534.5 178.3 490.3L115.2 537.6C101.1 548.2 81 545.3 70.4 531.2C59.8 517.1 62.7 497 76.8 486.4L160.2 423.9C160.1 421.3 160 418.7 160 416L160 384L64 384C46.3 384 32 369.7 32 352C32 334.3 46.3 320 64 320L162.8 320C165.3 309.6 169.3 299.8 174.6 290.9L76.8 217.6C62.7 207 59.8 186.9 70.4 172.8C81 158.7 101.1 155.8 115.2 166.4L224 248C236.3 242.9 249.8 240 264 240L376 240C390.2 240 403.7 242.8 416 248L524.8 166.4C538.9 155.8 559 158.7 569.6 172.8z" />
+                            </svg>
+                        </span>Logs do Sistema
+                    </li>
+                    <li data-target="gallery" id="nav-gallery">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M160 96C124.7 96 96 124.7 96 160L96 480C96 515.3 124.7 544 160 544L480 544C515.3 544 544 515.3 544 480L544 160C544 124.7 515.3 96 480 96L160 96zM224 176C250.5 176 272 197.5 272 224C272 250.5 250.5 272 224 272C197.5 272 176 250.5 176 224C176 197.5 197.5 176 224 176zM368 288C376.4 288 384.1 292.4 388.5 299.5L476.5 443.5C481 450.9 481.2 460.2 477 467.8C472.8 475.4 464.7 480 456 480L184 480C175.1 480 166.8 475 162.7 467.1C158.6 459.2 159.2 449.6 164.3 442.3L220.3 362.3C224.8 355.9 232.1 352.1 240 352.1C247.9 352.1 255.2 355.9 259.7 362.3L286.1 400.1L347.5 299.6C351.9 292.5 359.6 288.1 368 288.1z"/></svg>
+                        </span>Galeria
+                    </li>
+                    <li data-target="profile">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M463 448.2C440.9 409.8 399.4 384 352 384L288 384C240.6 384 199.1 409.8 177 448.2C212.2 487.4 263.2 512 320 512C376.8 512 427.8 487.3 463 448.2zM64 320C64 178.6 178.6 64 320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576C178.6 576 64 461.4 64 320zM320 336C359.8 336 392 303.8 392 264C392 224.2 359.8 192 320 192C280.2 192 248 224.2 248 264C248 303.8 280.2 336 320 336z"/></svg>
+                        </span>Perfil
+                    </li>
+                    <li data-target="pwa-install" id="menu-install-btn">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"
+                                style="width: 20px; height: 20px; fill: currentColor;">
+                                <path
+                                    d="M144 128C144 92.7 172.7 64 208 64L432 64C467.3 64 496 92.7 496 128L496 512C496 547.3 467.3 576 432 576L208 576C172.7 576 144 547.3 144 512L144 128zM208 128L208 432L432 432L432 128L208 128zM320 536C337.7 536 352 521.7 352 504C352 486.3 337.7 472 320 472C302.3 472 288 486.3 288 504C288 521.7 302.3 536 320 536z" />
+                            </svg>
+                        </span>Baixar App
+                    </li>
+                </ul>
+                <div class="nav-footer">
+                    <button id="logout-btn" class="btn-text"
+                        style="display: flex; align-items: center; justify-content: center; position: relative; width: 100%; color: #888;">
+                        <span style="position: absolute; left: 1.5rem; display: flex; align-items: center;">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"
+                                style="width: 20px; height: 20px; transform: scale(-1, 1); fill: currentColor;">
+                                <path
+                                    d="M136.5 88C136.5 57.1 161.6 32 192.5 32C223.4 32 248.5 57.1 248.5 88C248.5 118.9 223.4 144 192.5 144C161.6 144 136.5 118.9 136.5 88zM128.5 269.3L105.9 291.9C99.9 297.9 96.5 306 96.5 314.5L96.5 352C96.5 369.7 82.2 384 64.5 384C46.8 384 32.5 369.7 32.5 352L32.5 314.5C32.5 289 42.6 264.6 60.6 246.6L95.7 211.5C118.5 188.7 149.3 175.9 181.5 175.9C218.4 175.9 253.3 192.7 276.3 221.5L294.3 244C300.4 251.6 309.6 256 319.3 256L352.5 256C370.2 256 384.5 270.3 384.5 288C384.5 305.7 370.2 320 352.5 320L319.3 320C290.1 320 262.6 306.7 244.3 284L240.5 279.3L240.5 394.5L275 424.1C292.7 439.3 304.3 460.3 307.6 483.4L320.2 571.5C322.7 589 310.5 605.2 293 607.7C275.5 610.2 259.3 598 256.8 580.5L244.2 492.4C243.1 484.7 239.2 477.7 233.3 472.6L162 411.5C140.7 393.3 128.5 366.6 128.5 338.6L128.6 269.3zM128.6 435C131 437.3 133.4 439.6 136 441.8L182 481.2L179.8 488.8C175.3 504.5 166.9 518.8 155.4 530.3L87.1 598.6C74.6 611.1 54.3 611.1 41.8 598.6C29.3 586.1 29.3 565.8 41.8 553.3L110.1 485C113.9 481.2 116.7 476.4 118.2 471.2L128.6 435zM537.5 409C528.1 418.4 512.9 418.4 503.6 409C494.3 399.6 494.2 384.4 503.6 375.1L534.6 344.1L432.5 344.1C419.2 344.1 408.5 333.4 408.5 320.1C408.5 306.8 419.2 296.1 432.5 296.1L534.6 296.1L503.6 265.1C494.2 255.7 494.2 240.5 503.6 231.2C513 221.9 528.2 221.8 537.5 231.2L609.5 303.2C618.9 312.6 618.9 327.8 609.5 337.1L537.5 409.1z" />
+                            </svg>
+                        </span>
+                        Sair
+                    </button>
+                    <div class="system-version">v2.0.0</div>
+                </div>
+            </nav>
+
+            <main class="content">
+                <header class="top-bar">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <button id="sidebar-toggle" class="btn-text"
+                            style="font-size: 1.5rem; color: var(--text-color);">☰</button>
+                        <h2 id="page-title">Dashboard de Mensalidades</h2>
+                    </div>
+                    <div class="header-actions">
+                        <div class="notification-container" id="notification-trigger">
+                            <div class="notification-bell">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20"
+                                    fill="currentColor">
+                                    <path
+                                        d="M320 64C306.7 64 296 74.7 296 88L296 97.7C214.6 109.3 152 179.4 152 264L152 278.5C152 316.2 142 353.2 123 385.8L101.1 423.2C97.8 429 96 435.5 96 442.2C96 463.1 112.9 480 133.8 480L506.2 480C527.1 480 544 463.1 544 442.2C544 435.5 542.2 428.9 538.9 423.2L517 385.7C498 353.1 488 316.1 488 278.4L488 263.9C488 179.3 425.4 109.2 344 97.6L344 87.9C344 74.6 333.3 63.9 320 63.9zM488.4 432L151.5 432L164.4 409.9C187.7 370 200 324.6 200 278.5L200 264C200 197.7 253.7 144 320 144C386.3 144 440 197.7 440 264L440 278.5C440 324.7 452.3 370 475.5 409.9L488.4 432zM252.1 528C262 556 288.7 576 320 576C351.3 576 378 556 387.9 528L252.1 528z" />
+                                </svg>
+                                <span class="notification-badge" id="notification-badge">0</span>
+                            </div>
+                            <div class="notification-dropdown" id="notification-dropdown">
+                                <div class="dropdown-header">
+                                    <h4>Notificações</h4>
+                                    <button id="mark-all-read" class="btn-text" style="color: var(--accent-color); font-weight: 700; font-size: 0.85rem;">Marcar todas lidas</button>
+                                </div>
+                                <div id="notification-list" class="notification-list">
+                                    <div class="notification-empty">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#ddd" viewBox="0 0 16 16">
+                                            <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917z"/>
+                                        </svg>
+                                        <span>Não há novas notificações</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="people-actions" style="display: none; gap: 0.8rem; align-items: center;">
+                            <button id="import-btn" class="btn-primary btn-small">Importar Planilha</button>
+                            <button id="add-person-btn" class="btn-primary btn-small">Novo Membro</button>
+                        </div>
+                        <div id="events-actions" style="display: none; gap: 0.8rem; align-items: center;">
+                            <button id="add-event-btn" class="btn-primary btn-small">Novo Evento</button>
+                            <button id="add-participants-btn" class="btn-primary btn-small" style="display: none;">Adicionar Participantes</button>
+                        </div>
+                        <div id="site-calendar-actions" style="display: none; gap: 0.8rem; align-items: center;">
+                            <button id="add-site-calendar-btn" class="btn-primary btn-small">Nova Data</button>
+                            <button id="export-site-calendar-btn" class="btn-primary btn-small" style="background: var(--text-color);">Exportar Calendário</button>
+                        </div>
+                        <div class="year-selector">
+                            <select id="year-select">
+                                <option value="2026">2026</option>
+                            </select>
+                        </div>
+                    </div>
+                </header>
+<!-- Messages Page (Admin Only) -->
+<div id="messages-page" class="tab-content" style="display: none;">
+    <!-- Messages Submenu Tabs -->
+    <div class="messages-submenu" style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+        <button id="tab-system-messages" class="btn-text active" style="font-weight: 700; color: var(--accent-color); border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; background: transparent; border-top: none; border-left: none; border-right: none; cursor: pointer;">Avisos do Sistema</button>
+        <button id="tab-whatsapp-messages" class="btn-text" style="font-weight: 700; color: var(--text-dim); padding-bottom: 0.5rem; background: transparent; border: none; cursor: pointer;">WhatsApp (W-API)</button>
+    </div>
+
+    <!-- System Messages Container -->
+    <div id="system-messages-container">
+        <div class="glass-card" style="max-width: 600px; margin: 0 auto; padding: 2rem;">
+            <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; text-align: center;">Enviar Novo Aviso</h3>
+            <form id="send-msg-form">
+                <div class="input-group">
+                    <label>Enviar para:</label>
+                    <div class="search-container" style="position: relative; margin-bottom: 0.8rem;">
+                        <input type="text" id="msg-search" placeholder="Pesquisar membro..." 
+                               style="width: 100%; padding: 10px 15px 10px 40px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.02);">
+                        <span class="search-icon" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); display: flex; align-items: center;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                            </svg>
+                        </span>
+                    </div>
+                    <div id="msg-target-list" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #ffffff; position: relative;">
+                        <div class="checkbox-item" style="display: flex; align-items: center; gap: 10px; padding: 12px; border-bottom: 2px solid var(--border-color); position: sticky; top: 0; background: #ffffff; z-index: 10;">
+                            <input type="checkbox" id="msg-select-all" style="width: 18px; height: 18px; cursor: pointer;">
+                            <label for="msg-select-all" style="font-weight: 800; margin: 0; cursor: pointer; color: var(--accent-color);">Todos os Membros</label>
+                        </div>
+                        <div id="members-checkbox-container" style="padding: 0 5px;">
+                            <!-- Members will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="msg-title">Título do Aviso</label>
+                    <input type="text" id="msg-title" required placeholder="Ex: Lembrete de Reunião">
+                </div>
+                <div class="input-group">
+                    <label for="msg-content">Conteúdo da Mensagem</label>
+                    <textarea id="msg-content" required placeholder="Digite sua mensagem aqui..." style="width: 100%; min-height: 100px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;"></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; font-weight: 700;">Enviar Mensagem</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- + Messages Container -->
+    <div id="whatsapp-messages-container" style="display: none;">
+        <!-- WhatsApp Submenu Navigation -->
+        <div class="whatsapp-submenu" style="display: flex; gap: 1.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+            <button id="wa-tab-schedule" class="btn-text active" style="font-weight: 700; color: var(--accent-color); border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; background: transparent; border-top: none; border-left: none; border-right: none; cursor: pointer;">Agendar Mensagens</button>
+            <button id="wa-tab-send" class="btn-text" style="font-weight: 700; color: var(--text-dim); padding-bottom: 0.5rem; background: transparent; border: none; cursor: pointer;">Enviar Mensagens</button>
+            <button id="wa-tab-panel" class="btn-text" style="font-weight: 700; color: var(--text-dim); padding-bottom: 0.5rem; background: transparent; border: none; cursor: pointer;">Painel de Mensagens</button>
+        </div>
+
+        <!-- Sub-tab Content: Agendar Mensagens -->
+        <div id="wa-content-schedule" style="display: block;">
+            <div id="wa-panels-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; align-items: start;">
+                <!-- Panel 1: Configuração do W-API (Admin Master Only) -->
+                <div class="glass-card" id="wa-config-panel" style="padding: 2rem; display: none;">
+                    <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; font-size: 1.3rem;">Configurações W-API</h3>
+                    <form id="whatsapp-config-form">
+                        <div class="input-group">
+                            <label for="wa-base-url">URL da API (Base URL)</label>
+                            <input type="url" id="wa-base-url" required placeholder="https://api.seudominio.com" style="width: 100%;">
+                        </div>
+                        <div class="input-group">
+                            <label for="wa-instance-id">ID da Instância</label>
+                            <input type="text" id="wa-instance-id" required placeholder="Ex: instancia-01" style="width: 100%;">
+                        </div>
+                        <div class="input-group">
+                            <label for="wa-api-key">Chave de API (Token)</label>
+                            <div class="password-wrapper" style="position: relative; display: flex; align-items: center;">
+                                <input type="password" id="wa-api-key" required placeholder="sk-live-..." style="width: 100%; padding-right: 40px;">
+                                <button type="button" class="toggle-password" data-target="wa-api-key" tabindex="-1" style="position: absolute; right: 10px; background: transparent; border: none; cursor: pointer; color: var(--text-dim); display: flex; align-items: center;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20" fill="currentColor">
+                                        <path class="eye-open" d="M320 128C448 128 554.4 204.8 604.1 320C554.4 435.2 448 512 320 512C192 512 85.6 435.2 35.9 320C85.6 204.8 192 128 320 128ZM320 192C249.3 192 192 249.3 192 320C192 390.7 249.3 448 320 448C390.7 448 448 390.7 448 320C448 249.3 390.7 192 320 192ZM320 256C355.3 256 384 284.7 384 320C384 355.3 355.3 384 320 384C284.7 384 256 355.3 256 320C256 284.7 284.7 256 320 256Z" />
+                                        <path class="eye-closed" style="display: none;" d="M632.9 572.7C641.8 584.5 639.4 601.2 627.5 610.1C615.7 618.9 598.9 616.6 590.1 604.7L494.3 476.9C445.8 501.9 387.6 512 320 512C192 512 85.6 435.2 35.9 320C57.4 270.2 92.5 228.3 135.3 198.1L47.1 80.5C38.2 68.7 40.5 52 52.4 43.1C64.2 34.3 80.9 36.6 89.8 48.5L167.3 151.7C211 133.5 262.5 128 320 128C448 128 554.4 204.8 604.1 320C624.2 366.7 628.7 413.4 618.7 455.5L632.9 572.7ZM320 192C288.7 192 260.1 203.2 237.9 221.7L411.3 452.9C433.9 419.6 448 376.6 448 320C448 249.3 390.7 192 320 192ZM320 256C341.1 256 359.8 266.1 371.7 282.1L289 171.7C278.4 186.2 272 203.8 272 223C272 249.5 288.2 272.2 311 281.3L320 256Z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="input-group" style="display: flex; align-items: center; gap: 10px; margin-top: 1.5rem;">
+                            <input type="checkbox" id="wa-enabled" style="width: 18px; height: 18px; cursor: pointer; margin: 0;">
+                            <label for="wa-enabled" style="margin: 0; cursor: pointer; font-weight: 700;">Ativar Lembretes Automáticos</label>
+                        </div>
+                        <div class="input-group" style="margin-top: 1.5rem;">
+                            <label for="wa-template">Modelo de Lembrete Automático</label>
+                            <textarea id="wa-template" rows="5" required style="width: 100%; min-height: 100px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem;" placeholder="Ex: Olá {nome}, a mensalidade do mês de {mensalidade} está pendente..."></textarea>
+                            <small style="color: var(--text-dim); display: block; margin-top: 0.3rem; font-size: 0.8rem;">Variáveis: <code>{nome}</code>, <code>{mensalidade}</code></small>
+                        </div>
+                        <button type="submit" class="btn-primary" style="width: 100%; font-weight: 700; margin-top: 1.5rem; height: 46px;">Salvar Configurações</button>
+                    </form>
+                </div>
+
+                <!-- Panel 2: Agendar Lembrete Automático (Admin & Secretary) -->
+                <div class="glass-card" id="wa-schedule-panel" style="padding: 2rem; display: none;">
+                    <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; font-size: 1.3rem;">Agendar Lembrete Automático</h3>
+                    <form id="whatsapp-schedule-form">
+                        <div class="input-group">
+                            <label for="wa-sch-target-type">Enviar para:</label>
+                            <select id="wa-sch-target-type" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #ffffff;">
+                                <option value="all">Todos os Membros</option>
+                                <option value="unit">Por Unidade</option>
+                                <option value="selected">Membros Selecionados</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Dynamic Container for Unit Selection -->
+                        <div class="input-group" id="wa-sch-unit-container" style="display: none; margin-top: 1rem;">
+                            <label for="wa-sch-unit-name">Nome da Unidade</label>
+                            <input type="text" id="wa-sch-unit-name" placeholder="Ex: Unidade Norte" style="width: 100%;">
+                        </div>
+
+                        <!-- Dynamic Container for Member Selection -->
+                        <div class="input-group" id="wa-sch-members-container" style="display: none; margin-top: 1rem;">
+                            <label>Selecione os Membros:</label>
+                            <div class="search-container" style="position: relative; margin-bottom: 0.8rem;">
+                                <input type="text" id="wa-sch-search" placeholder="Pesquisar membro..." 
+                                       style="width: 100%; padding: 10px 15px 10px 40px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.02);">
+                                <span class="search-icon" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); display: flex; align-items: center;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #ffffff;">
+                                <div id="wa-sch-checkbox-container" style="padding: 5px;">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="input-group" style="margin-top: 1.5rem;">
+                            <label for="wa-sch-message">Mensagem do Lembrete</label>
+                            <textarea id="wa-sch-message" rows="4" required style="width: 100%; min-height: 80px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem;" placeholder="Digite a mensagem do lembrete..."></textarea>
+                            <small style="color: var(--text-dim); display: block; margin-top: 0.3rem; font-size: 0.8rem;">Variável disponível: <code>{nome}</code></small>
+                        </div>
+                        <div style="display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
+                            <div class="input-group" style="flex: 1; min-width: 140px; margin: 0;">
+                                <label for="wa-sch-date">Data de Envio</label>
+                                <input type="date" id="wa-sch-date" required>
+                            </div>
+                            <div class="input-group" style="flex: 1; min-width: 100px; margin: 0;">
+                                <label for="wa-sch-time">Horário</label>
+                                <input type="time" id="wa-sch-time" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary" style="width: 100%; font-weight: 700; margin-top: 1.5rem; height: 46px;">Agendar Lembrete</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Panel 4: Lembretes Agendados Table (Admin & Secretary) -->
+            <div class="glass-card table-container" id="wa-schedule-list-panel" style="margin-top: 2rem; padding: 0; display: none;">
+                <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                    <h4 style="margin: 0; font-size: 1.1rem; color: var(--accent-color);">Lembretes Agendados</h4>
+                </div>
+                <div class="table-responsive">
+                    <table class="table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border-color); text-align: left; background: rgba(0,0,0,0.02);">
+                                <th style="padding: 12px 15px; font-weight: 700;">Data/Hora Agendamento</th>
+                                <th style="padding: 12px 15px; font-weight: 700;">Destino</th>
+                                <th style="padding: 12px 15px; font-weight: 700;">Mensagem</th>
+                                <th style="padding: 12px 15px; font-weight: 700;">Status</th>
+                                <th style="padding: 12px 15px; font-weight: 700; text-align: center;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wa-schedule-list-body">
+                            <!-- Populated by JS -->
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-dim);">Nenhum agendamento encontrado.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sub-tab Content: Enviar Mensagens (Painel de Cobranças) -->
+        <div id="wa-content-send" style="display: none;">
+
+            <div class="grid-2" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; align-items: start;">
+                
+                <!-- Coluna da Esquerda: Configurações, Mensagem e Preview -->
+                <div class="glass-card" style="padding: 2rem;">
+                    <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; font-size: 1.3rem; display: flex; align-items: center; gap: 8px; margin-top: 0;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M12.136.326A1.5 1.5 0 0 1 14 1.78V3h.5A1.5 1.5 0 0 1 16 4.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 13.5v-9A1.5 1.5 0 0 1 1.5 3H2V1.78a1.5 1.5 0 0 1 1.864-1.454zM3 3h9v-.22a.5.5 0 0 0-.118-.326L11.5 2H4.5l-.382.454A.5.5 0 0 0 4 2.78zm11 1.5H1.5v9h13z"/>
+                        </svg>
+                        Parâmetros da Cobrança
+                    </h3>
+                    <form id="whatsapp-billing-form">
+                        <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="input-group" style="margin: 0;">
+                                <label for="wa-bill-month">Mês de Referência</label>
+                                <select id="wa-bill-month" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #ffffff;">
+                                    <option value="1">Janeiro</option>
+                                    <option value="2">Fevereiro</option>
+                                    <option value="3">Março</option>
+                                    <option value="4">Abril</option>
+                                    <option value="5">Maio</option>
+                                    <option value="6">Junho</option>
+                                    <option value="7">Julho</option>
+                                    <option value="8">Agosto</option>
+                                    <option value="9">Setembro</option>
+                                    <option value="10">Outubro</option>
+                                    <option value="11">Novembro</option>
+                                    <option value="12">Dezembro</option>
+                                </select>
+                            </div>
+                            <div class="input-group" style="margin: 0;">
+                                <label for="wa-bill-value">Valor (R$)</label>
+                                <input type="number" id="wa-bill-value" value="20.00" step="0.01" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                            </div>
+                        </div>
+
+                        <div class="input-group" style="margin-bottom: 1rem;">
+                            <label for="wa-bill-pix">Chave PIX para Pagamento</label>
+                            <input type="text" id="wa-bill-pix" value="jdboavista.ap@adventistas.org" placeholder="Chave PIX..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                        </div>
+
+                        <div class="input-group" style="margin-bottom: 1rem;">
+                            <label for="wa-bill-template">Modelo de Mensagem</label>
+                            <textarea id="wa-bill-template" rows="5" required style="width: 100%; min-height: 100px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; resize: vertical;"></textarea>
+                            <small style="color: var(--text-dim); display: block; margin-top: 0.3rem; font-size: 0.8rem;">Tags: <code>{nome}</code>, <code>{mes}</code>, <code>{valor}</code>, <code>{pix}</code></small>
+                        </div>
+
+                        <!-- Preview Box -->
+                        <div class="input-group" style="margin-bottom: 1.5rem;">
+                            <label>Pré-visualização (Primeiro Destinatário)</label>
+                            <div id="wa-bill-preview" style="background: #efeae2; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; font-size: 0.9rem; line-height: 1.4; color: #111b21; white-space: pre-wrap; font-family: sans-serif; position: relative;">
+                                <!-- Preview content here -->
+                            </div>
+                        </div>
+
+                        <!-- Agendamento -->
+                        <div style="border-top: 1px solid var(--border-color); padding-top: 1.2rem; margin-top: 1rem;">
+                            <h4 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--accent-color);">Agendar Envio (Opcional)</h4>
+                            <div class="grid-2" style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div class="input-group" style="margin: 0;">
+                                    <label for="wa-bill-date">Data de Envio</label>
+                                    <input type="date" id="wa-bill-date" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                </div>
+                                <div class="input-group" style="margin: 0;">
+                                    <label for="wa-bill-time">Horário</label>
+                                    <input type="time" id="wa-bill-time" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                </div>
+                            </div>
+                            <small style="color: var(--text-dim); display: block; margin-bottom: 1rem; font-size: 0.8rem;">Deixe a data e hora em branco para realizar o envio imediatamente em segundo plano.</small>
+                        </div>
+
+                        <button type="submit" class="btn-primary" style="width: 100%; font-weight: 700; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178Z"/>
+                            </svg>
+                            <span id="wa-bill-submit-text">Disparar Cobranças</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Coluna da Direita: Lista de Inadimplentes -->
+                <div class="glass-card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+                    <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.01);">
+                        <div>
+                            <h4 style="margin: 0; font-size: 1.1rem; color: var(--accent-color);">Inadimplentes da Mensalidade</h4>
+                            <p style="margin: 3px 0 0 0; font-size: 0.8rem; color: var(--text-dim);" id="wa-bill-count-text">Buscando membros em débito...</p>
+                        </div>
+                        <div>
+                            <input type="text" id="wa-bill-search" placeholder="Pesquisar..." style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem; width: 150px;">
+                        </div>
+                    </div>
+                    <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
+                        <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--border-color); text-align: left; position: sticky; top: 0; z-index: 1;">
+                                    <th style="padding: 12px 15px; width: 45px; text-align: center; background: var(--card-bg, #ffffff);">
+                                        <input type="checkbox" id="wa-bill-select-all" style="width: 18px; height: 18px; cursor: pointer;">
+                                    </th>
+                                    <th style="padding: 12px 15px; font-weight: 700; background: var(--card-bg, #ffffff);">Nome</th>
+                                    <th style="padding: 12px 15px; font-weight: 700; background: var(--card-bg, #ffffff);">Unidade</th>
+                                    <th style="padding: 12px 15px; font-weight: 700; background: var(--card-bg, #ffffff);">Telefone</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wa-bill-members-body">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Sub-tab Content: Painel de Mensagens -->
+        <div id="wa-content-panel" style="display: none;">
+            <div class="whatsapp-web-chat" style="display: flex; height: 680px; background: #eae6df; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                
+                <!-- Painel Esquerdo: Lista de Conversas (35% largura) -->
+                <div class="chat-sidebar" style="width: 35%; min-width: 290px; background: #ffffff; display: flex; flex-direction: column; border-right: 1px solid var(--border-color);">
+                    <!-- Header da lista (Avatar do usuário logado e status de conexão) -->
+                    <div class="sidebar-header" style="padding: 12px 15px; background: #f0f2f5; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.06);">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--accent-color); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; text-transform: uppercase;" id="wa-my-avatar-text">
+                                U
+                            </div>
+                            <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-color);" id="wa-my-username">Chat</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="wa-conn-text" style="font-size: 0.75rem; color: var(--text-dim);">Conectando...</span>
+                            <div id="wa-connection-status" style="width: 10px; height: 10px; border-radius: 50%; background: #ffc107;" title="Conectando à ZAP API"></div>
+                        </div>
+                    </div>
+                    <!-- Busca de Contatos -->
+                    <div class="sidebar-search" style="padding: 10px; background: #ffffff; border-bottom: 1px solid rgba(0,0,0,0.05);">
+                        <input type="text" id="wa-chat-search" placeholder="Pesquisar conversa..." style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem; background: #f0f2f5; outline: none; transition: border-color 0.2s;">
+                    </div>
+                    <!-- Lista Scrollable de Conversas -->
+                    <div id="wa-chat-list" style="flex-grow: 1; overflow-y: auto; background: #ffffff;">
+                        <!-- Renderizado dinamicamente pelo JS -->
+                        <p style="text-align: center; padding: 2rem; color: var(--text-dim); font-size: 0.9rem;">Carregando conversas...</p>
+                    </div>
+                </div>
+
+                <!-- Painel Direito: Janela de Chat (65% largura) -->
+                <div class="chat-window" style="width: 65%; display: flex; flex-direction: column; background: #efeae2; position: relative;">
+                    
+                    <!-- Tela de Boas-vindas (Quando nenhuma conversa está selecionada) -->
+                    <div id="wa-chat-welcome" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: #f8f9fa; text-align: center; padding: 2rem; z-index: 10; position: absolute; top: 0; left: 0; width: 100%;">
+                        <div style="background: rgba(var(--accent-rgb, 219, 68, 85), 0.08); width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="var(--accent-color)" viewBox="0 0 16 16">
+                                <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/>
+                            </svg>
+                        </div>
+                        <h3 style="color: var(--accent-color); font-size: 1.5rem; margin-bottom: 0.5rem;">WhatsApp Integrado</h3>
+                        <p style="color: var(--text-dim); max-width: 380px; font-size: 0.9rem; line-height: 1.4;">Selecione uma conversa na barra lateral para visualizar as mensagens e responder instantaneamente em tempo real.</p>
+                    </div>
+
+                    <!-- Tela de Conversa Ativa -->
+                    <div id="wa-chat-active" style="display: flex; flex-direction: column; height: 100%; width: 100%;">
+                        <!-- Header do Chat Ativo -->
+                        <div class="chat-header" style="padding: 10px 20px; background: #f0f2f5; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); z-index: 5;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <button id="wa-chat-back" style="background: transparent; border: none; cursor: pointer; color: var(--text-color); display: none; align-items: center; padding: 5px; margin-right: 5px;" title="Voltar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                                    </svg>
+                                </button>
+                                <img id="wa-active-avatar" src="https://via.placeholder.com/40" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-color);">
+                                <div>
+                                    <h4 id="wa-active-name" style="margin: 0; font-size: 0.95rem; color: var(--text-color); font-weight: 700;">Nome do Contato</h4>
+                                    <span id="wa-active-status" style="font-size: 0.75rem; color: var(--text-dim);">conectado</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Corpo das Mensagens (Scrollable) -->
+                        <div id="wa-chat-messages" style="flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #efeae2;">
+                            <!-- Balões de mensagem inseridos dinamicamente -->
+                        </div>
+                        
+                        <!-- Barra de Input e Envio -->
+                        <div class="chat-footer" style="padding: 12px 20px; background: #f0f2f5; display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--border-color); z-index: 5;">
+                            <!-- Envio de Anexo/Mídia -->
+                            <button id="wa-btn-attach" style="background: transparent; border: none; cursor: pointer; color: var(--text-dim); padding: 5px; display: flex; align-items: center; transition: color 0.2s;" title="Enviar Mídia">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0V3Z"/>
+                                </svg>
+                            </button>
+                            <input type="file" id="wa-file-input" style="display: none;">
+                            
+                            <!-- Input de Texto -->
+                            <input type="text" id="wa-message-input" placeholder="Digite uma mensagem..." style="flex-grow: 1; padding: 10px 18px; border-radius: 20px; border: 1px solid var(--border-color); font-size: 0.9rem; background: #ffffff; outline: none; transition: border-color 0.2s;">
+                            
+                            <!-- Botão Enviar -->
+                            <button id="wa-btn-send" class="btn-primary" style="border-radius: 50%; width: 40px; height: 40px; min-height: auto; padding: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 640 640" style="transform: rotate(45deg);">
+                                    <path d="M568.4 37.7C578.2 34.2 589 36.7 596.4 44C603.8 51.3 606.2 62.2 602.7 72L424.7 568.9C419.7 582.8 406.6 592 391.9 592C377.7 592 364.9 583.4 359.6 570.3L295.4 412.3C290.9 401.3 292.9 388.7 300.6 379.7L395.1 267.3C400.2 261.2 399.8 252.3 394.2 246.7C388.6 241.1 379.6 240.7 373.6 245.8L261.2 340.1C252.1 347.7 239.6 349.7 228.6 345.3L70.1 280.8C57 275.5 48.4 262.7 48.4 248.5C48.4 233.8 57.6 220.7 71.5 215.7L568.4 37.7z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- MODALS INJECTED FOR MPA -->
+<!-- Custom Alert Modal -->
+<div id="alert-modal" class="modal" style="z-index: 10003;">
+    <div class="modal-content animate-fade-in dindin-modal">
+        <div class="dindin-header">
+            <div class="dindin-title-wrapper">
+                <span id="alert-icon" class="dindin-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                </span>
+                <h3 id="alert-title">Aviso</h3>
+            </div>
+            <span class="dindin-close" onclick="document.getElementById('alert-modal').style.display='none'">&times;</span>
+        </div>
+        <div class="dindin-body">
+            <p id="alert-message"></p>
+        </div>
+        <div class="dindin-footer">
+            <button id="alert-ok" class="btn-primary" style="width: 100%;">Entendido</button>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Confirm Modal -->
+<div id="confirm-modal" class="modal" style="z-index: 10002;">
+    <div class="modal-content animate-fade-in dindin-modal">
+        <div class="dindin-header">
+            <div class="dindin-title-wrapper">
+                <span class="dindin-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </span>
+                <h3 id="confirm-title">Confirmar Ação</h3>
+            </div>
+            <span class="dindin-close" onclick="document.getElementById('confirm-modal').style.display='none'">&times;</span>
+        </div>
+        <div class="dindin-body">
+            <p id="confirm-message"></p>
+        </div>
+        <div class="dindin-footer" style="display: flex; gap: 1rem;">
+            <button id="confirm-yes" class="btn-primary" style="flex: 1;">Confirmar</button>
+            <button id="confirm-no" class="btn-secondary" style="flex: 1; border: none;">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Event Modal (Admin Only) -->
+<div id="event-create-modal" class="modal">
+    <div class="glass-card modal-content">
+        <span class="close-modal">&times;</span>
+        <h3>Novo Evento</h3>
+        <form id="event-form">
+            <div class="input-group">
+                <label for="event-name">Nome do Evento</label>
+                <input type="text" id="event-name" required placeholder="Ex: Campori">
+            </div>
+            <div class="input-group">
+                <label for="event-date">Data (Opcional)</label>
+                <input type="date" id="event-date">
+            </div>
+            <div class="input-group">
+                <label for="event-desc">Descrição (Opcional)</label>
+                <textarea id="event-desc"
+                    style="width: 100%; min-height: 80px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;"></textarea>
+            </div>
+            <div class="input-group">
+                <label for="event-payment-type">Tipo de Pagamento</label>
+                <select id="event-payment-type" class="form-control">
+                    <option value="parcelado">Parcelado (Janeiro a Dezembro)</option>
+                    <option value="unico">Pagamento Único (Total)</option>
+                </select>
+            </div>
+            <div class="participants-selector"
+                style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                <h4 style="margin-bottom: 1rem;">Participantes</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.8rem;">
+                    <button type="button" id="ev-clear-all" class="btn-primary"
+                        style="background: var(--error-color); color: white; padding: 0.5rem; font-size: 0.9rem; border: none; border-radius: 4px; cursor: pointer;">Limpar
+                        Seleção</button>
+                    <select id="ev-unit-filter"
+                        style="background: #1a1a1a; color: white; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.5rem; cursor: pointer; font-size: 0.9rem; text-align: center; text-align-last: center;">
+                        <option value="">Selecionar</option>
+                        <option value="ALL">Todos os Membros</option>
+                    </select>
+                </div>
+                <div class="input-group" style="margin-bottom: 1rem;">
+                    <input type="text" id="ev-member-search" placeholder="Pesquisar membro..."
+                        style="width: 100%; padding: 0.6rem; background: white; border: 1px solid var(--border-color); border-radius: 4px; color: black; font-size: 0.9rem;">
+                </div>
+                <div id="event-participants-list" class="checklist-container"
+                    style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem;">
+                    <!-- Checkboxes populated by JS -->
+                </div>
+            </div>
+            <button type="submit" class="btn-primary" style="margin-top: 1.5rem;">Criar Evento</button>
+        </form>
+    </div>
+</div>
+
+<!-- Add Participants Modal -->
+<div id="event-participants-modal" class="modal">
+    <div class="glass-card modal-content" style="max-width: 500px;">
+        <span class="close-modal">&times;</span>
+        <h3 style="color: var(--accent-color); margin-bottom: 0.5rem;">Adicionar Membros ao Evento</h3>
+        <p style="margin-bottom: 1.5rem; color: var(--text-dim); font-size: 0.9rem;">Selecione os novos membros que
+            deseja incluir neste evento.</p>
+
+        <div class="input-group" style="margin-bottom: 1rem;">
+            <input type="text" id="add-member-search" placeholder="Pesquisar membro..."
+                style="width: 100%; padding: 0.6rem; background: white; border: 1px solid var(--border-color); border-radius: 4px; color: black; font-size: 0.9rem;">
+        </div>
+
+        <div id="add-participants-list" class="checklist-container"
+            style="max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem; margin-bottom: 1.5rem;">
+            <!-- Populated by JS -->
+        </div>
+
+        <button id="save-new-participants-btn" class="btn-primary"
+            style="width: 100%; background: black; color: white; padding: 1rem; font-weight: 700;">Salvar
+            Selecionados</button>
+    </div>
+</div>
+
+<!-- Event Payment Modal -->
+<div id="event-payment-modal" class="modal">
+    <div class="glass-card modal-content">
+        <span class="close-modal">&times;</span>
+        <h3 id="ep-modal-title">Pagar Evento</h3>
+        <form id="event-payment-form">
+            <input type="hidden" id="ep-event-id">
+            <div class="info-tag">
+                Evento: <span id="ep-event-name"></span>
+            </div>
+            <div id="ep-date-selection" style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="input-group" style="flex: 1;">
+                    <label for="ep-month">Mês</label>
+                    <select id="ep-month">
+                        <option value="1">Janeiro</option>
+                        <option value="2">Fevereiro</option>
+                        <option value="3">Março</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Maio</option>
+                        <option value="6">Junho</option>
+                        <option value="7">Julho</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
+                </div>
+                <div class="input-group" style="flex: 1;">
+                    <label for="ep-year">Ano</label>
+                    <select id="ep-year">
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="ep-amount">Valor (R$)</label>
+                <input type="number" id="ep-amount" step="0.01" required placeholder="0,00">
+            </div>
+            
+            <div style="background: rgba(229, 9, 20, 0.05); border: 1px dashed var(--accent-color); border-radius: 8px; padding: 1.2rem; margin-bottom: 1.5rem; text-align: center;">
+                <h4 style="margin: 0 0 0.5rem 0; color: var(--accent-color); font-size: 1rem; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20" fill="currentColor"><path d="M306.4 356.5C311.8 351.1 321.1 351.1 326.5 356.5L403.5 433.5C417.7 447.7 436.6 455.5 456.6 455.5L471.7 455.5L374.6 552.6C344.3 582.1 295.1 582.1 264.8 552.6L167.3 455.2L176.6 455.2C196.6 455.2 215.5 447.4 229.7 433.2L306.4 356.5zM326.5 282.9C320.1 288.4 311.9 288.5 306.4 282.9L229.7 206.2C215.5 191.1 196.6 184.2 176.6 184.2L167.3 184.2L264.7 86.8C295.1 56.5 344.3 56.5 374.6 86.8L471.8 183.9L456.6 183.9C436.6 183.9 417.7 191.7 403.5 205.9L326.5 282.9zM176.6 206.7C190.4 206.7 203.1 212.3 213.7 222.1L290.4 298.8C297.6 305.1 307 309.6 316.5 309.6C325.9 309.6 335.3 305.1 342.5 298.8L419.5 221.8C429.3 212.1 442.8 206.5 456.6 206.5L494.3 206.5L552.6 264.8C582.9 295.1 582.9 344.3 552.6 374.6L494.3 432.9L456.6 432.9C442.8 432.9 429.3 427.3 419.5 417.5L342.5 340.5C328.6 326.6 304.3 326.6 290.4 340.6L213.7 417.2C203.1 427 190.4 432.6 176.6 432.6L144.8 432.6L86.8 374.6C56.5 344.3 56.5 295.1 86.8 264.8L144.8 206.7L176.6 206.7z"/></svg>
+                    Pague via PIX
+                </h4>
+                <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1rem; line-height: 1.4;">Faça o pagamento utilizando a chave abaixo e em seguida anexe o comprovante.</p>
+                <div style="background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.8rem; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem;">
+                    <span style="font-family: monospace; font-size: 0.95rem; font-weight: bold; color: var(--text-color); word-break: break-all; text-align: left; cursor: pointer;" onclick="window.copyPix(this, 'jdboavista.ap@adventistas.org')" id="pix-key-2" title="Clique para copiar">jdboavista.ap@adventistas.org</span>
+                    <button type="button" class="btn-secondary" onclick="window.copyPix(this, 'jdboavista.ap@adventistas.org')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; white-space: nowrap; margin: 0; transition: all 0.2s;">Copiar</button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="ep-receipt">Comprovante</label>
+                <input type="file" id="ep-receipt" accept="image/*,.pdf">
+                <div id="ep-view-receipt-container" style="margin-top: 0.5rem; display: none;">
+                    <a href="#" id="ep-view-receipt-btn" target="_blank"
+                        style="color: var(--accent-color); font-size: 0.9rem; text-decoration: none;">Ver
+                        Comprovante Atual</a>
+                </div>
+            </div>
+            <div id="ep-rejection-container" class="reason-display" style="display: none; margin-bottom: 1rem;">
+                <h6>Correção Necessária</h6>
+                <p id="ep-rejection-text"></p>
+            </div>
+
+            <div id="ep-main-actions">
+                <button type="submit" id="ep-save-btn" class="btn-primary"
+                    style="background: black; color: white; width: 100%; padding: 0.8rem; border-radius: 4px; font-weight: 700; border: none; cursor: pointer; margin-bottom: 0.5rem;">Enviar
+                    Pagamento</button>
+                <button type="button" id="ep-delete-btn" class="btn-primary"
+                    style="background: var(--error-color); color: white; width: 100%; padding: 0.8rem; border-radius: 4px; font-weight: 700; border: none; cursor: pointer; display: none;">Remover
+                    Pagamento</button>
+            </div>
+
+            <div id="ep-admin-actions" class="modal-footer-actions"
+                style="display: none; gap: 0.5rem; margin-top: 0.5rem;">
+                <button type="button" id="ep-approve-btn" class="btn-primary"
+                    style="flex: 1; background-color: #4caf50;">Aprovar</button>
+                <button type="button" id="ep-reject-trigger-btn" class="btn-danger"
+                    style="flex: 1;">Rejeitar</button>
+            </div>
+
+            <div id="ep-rejection-form" class="rejection-form">
+                <textarea id="ep-reject-reason" placeholder="Motivo da rejeição..."></textarea>
+                <button type="button" id="ep-confirm-reject-btn" class="btn-danger"
+                    style="width: 100%;">Confirmar Rejeição</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Mandatory Password Change Modal -->
+<div id="force-change-modal" class="modal" style="z-index: 10001; background: rgba(0,0,0,0.9);">
+    <div class="modal-content glass-card animate-fade-in" style="max-width: 450px;">
+        <h2 style="margin-bottom: 1.5rem; color: var(--accent-color);">Segurança Obrigatória</h2>
+        <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 1.5rem;">
+            Por segurança, você deve trocar sua senha no primeiro acesso. <br><br>
+            <strong>Requisitos:</strong><br>
+            • Mínimo de 5 caracteres<br>
+            • Pelo menos 1 número<br>
+            • Pelo menos 1 caractere especial (!@#$, etc)
+        </p>
+        <form id="force-change-form">
+            <div class="input-group">
+                <label>Nova Senha</label>
+                <div class="password-wrapper">
+                    <input type="password" id="force-new-password" required placeholder="Digite a nova senha">
+                    <button type="button" class="toggle-password" data-target="force-new-password" tabindex="-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20"
+                            fill="currentColor">
+                            <path class="eye-open"
+                                d="M320 128C448 128 554.4 204.8 604.1 320C554.4 435.2 448 512 320 512C192 512 85.6 435.2 35.9 320C85.6 204.8 192 128 320 128ZM320 192C249.3 192 192 249.3 192 320C192 390.7 249.3 448 320 448C390.7 448 448 390.7 448 320C448 249.3 390.7 192 320 192ZM320 256C355.3 256 384 284.7 384 320C384 355.3 355.3 384 320 384C284.7 384 256 355.3 256 320C256 284.7 284.7 256 320 256Z" />
+                            <path class="eye-closed" style="display: none;"
+                                d="M632.9 572.7C641.8 584.5 639.4 601.2 627.5 610.1C615.7 618.9 598.9 616.6 590.1 604.7L494.3 476.9C445.8 501.9 387.6 512 320 512C192 512 85.6 435.2 35.9 320C57.4 270.2 92.5 228.3 135.3 198.1L47.1 80.5C38.2 68.7 40.5 52 52.4 43.1C64.2 34.3 80.9 36.6 89.8 48.5L167.3 151.7C211 133.5 262.5 128 320 128C448 128 554.4 204.8 604.1 320C624.2 366.7 628.7 413.4 618.7 455.5L632.9 572.7ZM320 192C288.7 192 260.1 203.2 237.9 221.7L411.3 452.9C433.9 419.6 448 376.6 448 320C448 249.3 390.7 192 320 192ZM320 256C341.1 256 359.8 266.1 371.7 282.1L289 171.7C278.4 186.2 272 203.8 272 223C272 249.5 288.2 272.2 311 281.3L320 256Z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Confirmar Nova Senha</label>
+                <div class="password-wrapper">
+                    <input type="password" id="force-confirm-password" required placeholder="Confirme a nova senha">
+                    <button type="button" class="toggle-password" data-target="force-confirm-password"
+                        tabindex="-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20"
+                            fill="currentColor">
+                            <path class="eye-open"
+                                d="M320 128C448 128 554.4 204.8 604.1 320C554.4 435.2 448 512 320 512C192 512 85.6 435.2 35.9 320C85.6 204.8 192 128 320 128ZM320 192C249.3 192 192 249.3 192 320C192 390.7 249.3 448 320 448C390.7 448 448 390.7 448 320C448 249.3 390.7 192 320 192ZM320 256C355.3 256 384 284.7 384 320C384 355.3 355.3 384 320 384C284.7 384 256 355.3 256 320C256 284.7 284.7 256 320 256Z" />
+                            <path class="eye-closed" style="display: none;"
+                                d="M632.9 572.7C641.8 584.5 639.4 601.2 627.5 610.1C615.7 618.9 598.9 616.6 590.1 604.7L494.3 476.9C445.8 501.9 387.6 512 320 512C192 512 85.6 435.2 35.9 320C57.4 270.2 92.5 228.3 135.3 198.1L47.1 80.5C38.2 68.7 40.5 52 52.4 43.1C64.2 34.3 80.9 36.6 89.8 48.5L167.3 151.7C211 133.5 262.5 128 320 128C448 128 554.4 204.8 604.1 320C624.2 366.7 628.7 413.4 618.7 455.5L632.9 572.7ZM320 192C288.7 192 260.1 203.2 237.9 221.7L411.3 452.9C433.9 419.6 448 376.6 448 320C448 249.3 390.7 192 320 192ZM320 256C341.1 256 359.8 266.1 371.7 282.1L289 171.7C278.4 186.2 272 203.8 272 223C272 249.5 288.2 272.2 311 281.3L320 256Z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary" style="margin-top: 1rem;">Atualizar Senha e Entrar</button>
+            <div id="force-change-error" class="error-msg"></div>
+        </form>
+    </div>
+</div>
+
+<!-- LGPD Modal -->
+<div id="lgpd-modal" class="modal" style="z-index: 99999;">
+    <div class="glass-card modal-content">
+        <h3>Termos de Uso e Privacidade (LGPD)</h3>
+        <div style="max-height: 400px; overflow-y: auto; padding-right: 15px; margin-bottom: 1.5rem; font-size: 0.9rem; line-height: 1.6; color: var(--text-color);">
+            <p style="margin-bottom: 1rem;">Para continuarmos oferecendo um sistema seguro e transparente para a gestão do nosso Clube de Desbravadores Tribo de Davi, atualizamos nossa Política de Privacidade em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).</p>
+            
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--text-color);">1. Coleta e Armazenamento de Dados</h4>
+            <p style="margin-bottom: 1rem;">Coletamos os seguintes dados pessoais estritamente necessários para a administração das atividades do clube: nome completo, CPF, data de nascimento, telefone, e-mail, informações de saúde (quando exigidas para acampamentos), registros de imagem/foto em eventos e relatórios de transações financeiras (mensalidades e doações).</p>
+
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--text-color);">2. Finalidade e Uso das Informações</h4>
+            <p style="margin-bottom: 1rem;">Seus dados são usados exclusivamente para: <br>
+            • Gestão interna (controle de caixa, mensalidades, inscrições de eventos);<br>
+            • Comunicação oficial da diretoria com pais e membros;<br>
+            • Elaboração de seguros obrigatórios de acidentes para eventos, saídas e acampamentos;<br>
+            • Cumprimento de regras administrativas e estatísticas exigidas pela Associação/Missão local e Divisão Sul-Americana (DSA).</p>
+
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--text-color);">3. Uso de Imagem</h4>
+            <p style="margin-bottom: 1rem;">Ao aceitar estes termos, você autoriza de forma gratuita o Clube de Desbravadores Tribo de Davi a utilizar fotos e vídeos onde o membro apareça durante as atividades oficiais (reuniões, acampamentos, feiras), exclusivamente para fins institucionais e de divulgação nas redes sociais e site oficial do clube, sem fins lucrativos.</p>
+
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--text-color);">4. Segurança e Compartilhamento</h4>
+            <p style="margin-bottom: 1rem;">Suas informações estão armazenadas de forma segura em nossos servidores. Nós não comercializamos nem compartilhamos seus dados com terceiros não autorizados. Os dados só poderão ser repassados aos níveis hierárquicos superiores da Igreja Adventista do Sétimo Dia (Associação, União) quando estritamente necessário (ex: seguros e eventos regionais).</p>
+
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--text-color);">5. Seus Direitos</h4>
+            <p style="margin-bottom: 1rem;">Você possui o direito de solicitar a visualização, retificação ou exclusão de seus dados pessoais entrando em contato direto com a Secretaria ou Diretoria do Clube. Contudo, a exclusão de dados administrativos obrigatórios pode resultar no desligamento das atividades ativas do clube por motivos de segurança (ex: falta de seguro de vida).</p>
+
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--text-color);">6. Isenção de Recebimento de Valores</h4>
+            <p style="margin-bottom: 1rem;">O presente sistema atua exclusivamente como uma ferramenta de registro e gestão de comprovantes. O sistema <strong>não recebe, não processa e não intermedia</strong> transações financeiras de nenhuma natureza. Todos os pagamentos são realizados diretamente pelo usuário para a conta bancária oficial da Igreja Adventista do Sétimo Dia do Jardim Boa Vista. É de total responsabilidade do membro ou responsável conferir os dados da transferência antes da conclusão e envio do comprovante na plataforma.</p>
+
+            <div class="info-tag" style="margin-top: 1.5rem; margin-bottom: 0; text-align: center;">
+                Para prosseguir utilizando o sistema financeiro e administrativo, confirme que leu e aceita as condições legais acima.
+            </div>
+        </div>
+        
+        <button type="button" id="accept-lgpd-btn" class="btn-primary" style="width: 100%; font-weight: 700;">Li, Compreendi e Aceito os Termos</button>
+        <button type="button" id="lgpd-close-btn" class="btn-text" onclick="document.getElementById('lgpd-modal').style.display='none';" style="display: none; width: 100%; margin-top: 1rem;">Fechar Termos</button>
+    </div>
+</div>
+
+<!-- Notification Modal (For priority alerts) -->
+<div id="notification-modal" class="modal" style="display: none;">
+    <div class="glass-card modal-content animate-slide-up" style="max-width: 400px; text-align: center; padding: 2rem; border: 1px solid rgba(229, 9, 20, 0.2);">
+        <div id="notif-icon" style="margin-bottom: 1.5rem; color: var(--accent-color); display: flex; justify-content: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="80" height="80" fill="currentColor">
+                <path d="M320 64C302.3 64 288 78.3 288 96L288 99.2C215 114 160 178.6 160 256L160 277.7C160 325.8 143.6 372.5 113.6 410.1L103.8 422.3C98.7 428.6 96 436.4 96 444.5C96 464.1 111.9 480 131.5 480L508.4 480C528 480 543.9 464.1 543.9 444.5C543.9 436.4 541.2 428.6 536.1 422.3L526.3 410.1C496.4 372.5 480 325.8 480 277.7L480 256C480 178.6 425 114 352 99.2L352 96C352 78.3 337.7 64 320 64zM258 528C265.1 555.6 290.2 576 320 576C349.8 576 374.9 555.6 382 528L258 528z"/>
+            </svg>
+        </div>
+        <h2 id="notif-title" style="margin-bottom: 1.2rem; color: var(--accent-color); font-weight: 800; font-size: 1.8rem; letter-spacing: -1px;">Novo Aviso</h2>
+        <div id="notif-content" style="margin-bottom: 2.5rem; line-height: 1.6; color: var(--text-color); font-size: 1.1rem; opacity: 0.9;">
+            <!-- Content here -->
+        </div>
+        <button id="close-notif-btn" class="btn-primary" style="width: 100%; padding: 1rem; font-weight: 700; border-radius: 12px; background: var(--accent-color);">Entendido</button>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div id="payment-modal" class="modal">
+    <div class="glass-card modal-content">
+        <span class="close-modal">&times;</span>
+        <h3 id="payment-modal-title">Registrar Pagamento</h3>
+        <form id="payment-form">
+            <input type="hidden" id="p-person-id">
+            <input type="hidden" id="p-month">
+            <div class="input-group" id="p-single-month-info">
+                <label>Mês de Referência</label>
+                <div class="info-tag" style="margin-top: 0.5rem;">
+                    Membro: <span id="p-member-name"></span> | Mês: <span id="p-month-name"></span>
+                </div>
+            </div>
+
+            <div class="toggle-wrapper">
+                <span>Este pagamento é referente a vários meses?</span>
+                <label class="switch">
+                    <input type="checkbox" id="p-multi-month-toggle"
+                        onchange="window.toggleMultiMonth?.(this.checked)">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+
+
+            <div id="p-multi-month-selector"
+                style="display: none; margin-bottom: 1.5rem; padding: 1.2rem; background: rgba(0,0,0,0.02); border: 1px solid var(--border-color); border-radius: 12px;">
+                <label
+                    style="display: block; margin-bottom: 1rem; font-weight: 700; font-size: 0.9rem; color: var(--accent-color);">Selecione
+                    os meses incluídos:</label>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem;"
+                    id="p-months-grid">
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Jan <input
+                            type="checkbox" value="1"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Fev <input
+                            type="checkbox" value="2"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Mar <input
+                            type="checkbox" value="3"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Abr <input
+                            type="checkbox" value="4"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Mai <input
+                            type="checkbox" value="5"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Jun <input
+                            type="checkbox" value="6"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Jul <input
+                            type="checkbox" value="7"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Ago <input
+                            type="checkbox" value="8"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Set <input
+                            type="checkbox" value="9"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Out <input
+                            type="checkbox" value="10"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Nov <input
+                            type="checkbox" value="11"></label>
+                    <label class="month-grid-item" onclick="window.selectMonth?.(this)">Dez <input
+                            type="checkbox" value="12"></label>
+                </div>
+
+                <p style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-dim); text-align: center;">O
+                    valor total será dividido igualmente entre os meses selecionados.</p>
+            </div>
+
+            <div class="input-group">
+                <label for="amount">Valor Total (R$)</label>
+                <input type="number" id="amount" step="0.01" required placeholder="0,00">
+            </div>
+
+            
+            <div style="background: rgba(229, 9, 20, 0.05); border: 1px dashed var(--accent-color); border-radius: 8px; padding: 1.2rem; margin-bottom: 1.5rem; text-align: center;">
+                <h4 style="margin: 0 0 0.5rem 0; color: var(--accent-color); font-size: 1rem; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20" fill="currentColor"><path d="M306.4 356.5C311.8 351.1 321.1 351.1 326.5 356.5L403.5 433.5C417.7 447.7 436.6 455.5 456.6 455.5L471.7 455.5L374.6 552.6C344.3 582.1 295.1 582.1 264.8 552.6L167.3 455.2L176.6 455.2C196.6 455.2 215.5 447.4 229.7 433.2L306.4 356.5zM326.5 282.9C320.1 288.4 311.9 288.5 306.4 282.9L229.7 206.2C215.5 191.1 196.6 184.2 176.6 184.2L167.3 184.2L264.7 86.8C295.1 56.5 344.3 56.5 374.6 86.8L471.8 183.9L456.6 183.9C436.6 183.9 417.7 191.7 403.5 205.9L326.5 282.9zM176.6 206.7C190.4 206.7 203.1 212.3 213.7 222.1L290.4 298.8C297.6 305.1 307 309.6 316.5 309.6C325.9 309.6 335.3 305.1 342.5 298.8L419.5 221.8C429.3 212.1 442.8 206.5 456.6 206.5L494.3 206.5L552.6 264.8C582.9 295.1 582.9 344.3 552.6 374.6L494.3 432.9L456.6 432.9C442.8 432.9 429.3 427.3 419.5 417.5L342.5 340.5C328.6 326.6 304.3 326.6 290.4 340.6L213.7 417.2C203.1 427 190.4 432.6 176.6 432.6L144.8 432.6L86.8 374.6C56.5 344.3 56.5 295.1 86.8 264.8L144.8 206.7L176.6 206.7z"/></svg>
+                    Pague via PIX
+                </h4>
+                <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1rem; line-height: 1.4;">Faça o pagamento utilizando a chave abaixo e em seguida anexe o comprovante.</p>
+                <div style="background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.8rem; display: flex; justify-content: space-between; align-items: center; gap: 0.8rem;">
+                    <span style="font-family: monospace; font-size: 0.95rem; font-weight: bold; color: var(--text-color); word-break: break-all; text-align: left; cursor: pointer;" onclick="window.copyPix(this, 'jdboavista.ap@adventistas.org')" id="pix-key-1" title="Clique para copiar">jdboavista.ap@adventistas.org</span>
+                    <button type="button" class="btn-secondary" onclick="window.copyPix(this, 'jdboavista.ap@adventistas.org')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; white-space: nowrap; margin: 0; transition: all 0.2s;">Copiar</button>
+                </div>
+            </div>
+
+
+            <div class="input-group">
+                <label for="receipt">Comprovante (PNG, JPG, PDF) - Opcional</label>
+                <input type="file" id="receipt" accept="image/*,.pdf">
+                <div id="view-receipt-container" style="margin-top: 0.5rem; display: none;">
+                    <a href="#" id="view-receipt-btn" target="_blank"
+                        style="color: var(--accent-color); font-size: 0.9rem; text-decoration: none;">Ver
+                        Comprovante Atual</a>
+                </div>
+            </div>
+            <div id="payment-error" class="error-msg"></div>
+
+            <!-- Member View: Rejection Reason -->
+            <div id="rejection-reason-container" class="reason-display" style="display: none;">
+                <h6>Correção Necessária</h6>
+                <p id="rejection-reason-text"></p>
+            </div>
+
+            <button type="submit" class="btn-primary" id="save-payment-btn">Salvar Pagamento</button>
+
+            <!-- Admin Actions -->
+            <div id="admin-payment-actions" class="modal-footer-actions" style="display: none;">
+                <button type="button" id="approve-payment-btn" class="btn-primary"
+                    style="flex: 1; background-color: #4caf50;">Aprovar</button>
+                <button type="button" id="reject-trigger-btn" class="btn-danger"
+                    style="flex: 1;">Rejeitar</button>
+            </div>
+
+            <!-- Admin: Rejection Reason Form -->
+            <div id="rejection-form" class="rejection-form">
+                <label for="reject-reason">Motivo da Rejeição</label>
+                <textarea id="reject-reason"
+                    placeholder="Descreva por que o pagamento foi recusado e o que deve ser corrigido..."></textarea>
+                <button type="button" id="confirm-reject-btn" class="btn-danger" style="width: 100%;">Confirmar
+                    Rejeição</button>
+                <button type="button" id="cancel-reject-btn" class="btn-text"
+                    style="width: 100%; margin-top: 0.5rem;">Voltar</button>
+            </div>
+
+            <button type="button" id="delete-payment-btn" class="btn-danger"
+                style="display: none; width: 100%; margin-top: 1rem;">Excluir Pagamento Permanentemente</button>
+        </form>
+    </div>
+</div>
+
+<!-- Person Modal -->
+<div id="person-modal" class="modal">
+    <div class="glass-card modal-content">
+        <span class="close-modal">&times;</span>
+        <h3 id="person-modal-title">Novo Membro</h3>
+        <form id="person-form">
+            <input type="hidden" id="p-id">
+            <div class="input-group">
+                <label for="p-name">Nome Completo</label>
+                <input type="text" id="p-name" required>
+            </div>
+            <div class="input-group">
+                <label for="p-responsible">Responsável (Opcional)</label>
+                <input type="text" id="p-responsible">
+            </div>
+            <div class="input-group">
+                <label for="p-unit">Unidade</label>
+                <input type="text" id="p-unit" placeholder="Ex: Unidade Norte">
+            </div>
+            <div class="input-group">
+                <label for="p-birth">Data de Nascimento (Opcional)</label>
+                <input type="date" id="p-birth">
+            </div>
+            <div class="input-group">
+                <label for="p-age">Idade</label>
+                <input type="text" id="p-age" readonly placeholder="Calculada automaticamente"
+                    style="background: var(--bg-color); opacity: 0.8;">
+            </div>
+            <div class="input-group">
+                <label for="p-cpf">CPF (Opcional)</label>
+                <input type="text" id="p-cpf" maxlength="14">
+            </div>
+            <div class="input-group">
+                <label for="p-phone">Telefone / WhatsApp (Opcional)</label>
+                <input type="text" id="p-phone" placeholder="Ex: (11) 99999-9999" maxlength="15">
+            </div>
+            <div class="credentials-section" id="admin-only-credentials"
+                style="margin-top: 1rem; padding-top: 1rem;">
+                <div class="input-group">
+                    <label for="u-username">Usuário de Acesso</label>
+                    <input type="text" id="u-username">
+                </div>
+                <div class="input-group">
+                    <label for="u-role">Nível de Acesso</label>
+                    <select id="u-role" class="form-control">
+                        <option value="member">Membro (Comum)</option>
+                        <option value="responsible">Responsável</option>
+                        <option value="social_midia">Social Mídia</option>
+                        <option value="secretário">Secretário</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="u-password">Nova Senha (deixe vazio para manter)</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="u-password" placeholder="Digite para trocar">
+                        <button type="button" class="toggle-password" data-target="u-password" tabindex="-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20"
+                                fill="currentColor">
+                                <path class="eye-open"
+                                    d="M320 128C448 128 554.4 204.8 604.1 320C554.4 435.2 448 512 320 512C192 512 85.6 435.2 35.9 320C85.6 204.8 192 128 320 128ZM320 192C249.3 192 192 249.3 192 320C192 390.7 249.3 448 320 448C390.7 448 448 390.7 448 320C448 249.3 390.7 192 320 192ZM320 256C355.3 256 384 284.7 384 320C384 355.3 355.3 384 320 384C284.7 384 256 355.3 256 320C256 284.7 284.7 256 320 256Z" />
+                                <path class="eye-closed" style="display: none;"
+                                    d="M632.9 572.7C641.8 584.5 639.4 601.2 627.5 610.1C615.7 618.9 598.9 616.6 590.1 604.7L494.3 476.9C445.8 501.9 387.6 512 320 512C192 512 85.6 435.2 35.9 320C57.4 270.2 92.5 228.3 135.3 198.1L47.1 80.5C38.2 68.7 40.5 52 52.4 43.1C64.2 34.3 80.9 36.6 89.8 48.5L167.3 151.7C211 133.5 262.5 128 320 128C448 128 554.4 204.8 604.1 320C624.2 366.7 628.7 413.4 618.7 455.5L632.9 572.7ZM320 192C288.7 192 260.1 203.2 237.9 221.7L411.3 452.9C433.9 419.6 448 376.6 448 320C448 249.3 390.7 192 320 192ZM320 256C341.1 256 359.8 266.1 371.7 282.1L289 171.7C278.4 186.2 272 203.8 272 223C272 249.5 288.2 272.2 311 281.3L320 256Z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="credentials-section" id="responsible-credentials-section"
+                style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-color); display: none;">
+                <h4 style="color: var(--accent-color); margin-bottom: 0.8rem; font-size: 0.95rem;">Credenciais do Responsável</h4>
+                <div class="input-group">
+                    <label for="u-resp-username">Usuário do Responsável</label>
+                    <input type="text" id="u-resp-username" readonly style="background: var(--bg-color); opacity: 0.8;">
+                </div>
+                <div class="input-group">
+                    <label for="u-resp-password">Nova Senha do Responsável (deixe vazio para manter)</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="u-resp-password" placeholder="Digite para trocar a senha do responsável">
+                        <button type="button" class="toggle-password" data-target="u-resp-password" tabindex="-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20"
+                                fill="currentColor">
+                                <path class="eye-open"
+                                    d="M320 128C448 128 554.4 204.8 604.1 320C554.4 435.2 448 512 320 512C192 512 85.6 435.2 35.9 320C85.6 204.8 192 128 320 128ZM320 192C249.3 192 192 249.3 192 320C192 390.7 249.3 448 320 448C390.7 448 448 390.7 448 320C448 249.3 390.7 192 320 192ZM320 256C355.3 256 384 284.7 384 320C384 355.3 355.3 384 320 384C284.7 384 256 355.3 256 320C256 284.7 284.7 256 320 256Z" />
+                                <path class="eye-closed" style="display: none;"
+                                    d="M632.9 572.7C641.8 584.5 639.4 601.2 627.5 610.1C615.7 618.9 598.9 616.6 590.1 604.7L494.3 476.9C445.8 501.9 387.6 512 320 512C192 512 85.6 435.2 35.9 320C57.4 270.2 92.5 228.3 135.3 198.1L47.1 80.5C38.2 68.7 40.5 52 52.4 43.1C64.2 34.3 80.9 36.6 89.8 48.5L167.3 151.7C211 133.5 262.5 128 320 128C448 128 554.4 204.8 604.1 320C624.2 366.7 628.7 413.4 618.7 455.5L632.9 572.7ZM320 192C288.7 192 260.1 203.2 237.9 221.7L411.3 452.9C433.9 419.6 448 376.6 448 320C448 249.3 390.7 192 320 192ZM320 256C341.1 256 359.8 266.1 371.7 282.1L289 171.7C278.4 186.2 272 203.8 272 223C272 249.5 288.2 272.2 311 281.3L320 256Z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn-primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Recover Password Modal -->
+<div id="recover-modal" class="modal">
+    <div class="modal-content glass-card animate-fade-in" style="max-width: 400px;">
+        <span class="close-modal" id="close-recover-modal">&times;</span>
+        <h2 style="margin-bottom: 1.5rem; color: var(--accent-color);">Recuperar Senha</h2>
+        <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 1.5rem;">
+            Informe seu usuário e CPF para validar sua identidade e definir uma nova senha.
+        </p>
+        <form id="recover-form">
+            <div class="input-group">
+                <label>Usuário</label>
+                <input type="text" id="recover-username" required placeholder="Digite seu usuário">
+            </div>
+            <div class="input-group">
+                <label>CPF</label>
+                <input type="text" id="recover-cpf" required placeholder="Digite seu CPF (apenas números)" maxlength="14">
+            </div>
+            <div class="input-group">
+                <label>Nova Senha</label>
+                <div class="password-wrapper">
+                    <input type="password" id="recover-new-password" required
+                        placeholder="Mín. 5 chars, 1 num, 1 especial">
+                    <button type="button" class="toggle-password" data-target="recover-new-password" tabindex="-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20"
+                            fill="currentColor">
+                            <path class="eye-open"
+                                d="M320 128C448 128 554.4 204.8 604.1 320C554.4 435.2 448 512 320 512C192 512 85.6 435.2 35.9 320C85.6 204.8 192 128 320 128ZM320 192C249.3 192 192 249.3 192 320C192 390.7 249.3 448 320 448C390.7 448 448 390.7 448 320C448 249.3 390.7 192 320 192ZM320 256C355.3 256 384 284.7 384 320C384 355.3 355.3 384 320 384C284.7 384 256 355.3 256 320C256 284.7 284.7 256 320 256Z" />
+                            <path class="eye-closed" style="display: none;"
+                                d="M632.9 572.7C641.8 584.5 639.4 601.2 627.5 610.1C615.7 618.9 598.9 616.6 590.1 604.7L494.3 476.9C445.8 501.9 387.6 512 320 512C192 512 85.6 435.2 35.9 320C57.4 270.2 92.5 228.3 135.3 198.1L47.1 80.5C38.2 68.7 40.5 52 52.4 43.1C64.2 34.3 80.9 36.6 89.8 48.5L167.3 151.7C211 133.5 262.5 128 320 128C448 128 554.4 204.8 604.1 320C624.2 366.7 628.7 413.4 618.7 455.5L632.9 572.7ZM320 192C288.7 192 260.1 203.2 237.9 221.7L411.3 452.9C433.9 419.6 448 376.6 448 320C448 249.3 390.7 192 320 192ZM320 256C341.1 256 359.8 266.1 371.7 282.1L289 171.7C278.4 186.2 272 203.8 272 223C272 249.5 288.2 272.2 311 281.3L320 256Z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary" style="margin-top: 1rem;">Redefinir Senha</button>
+            <div id="recover-error" class="error-msg"></div>
+        </form>
+    </div>
+</div>
+
+<!-- Report Selector Modal -->
+<div id="report-selector-modal" class="modal">
+    <div class="glass-card modal-content" style="max-width: 500px;">
+        <span class="close-modal">&times;</span>
+        <h3 style="margin-bottom: 1.5rem; color: var(--accent-color);">O que você deseja gerar?</h3>
+
+        <div class="input-group">
+            <label for="report-type-select">Tipo de Relatório</label>
+            <select id="report-type-select">
+                <option value="general">Mensalidades Geral (Ano)</option>
+                <option value="member">Individual por Membro</option>
+                <option value="event">Específico de Evento</option>
+            </select>
+        </div>
+
+        <!-- Field for Member -->
+        <div id="report-field-member" class="input-group" style="display: none;">
+            <label for="report-member-select">Selecione o Membro</label>
+            <select id="report-member-select">
+                <!-- Populated by JS -->
+            </select>
+        </div>
+
+        <!-- Fields for Event -->
+        <div id="report-fields-event" style="display: none;">
+            <div class="input-group">
+                <label for="report-event-select">Selecione o Evento</label>
+                <select id="report-event-select">
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="report-event-filter">Agrupamento</label>
+                <select id="report-event-filter">
+                    <option value="all">Lista Completa de Participantes</option>
+                    <option value="unit">Resumo por Unidade</option>
+                    <option value="individual">Lista Individual</option>
+                </select>
+            </div>
+            <!-- Field for Event Participant (Shown when filter is individual) -->
+            <div id="report-field-event-member" class="input-group" style="display: none;">
+                <label for="report-event-member-select">Selecione o Participante</label>
+                <select id="report-event-member-select">
+                    <option value="">Selecione um Participante</option>
+                </select>
+            </div>
+        </div>
+
+        <button id="confirm-generate-report-btn" onclick="window.confirmGenerateReport()" class="btn-primary"
+            style="width: 100%; background: var(--accent-color); color: white; padding: 1rem; font-weight: 700; margin-top: 1rem;">Gerar
+            Agora</button>
+    </div>
+</div>
+
+<div id="report-modal" class="modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 20000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div class="modal-content glass-card"
+        style="max-width: 1000px; width: 90%; max-height: 95vh; overflow-y: auto; background: var(--bg-color); padding: 2rem;">
+        <span class="close-modal" style="top: 1rem; right: 1.5rem;">&times;</span>
+        <div id="report-modal-header"
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 2rem; border-bottom: 1px solid var(--border-color); padding: 0 0.5rem 1.5rem 0.5rem;">
+            <h3 style="color: var(--accent-color); margin: 0; font-size: 1.6rem; font-weight: 700;">Visualização do
+                Relatório</h3>
+            <div id="calendar-export-filters" style="display: none; gap: 0.8rem; align-items: center;">
+                <select id="calendar-export-period" style="padding: 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color);">
+                    <option value="1">1º Semestre</option>
+                    <option value="2">2º Semestre</option>
+                    <option value="all">Ano Completo</option>
+                </select>
+                <select id="calendar-export-year" style="padding: 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color);">
+                    <option value="2026">2026</option>
+                    <option value="2027">2027</option>
+                </select>
+            </div>
+            <button onclick="window.print()" class="btn-primary"
+                style="width: auto; background: black; color: white; padding: 0.7rem 2rem; font-size: 1rem; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">Imprimir
+                / Salvar PDF</button>
+        </div>
+        <div id="report-printable" class="report-canvas"
+            style="background: white; padding: 4rem; border-radius: 4px; border: 1px solid #ddd; color: black; box-shadow: 0 10px 30px rgba(0,0,0,0.1); min-height: 1000px;">
+            <!-- Generated Report HTML -->
+        </div>
+    </div>
+</div>
+
+<!-- Session Conflict Modal -->
+<div id="session-modal" class="modal" style="z-index: 10002;">
+    <div class="modal-content glass-card animate-fade-in" style="max-width: 400px; text-align: center;">
+        <div style="margin-bottom: 1.5rem; color: var(--accent-color); display: flex; justify-content: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="60" height="60"
+                fill="currentColor">
+                <path
+                    d="M208 64C172.7 64 144 92.7 144 128L144 512C144 547.3 172.7 576 208 576L432 576C467.3 576 496 547.3 496 512L496 128C496 92.7 467.3 64 432 64L208 64zM280 480L360 480C373.3 480 384 490.7 384 504C384 517.3 373.3 528 360 528L280 528C266.7 528 256 517.3 256 504C256 490.7 266.7 480 280 480z" />
+            </svg>
+        </div>
+        <h2 style="margin-bottom: 1rem; color: var(--accent-color);">Sessão Ativa</h2>
+        <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 2rem;">
+            Já existe um dispositivo conectado a esta conta. Deseja encerrar a outra sessão para entrar aqui?
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+            <button id="confirm-force-login" class="btn-primary">Derrubar Sessão e Entrar</button>
+            <button onclick="document.getElementById('session-modal').style.display='none'"
+                class="btn-text">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Site Calendar Modal (Admin/Secretário) -->
+<div id="site-calendar-create-modal" class="modal">
+    <div class="glass-card modal-content">
+        <span class="close-modal">&times;</span>
+        <h3>Nova Data de Saída / Atividade (Site)</h3>
+        <form id="site-calendar-form">
+            <div class="input-group">
+                <label for="sc-name">Nome da Saída / Atividade</label>
+                <input type="text" id="sc-name" required placeholder="Ex: Caminhada Noturna / Acampamento">
+            </div>
+            <div class="input-group">
+                <label for="sc-date">Data</label>
+                <input type="date" id="sc-date" required>
+            </div>
+            <div class="input-group">
+                <label for="sc-desc">Descrição / Detalhes</label>
+                <textarea id="sc-desc"
+                    style="width: 100%; min-height: 80px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;"
+                    placeholder="Descreva a atividade para o público do site..."></textarea>
+            </div>
+            <div class="input-group">
+                <label for="sc-local">Local</label>
+                <input type="text" id="sc-local" placeholder="Ex: CAGV / Jd. Boa Vista">
+            </div>
+            <div class="input-group">
+                <label for="sc-responsible">Responsável</label>
+                <input type="text" id="sc-responsible" placeholder="Ex: Diretoria / Associação">
+            </div>
+            <button type="submit" class="btn-primary" style="margin-top: 1.5rem; width: 100%;">Cadastrar no Site</button>
+        </form>
+    </div>
+</div>
+
+<!-- Site Calendar Edit Modal (Admin/Secretário) -->
+<div id="site-calendar-edit-modal" class="modal">
+    <div class="glass-card modal-content">
+        <span class="close-modal">&times;</span>
+        <h3>Editar Data de Saída / Atividade (Site)</h3>
+        <form id="site-calendar-edit-form">
+            <input type="hidden" id="sc-edit-id">
+            <div class="input-group">
+                <label for="sc-edit-name">Nome da Saída / Atividade</label>
+                <input type="text" id="sc-edit-name" required placeholder="Ex: Caminhada Noturna / Acampamento">
+            </div>
+            <div class="input-group">
+                <label for="sc-edit-date">Data</label>
+                <input type="date" id="sc-edit-date" required>
+            </div>
+            <div class="input-group">
+                <label for="sc-edit-desc">Descrição / Detalhes</label>
+                <textarea id="sc-edit-desc"
+                    style="width: 100%; min-height: 80px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;"
+                    placeholder="Descreva a atividade para o público do site..."></textarea>
+            </div>
+            <div class="input-group">
+                <label for="sc-edit-local">Local</label>
+                <input type="text" id="sc-edit-local" placeholder="Ex: CAGV / Jd. Boa Vista">
+            </div>
+            <div class="input-group">
+                <label for="sc-edit-responsible">Responsável</label>
+                <input type="text" id="sc-edit-responsible" placeholder="Ex: Diretoria / Associação">
+            </div>
+            <div class="modal-actions" style="margin-top: 1.5rem;">
+                <button type="submit" class="btn-primary">Salvar Alterações</button>
+                <button type="button" id="sc-edit-delete-btn" class="btn-danger">Excluir Evento</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- WhatsApp Disabled Modal -->
+<div id="whatsapp-disabled-modal" class="modal" style="display: none; z-index: 999999;">
+    <div class="glass-card modal-content animate-slide-up" style="max-width: 400px; text-align: center; padding: 2rem; border: 1px solid rgba(229, 9, 20, 0.2);">
+        <div style="margin-bottom: 1.5rem; color: var(--accent-color); display: flex; justify-content: center;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="80" height="80" fill="currentColor">
+                <path d="M320 64C302.3 64 288 78.3 288 96L288 99.2C215 114 160 178.6 160 256L160 277.7C160 325.8 143.6 372.5 113.6 410.1L103.8 422.3C98.7 428.6 96 436.4 96 444.5C96 464.1 111.9 480 131.5 480L508.4 480C528 480 543.9 464.1 543.9 444.5C543.9 436.4 541.2 428.6 536.1 422.3L526.3 410.1C496.4 372.5 480 325.8 480 277.7L480 256C480 178.6 425 114 352 99.2L352 96C352 78.3 337.7 64 320 64zM258 528C265.1 555.6 290.2 576 320 576C349.8 576 374.9 555.6 382 528L258 528z"/>
+            </svg>
+        </div>
+        <h2 style="margin-bottom: 1.2rem; color: var(--accent-color); font-weight: 800; font-size: 1.5rem; letter-spacing: -1px;">Funcionalidade Indisponível</h2>
+        <div style="margin-bottom: 2.5rem; line-height: 1.6; color: var(--text-color); font-size: 1.1rem; opacity: 0.9;">
+            A comunicação e aplicação com o WhatsApp foi temporariamente desativada. Por ora, não utilizaremos mais este recurso.
+        </div>
+        <button onclick="document.getElementById('whatsapp-disabled-modal').style.display='none'" class="btn-primary" style="width: 100%; padding: 1rem; font-weight: 700; border-radius: 12px; background: var(--accent-color);">Entendido</button>
+    </div>
+</div>
+
+
+</main>
+        </section>
+
+        <!-- Modals -->
+        
+
+        
+
+        
+
+        <!-- Event Modal (Admin Only) Container -->
+        
+
+        <!-- Site Calendar Modal (Admin/Secretário) Container -->
+        
+
+        <!-- Site Calendar Edit Modal (Admin/Secretário) Container -->
+        
+
+        
+
+        
+
+    
+
+    
+
+    <!-- Back to Top Button -->
+    <button id="back-to-top" title="Voltar ao topo">↑</button>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    <!-- PWA Install Banner -->
+    <div id="pwa-install-banner" class="pwa-banner" style="display: none;">
+        <div class="pwa-content">
+            <img src="logo.png" alt="Logo" class="pwa-logo">
+            <div class="pwa-text">
+                <strong>Instalar Financeiro Tribo</strong>
+                <span>Adicione à sua tela inicial para acesso rápido e fluido.</span>
+            </div>
+            <div class="pwa-actions">
+                <button id="pwa-install-btn" class="btn-primary btn-sm">Instalar</button>
+                <button id="pwa-close-btn" class="btn-text btn-sm">Agora não</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="js/state.js?v=212"></script>
+    <script src="js/utils.js?v=212"></script>
+    
+        <script src="js/state.js?v=mpa"></script>
+    <script src="js/utils.js?v=mpa"></script>
+    <script src="js/core.js?v=mpa"></script>
+    <script src="js/logs.js?v=mpa"></script>
+    <script src="js/calendar.js?v=mpa"></script>
+    <script src="js/events.js?v=mpa"></script>
+    <script src="js/dashboard.js?v=mpa"></script>
+    <script src="js/financial.js?v=mpa"></script>
+    <script src="js/ui.js?v=mpa"></script>
+    <script src="js/pwa.js?v=mpa"></script>
+    <script src="js/sales.js?v=mpa"></script>
+    <script src="js/notifications.js?v=mpa"></script>
+    <script src="js/profile.js?v=mpa"></script>
+    <script src="js/whatsapp.js?v=mpa"></script>
+    <script src="js/gallery.js?v=mpa"></script>
+    <script src="js/chat.js?v=mpa"></script>
+    <script src="js/reports.js?v=mpa"></script>
+    
+
+    
+
+</body>
+
+</html>

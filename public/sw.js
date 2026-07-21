@@ -1,10 +1,40 @@
-const CACHE_NAME = 'gestao-fin-v16'; // Nome da versão do cache (deve ser atualizado para forçar refresh de arquivos)
+const CACHE_NAME = 'gestao-fin-v18'; // Nome da versão do cache (deve ser atualizado para forçar refresh de arquivos)
 const STATIC_ASSETS = [ // Lista de arquivos estáticos que serão salvos no cache para funcionamento offline
   '/', // Página inicial
-  '/index.html', // Estrutura HTML
+  '/login.html',
   '/style.css', // Estilos CSS
-  '/app.js', // Lógica da aplicação
   '/logo.png', // Logotipo do sistema
+  '/core/loader.js',
+  '/js/state.js',
+  '/js/utils.js',
+  '/js/core.js',
+  '/js/logs.js',
+  '/js/calendar.js',
+  '/js/events.js',
+  '/js/dashboard.js',
+  '/js/financial.js',
+  '/js/ui.js',
+  '/js/pwa.js',
+  '/js/sales.js',
+  '/js/notifications.js',
+  '/js/profile.js',
+  '/js/whatsapp.js',
+  '/js/gallery.js',
+  '/js/chat.js',
+  '/js/reports.js',
+  '/dashboard.html',
+  '/mensalidade.html',
+  '/events.html',
+  '/people.html',
+  '/reports.html',
+  '/authorizations.html',
+  '/sales.html',
+  '/logs.html',
+  '/messages.html',
+  '/gallery.html',
+  '/profile.html',
+  '/pwa-install.html',
+  '/outflows.html',
   'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap', // Fonte Google Fonts
   'https://cdn.jsdelivr.net/npm/chart.js' // Biblioteca de gráficos
 ];

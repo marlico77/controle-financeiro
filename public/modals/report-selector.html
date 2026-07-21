@@ -1,0 +1,53 @@
+<!-- Report Selector Modal -->
+<div id="report-selector-modal" class="modal">
+    <div class="glass-card modal-content" style="max-width: 500px;">
+        <span class="close-modal">&times;</span>
+        <h3 style="margin-bottom: 1.5rem; color: var(--accent-color);">O que você deseja gerar?</h3>
+
+        <div class="input-group">
+            <label for="report-type-select">Tipo de Relatório</label>
+            <select id="report-type-select">
+                <option value="general">Mensalidades Geral (Ano)</option>
+                <option value="member">Individual por Membro</option>
+                <option value="event">Específico de Evento</option>
+            </select>
+        </div>
+
+        <!-- Field for Member -->
+        <div id="report-field-member" class="input-group" style="display: none;">
+            <label for="report-member-select">Selecione o Membro</label>
+            <select id="report-member-select">
+                <!-- Populated by JS -->
+            </select>
+        </div>
+
+        <!-- Fields for Event -->
+        <div id="report-fields-event" style="display: none;">
+            <div class="input-group">
+                <label for="report-event-select">Selecione o Evento</label>
+                <select id="report-event-select">
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="report-event-filter">Agrupamento</label>
+                <select id="report-event-filter">
+                    <option value="all">Lista Completa de Participantes</option>
+                    <option value="unit">Resumo por Unidade</option>
+                    <option value="individual">Lista Individual</option>
+                </select>
+            </div>
+            <!-- Field for Event Participant (Shown when filter is individual) -->
+            <div id="report-field-event-member" class="input-group" style="display: none;">
+                <label for="report-event-member-select">Selecione o Participante</label>
+                <select id="report-event-member-select">
+                    <option value="">Selecione um Participante</option>
+                </select>
+            </div>
+        </div>
+
+        <button id="confirm-generate-report-btn" onclick="window.confirmGenerateReport()" class="btn-primary"
+            style="width: 100%; background: var(--accent-color); color: white; padding: 1rem; font-weight: 700; margin-top: 1rem;">Gerar
+            Agora</button>
+    </div>
+</div>

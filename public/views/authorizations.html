@@ -1,0 +1,52 @@
+<!-- Authorizations Page -->
+<div id="authorizations-page" class="tab-content" style="display: none;">
+    <div class="glass-card" style="padding: 2rem; max-width: 800px; margin: 0 auto;">
+        <div style="margin-bottom: 2rem; text-align: center;">
+            <h3 style="color: var(--accent-color); margin-bottom: 0.5rem; font-size: 1.8rem;">Gerar
+                Autorização de Saída</h3>
+            <p style="color: var(--text-dim);">Preencha os detalhes do evento para gerar o documento
+                padronizado.</p>
+        </div>
+        <form id="auth-form">
+            <div class="input-group">
+                <label for="auth-event-name">Nome do Evento</label>
+                <input type="text" id="auth-event-name" required
+                    placeholder="Ex: Saída ao museu Catavento">
+            </div>
+            <div class="grid-2">
+                <div class="input-group">
+                    <label for="auth-event-date">Data do Evento</label>
+                    <input type="date" id="auth-event-date" required>
+                </div>
+                <div class="input-group">
+                    <label for="auth-event-location">Local do Evento</label>
+                    <input type="text" id="auth-event-location" required
+                        placeholder="Ex: Sítio Avenida Mercúrio, Parque Dom Pedro-SP">
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="auth-departure-location">Local de Saída</label>
+                <input type="text" id="auth-departure-location" required
+                    placeholder="Ex: R. Pedro Alexandrino Soares, 557 - Jardim Boa Vista">
+            </div>
+            <div class="grid-2">
+                <div class="input-group">
+                    <label for="auth-departure-time">Horário de Saída</label>
+                    <input type="time" id="auth-departure-time" required>
+                </div>
+                <div class="input-group">
+                    <label for="auth-return-time">Horário de Retorno Previsto</label>
+                    <input type="time" id="auth-return-time" required>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="button" id="generate-auth-pdf"
+                    onclick="window.generateAuthDocument('pdf')" class="btn-primary"
+                    style="flex: 1; background: #e50914;">Gerar PDF</button>
+                <button type="button" id="generate-auth-doc"
+                    onclick="window.generateAuthDocument('doc')" class="btn-primary"
+                    style="flex: 1; background: black;">Gerar .DOC</button>
+            </div>
+        </form>
+    </div>
+</div>

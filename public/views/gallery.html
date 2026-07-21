@@ -1,0 +1,55 @@
+<!-- Gallery Page -->
+<div id="gallery-page" class="tab-content" style="display: none;">
+    <div class="grid-layout">
+        <!-- Gallery Registration Form -->
+        <div class="glass-card" style="padding: 1.5rem;">
+            <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; font-size: 1.3rem;">Cadastrar Álbum</h3>
+            <form id="gallery-form">
+                <input type="hidden" id="gallery-id">
+                <div class="input-group">
+                    <label for="gallery-title">Nome do Álbum</label>
+                    <input type="text" id="gallery-title" required placeholder="Ex: Campori UCB 2023">
+                </div>
+                <div class="input-group">
+                    <label for="gallery-cover-url">Link da Foto de Capa (URL)</label>
+                    <input type="text" id="gallery-cover-url" required placeholder="https://lh3.googleusercontent.com/...">
+                </div>
+                <div class="input-group">
+                    <label for="gallery-album-url">Link do Álbum Google Photos (URL)</label>
+                    <input type="text" id="gallery-album-url" placeholder="https://photos.google.com/...">
+                </div>
+                <div class="input-group">
+                    <label for="gallery-desc">Breve Descrição do Evento</label>
+                    <textarea id="gallery-desc" style="width: 100%; min-height: 80px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;" placeholder="Relembre os momentos inesquecíveis..."></textarea>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem; width: 100%;">
+                    <button type="submit" class="btn-primary" style="flex: 1; font-weight: 700; height: 46px; border-radius: 4px; font-size: 0.95rem; display: flex; align-items: center; justify-content: center;" id="gallery-submit-btn">Salvar Álbum</button>
+                    <button type="button" class="btn-secondary" style="flex: 1; display: none; height: 46px; border-radius: 4px; font-size: 0.95rem; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: #ffffff;" id="gallery-cancel-btn">Cancelar Edição</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Gallery History -->
+        <div class="glass-card table-container" style="padding: 0;">
+            <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                <h4 style="margin: 0;">Álbuns Publicados no Site</h4>
+            </div>
+            <div class="table-responsive">
+                <table id="gallery-table">
+                    <thead>
+                        <tr>
+                            <th>Capa</th>
+                            <th>Nome do Álbum</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gallery-body">
+                        <tr>
+                            <td colspan="3" style="text-align: center; padding: 2rem;">Carregando álbuns...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
