@@ -916,20 +916,21 @@ if (backToEventsBtn) {
         if (addEventBtn) addEventBtn.style.display = 'block';
         if (addPartBtn) addPartBtn.style.display = 'none';
     }
-};
+}
+}
 
 // Rastreador global para evitar que o Admin seja bombardeado com as mesmas notificações em uma mesma sessão
 const sessionShownModals = new Set();
 
-// Busca notificações pendentes no servidor
 async function fetchNotifications() {
     try {
         if (!state.token) return; // Não busca se não estiver logado
 
         // Busca as últimas 20 notificações para a lista de UI
-        state.notifications = await apiFetch('/api/notifications');
+        const resData = await apiFetch('/api/notifications');
+        state.notifications = Array.isArray(resData) ? resData : (resData.data || []);
         updateNotificationUI(); // Atualiza a interface visual do sino
-
+        
         // Verifica se há notificações manuais (alertas prioritários enviados por admin) não lidas
         const unreadManual = state.notifications.filter(n => !n.is_read && n.type === 'manual');
         if (unreadManual.length > 0) {
@@ -941,33 +942,52 @@ async function fetchNotifications() {
                 showNotificationModal(latest); // Abre um modal de destaque para o alerta
             }
         }
+        
+        // Se a API Web Badge estiver disponível, atualiza o ícone do PWA/Navegador
+        if ('setAppBadge' in navigator) {
+            const unread = state.notifications.filter(n => !n.is_read).length;
+            if (unread > 0) {
+                navigator.setAppBadge(unread).catch(console.error);
+            } else {
+                navigator.clearAppBadge().catch(console.error);
+            }
+        }
     } catch (err) {
         console.error('Error fetching notifications:', err);
     }
-};
+}
 
 // Atualiza o contador (badge) e a lista visual do menu de notificações
 const updateNotificationUI = () => {
     const list = document.getElementById('notification-list'); // Container da lista
-    const badge = document.getElementById('notification-badge'); // Contador vermelho
-    const unreadCount = state.notifications.filter(n => !n.is_read).length; // Conta não lidas
+    const badge = document.getElementById('notification-badge'); // Contador vermelho desktop
+    const mobileBadge = document.getElementById('mobile-notification-badge'); // Contador vermelho mobile
+    
+    const notifs = Array.isArray(state.notifications) ? state.notifications : [];
+    const unreadCount = notifs.filter(n => !n.is_read).length; // Conta não lidas
 
-    // Atualiza o numerozinho vermelho sobre o sino
+    // Atualiza o numerozinho vermelho sobre o sino (Desktop)
     if (badge) {
         badge.textContent = unreadCount;
         badge.style.display = unreadCount > 0 ? 'block' : 'none';
+    }
+    
+    // Atualiza o numerozinho vermelho sobre o sino (Mobile)
+    if (mobileBadge) {
+        mobileBadge.textContent = unreadCount;
+        mobileBadge.style.display = unreadCount > 0 ? 'block' : 'none';
     }
 
     if (!list) return;
 
     // Caso a lista esteja vazia
-    if (state.notifications.length === 0) {
-        list.innerHTML = '<div class="notification-empty">Não há novas notificações</div>';
+    if (notifs.length === 0) {
+        list.innerHTML = '<div class="notification-empty"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="#ddd" viewBox="0 0 16 16"><path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917z"/></svg><span>Não há novas notificações</span></div>';
         return;
     }
 
     // Gera o HTML para cada item da lista de notificações
-    list.innerHTML = state.notifications.map(n => `
+    list.innerHTML = notifs.map(n => `
         <div class="notification-item ${n.is_read ? '' : 'unread'} ${n.related_id ? 'clickable' : ''}" 
              ${n.related_id ? `data-related-id="${n.related_id}" data-related-type="${n.related_type}"` : ''}>
             <div class="notif-content-wrapper">
