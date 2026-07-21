@@ -1026,7 +1026,3 @@ const handleNotificationClick = async (id, type) => {
         showStatus('Erro ao carregar detalhes: ' + err.message, 'error');
     }
 };
-
-
-
-}
