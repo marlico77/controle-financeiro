@@ -1,0 +1,38 @@
+<!-- Logs Page -->
+<div id="logs-page" class="tab-content" style="display: none;">
+    <div class="glass-card table-container">
+        <div
+            style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <h4 style="margin: 0;">Logs de Auditoria Recentes</h4>
+            <button id="refresh-logs-btn" class="btn-text" style="color: var(--accent-color);">Atualizar
+                Logs</button>
+        </div>
+        <div class="log-filters"
+            style="padding: 1rem 1.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap; border-bottom: 1px solid var(--border-color);">
+            <button class="filter-btn active" data-filter="all">Todos</button>
+            <button class="filter-btn" data-filter="login">Logs de Login</button>
+            <button class="filter-btn" data-filter="info">Envio de Informação</button>
+            <button class="filter-btn" data-filter="network">Protocolos e Rede</button>
+        </div>
+        <div class="table-responsive">
+            <table id="logs-table">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Usuário</th>
+                        <th>Ação</th>
+                        <th>IP / Dispositivo</th>
+                        <th>Detalhes</th>
+                    </tr>
+                </thead>
+                <tbody id="logs-body">
+                    <!-- Populated by JS -->
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 2rem;">Carregando logs...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

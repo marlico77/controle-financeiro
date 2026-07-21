@@ -1,0 +1,56 @@
+<!-- Login Section -->
+<section id="login-section" class="login-screen-wrapper">
+    <div class="login-overlay"></div>
+    <div style="position: relative; z-index: 20; display: flex; flex-direction: column; width: 100%; max-width: 420px;">
+        <a href="https://www.tribodedavi.net.br" style="display: inline-flex; align-items: center; text-decoration: none; color: rgba(255, 255, 255, 0.8); font-size: 0.95rem; font-weight: 500; margin-bottom: 0.8rem; transition: color 0.2s; text-shadow: 0 1px 3px rgba(0,0,0,0.5); align-self: flex-start;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='rgba(255, 255, 255, 0.8)'">
+            &larr; Voltar para a página inicial
+        </a>
+        <div class="login-card-container animate-fade-in" style="width: 100%; box-sizing: border-box;">
+            <div class="login-header">
+            <img src="logo.png" alt="Financeiro Tribo" class="login-logo">
+            <h1>Bem-vindo à Tribo</h1>
+            <p class="login-subtitle">Clube de Desbravadores Tribo de Davi</p>
+        </div>
+        <form id="login-form" class="login-form-premium">
+            <div class="input-group premium-input-group">
+                <label for="username">Usuário</label>
+                <div class="input-icon-wrapper">
+                    <span class="input-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="18" height="18" fill="currentColor"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M320 312C386.3 312 440 258.3 440 192C440 125.7 386.3 72 320 72C253.7 72 200 125.7 200 192C200 258.3 253.7 312 320 312zM290.3 368C191.8 368 112 447.8 112 546.3C112 562.7 125.3 576 141.7 576L498.3 576C514.7 576 528 562.7 528 546.3C528 447.8 448.2 368 349.7 368L290.3 368z"/></svg>
+                    </span>
+                    <input type="text" id="username" required placeholder="Digite seu usuário">
+                </div>
+            </div>
+            <div class="input-group premium-input-group">
+                <label for="password">Senha</label>
+                <div class="input-icon-wrapper password-wrapper">
+                    <span class="input-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="18" height="18" fill="currentColor"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M256 160L256 224L384 224L384 160C384 124.7 355.3 96 320 96C284.7 96 256 124.7 256 160zM192 224L192 160C192 89.3 249.3 32 320 32C390.7 32 448 89.3 448 160L448 224C483.3 224 512 252.7 512 288L512 512C512 547.3 483.3 576 448 576L192 576C156.7 576 128 547.3 128 512L128 288C128 252.7 156.7 224 192 224z"/></svg>
+                    </span>
+                    <input type="password" id="password" required placeholder="Digite sua senha">
+                    <button type="button" class="toggle-password premium-toggle" data-target="password" tabindex="-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20"
+                            fill="currentColor">
+                            <path class="eye-open"
+                                d="M320 128C448 128 554.4 204.8 604.1 320C554.4 435.2 448 512 320 512C192 512 85.6 435.2 35.9 320C85.6 204.8 192 128 320 128ZM320 192C249.3 192 192 249.3 192 320C192 390.7 249.3 448 320 448C390.7 448 448 390.7 448 320C448 249.3 390.7 192 320 192ZM320 256C355.3 256 384 284.7 384 320C384 355.3 355.3 384 320 384C284.7 384 256 355.3 256 320C256 284.7 284.7 256 320 256Z" />
+                            <path class="eye-closed" style="display: none;"
+                                d="M632.9 572.7C641.8 584.5 639.4 601.2 627.5 610.1C615.7 618.9 598.9 616.6 590.1 604.7L494.3 476.9C445.8 501.9 387.6 512 320 512C192 512 85.6 435.2 35.9 320C57.4 270.2 92.5 228.3 135.3 198.1L47.1 80.5C38.2 68.7 40.5 52 52.4 43.1C64.2 34.3 80.9 36.6 89.8 48.5L167.3 151.7C211 133.5 262.5 128 320 128C448 128 554.4 204.8 604.1 320C624.2 366.7 628.7 413.4 618.7 455.5L632.9 572.7ZM320 192C288.7 192 260.1 203.2 237.9 221.7L411.3 452.9C433.9 419.6 448 376.6 448 320C448 249.3 390.7 192 320 192ZM320 256C341.1 256 359.8 266.1 371.7 282.1L289 171.7C278.4 186.2 272 203.8 272 223C272 249.5 288.2 272.2 311 281.3L320 256Z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="login-actions-premium">
+                <label class="premium-checkbox-label">
+                    <input type="checkbox" id="remember-me"> Lembre-me
+                </label>
+                <a href="#" id="forgot-password-link" class="premium-forgot-link">Perdeu sua senha?</a>
+            </div>
+
+            <button type="submit" class="btn-primary premium-submit-btn">Acessar Conta</button>
+            <div id="login-error" class="error-msg premium-error-msg"></div>
+            <div class="system-version premium-version">v2.0.0</div>
+        </form>
+        </div>
+    </div>
+</section>

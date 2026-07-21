@@ -1,0 +1,389 @@
+<!-- Messages Page (Admin Only) -->
+<div id="messages-page" class="tab-content" style="display: none;">
+    <!-- Messages Submenu Tabs -->
+    <div class="messages-submenu" style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+        <button id="tab-system-messages" class="btn-text active" style="font-weight: 700; color: var(--accent-color); border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; background: transparent; border-top: none; border-left: none; border-right: none; cursor: pointer;">Avisos do Sistema</button>
+        <button id="tab-whatsapp-messages" class="btn-text" style="font-weight: 700; color: var(--text-dim); padding-bottom: 0.5rem; background: transparent; border: none; cursor: pointer;">WhatsApp (W-API)</button>
+    </div>
+
+    <!-- System Messages Container -->
+    <div id="system-messages-container">
+        <div class="glass-card" style="max-width: 600px; margin: 0 auto; padding: 2rem;">
+            <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; text-align: center;">Enviar Novo Aviso</h3>
+            <form id="send-msg-form">
+                <div class="input-group">
+                    <label>Enviar para:</label>
+                    <div class="search-container" style="position: relative; margin-bottom: 0.8rem;">
+                        <input type="text" id="msg-search" placeholder="Pesquisar membro..." 
+                               style="width: 100%; padding: 10px 15px 10px 40px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.02);">
+                        <span class="search-icon" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); display: flex; align-items: center;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                            </svg>
+                        </span>
+                    </div>
+                    <div id="msg-target-list" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #ffffff; position: relative;">
+                        <div class="checkbox-item" style="display: flex; align-items: center; gap: 10px; padding: 12px; border-bottom: 2px solid var(--border-color); position: sticky; top: 0; background: #ffffff; z-index: 10;">
+                            <input type="checkbox" id="msg-select-all" style="width: 18px; height: 18px; cursor: pointer;">
+                            <label for="msg-select-all" style="font-weight: 800; margin: 0; cursor: pointer; color: var(--accent-color);">Todos os Membros</label>
+                        </div>
+                        <div id="members-checkbox-container" style="padding: 0 5px;">
+                            <!-- Members will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="msg-title">Título do Aviso</label>
+                    <input type="text" id="msg-title" required placeholder="Ex: Lembrete de Reunião">
+                </div>
+                <div class="input-group">
+                    <label for="msg-content">Conteúdo da Mensagem</label>
+                    <textarea id="msg-content" required placeholder="Digite sua mensagem aqui..." style="width: 100%; min-height: 100px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;"></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; font-weight: 700;">Enviar Mensagem</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- + Messages Container -->
+    <div id="whatsapp-messages-container" style="display: none;">
+        <!-- WhatsApp Submenu Navigation -->
+        <div class="whatsapp-submenu" style="display: flex; gap: 1.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+            <button id="wa-tab-schedule" class="btn-text active" style="font-weight: 700; color: var(--accent-color); border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; background: transparent; border-top: none; border-left: none; border-right: none; cursor: pointer;">Agendar Mensagens</button>
+            <button id="wa-tab-send" class="btn-text" style="font-weight: 700; color: var(--text-dim); padding-bottom: 0.5rem; background: transparent; border: none; cursor: pointer;">Enviar Mensagens</button>
+            <button id="wa-tab-panel" class="btn-text" style="font-weight: 700; color: var(--text-dim); padding-bottom: 0.5rem; background: transparent; border: none; cursor: pointer;">Painel de Mensagens</button>
+        </div>
+
+        <!-- Sub-tab Content: Agendar Mensagens -->
+        <div id="wa-content-schedule" style="display: block;">
+            <div id="wa-panels-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; align-items: start;">
+                <!-- Panel 1: Configuração do W-API (Admin Master Only) -->
+                <div class="glass-card" id="wa-config-panel" style="padding: 2rem; display: none;">
+                    <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; font-size: 1.3rem;">Configurações W-API</h3>
+                    <form id="whatsapp-config-form">
+                        <div class="input-group">
+                            <label for="wa-base-url">URL da API (Base URL)</label>
+                            <input type="url" id="wa-base-url" required placeholder="https://api.seudominio.com" style="width: 100%;">
+                        </div>
+                        <div class="input-group">
+                            <label for="wa-instance-id">ID da Instância</label>
+                            <input type="text" id="wa-instance-id" required placeholder="Ex: instancia-01" style="width: 100%;">
+                        </div>
+                        <div class="input-group">
+                            <label for="wa-api-key">Chave de API (Token)</label>
+                            <div class="password-wrapper" style="position: relative; display: flex; align-items: center;">
+                                <input type="password" id="wa-api-key" required placeholder="sk-live-..." style="width: 100%; padding-right: 40px;">
+                                <button type="button" class="toggle-password" data-target="wa-api-key" tabindex="-1" style="position: absolute; right: 10px; background: transparent; border: none; cursor: pointer; color: var(--text-dim); display: flex; align-items: center;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="20" height="20" fill="currentColor">
+                                        <path class="eye-open" d="M320 128C448 128 554.4 204.8 604.1 320C554.4 435.2 448 512 320 512C192 512 85.6 435.2 35.9 320C85.6 204.8 192 128 320 128ZM320 192C249.3 192 192 249.3 192 320C192 390.7 249.3 448 320 448C390.7 448 448 390.7 448 320C448 249.3 390.7 192 320 192ZM320 256C355.3 256 384 284.7 384 320C384 355.3 355.3 384 320 384C284.7 384 256 355.3 256 320C256 284.7 284.7 256 320 256Z" />
+                                        <path class="eye-closed" style="display: none;" d="M632.9 572.7C641.8 584.5 639.4 601.2 627.5 610.1C615.7 618.9 598.9 616.6 590.1 604.7L494.3 476.9C445.8 501.9 387.6 512 320 512C192 512 85.6 435.2 35.9 320C57.4 270.2 92.5 228.3 135.3 198.1L47.1 80.5C38.2 68.7 40.5 52 52.4 43.1C64.2 34.3 80.9 36.6 89.8 48.5L167.3 151.7C211 133.5 262.5 128 320 128C448 128 554.4 204.8 604.1 320C624.2 366.7 628.7 413.4 618.7 455.5L632.9 572.7ZM320 192C288.7 192 260.1 203.2 237.9 221.7L411.3 452.9C433.9 419.6 448 376.6 448 320C448 249.3 390.7 192 320 192ZM320 256C341.1 256 359.8 266.1 371.7 282.1L289 171.7C278.4 186.2 272 203.8 272 223C272 249.5 288.2 272.2 311 281.3L320 256Z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="input-group" style="display: flex; align-items: center; gap: 10px; margin-top: 1.5rem;">
+                            <input type="checkbox" id="wa-enabled" style="width: 18px; height: 18px; cursor: pointer; margin: 0;">
+                            <label for="wa-enabled" style="margin: 0; cursor: pointer; font-weight: 700;">Ativar Lembretes Automáticos</label>
+                        </div>
+                        <div class="input-group" style="margin-top: 1.5rem;">
+                            <label for="wa-template">Modelo de Lembrete Automático</label>
+                            <textarea id="wa-template" rows="5" required style="width: 100%; min-height: 100px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem;" placeholder="Ex: Olá {nome}, a mensalidade do mês de {mensalidade} está pendente..."></textarea>
+                            <small style="color: var(--text-dim); display: block; margin-top: 0.3rem; font-size: 0.8rem;">Variáveis: <code>{nome}</code>, <code>{mensalidade}</code></small>
+                        </div>
+                        <button type="submit" class="btn-primary" style="width: 100%; font-weight: 700; margin-top: 1.5rem; height: 46px;">Salvar Configurações</button>
+                    </form>
+                </div>
+
+                <!-- Panel 2: Agendar Lembrete Automático (Admin & Secretary) -->
+                <div class="glass-card" id="wa-schedule-panel" style="padding: 2rem; display: none;">
+                    <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; font-size: 1.3rem;">Agendar Lembrete Automático</h3>
+                    <form id="whatsapp-schedule-form">
+                        <div class="input-group">
+                            <label for="wa-sch-target-type">Enviar para:</label>
+                            <select id="wa-sch-target-type" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #ffffff;">
+                                <option value="all">Todos os Membros</option>
+                                <option value="unit">Por Unidade</option>
+                                <option value="selected">Membros Selecionados</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Dynamic Container for Unit Selection -->
+                        <div class="input-group" id="wa-sch-unit-container" style="display: none; margin-top: 1rem;">
+                            <label for="wa-sch-unit-name">Nome da Unidade</label>
+                            <input type="text" id="wa-sch-unit-name" placeholder="Ex: Unidade Norte" style="width: 100%;">
+                        </div>
+
+                        <!-- Dynamic Container for Member Selection -->
+                        <div class="input-group" id="wa-sch-members-container" style="display: none; margin-top: 1rem;">
+                            <label>Selecione os Membros:</label>
+                            <div class="search-container" style="position: relative; margin-bottom: 0.8rem;">
+                                <input type="text" id="wa-sch-search" placeholder="Pesquisar membro..." 
+                                       style="width: 100%; padding: 10px 15px 10px 40px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.02);">
+                                <span class="search-icon" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); display: flex; align-items: center;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #ffffff;">
+                                <div id="wa-sch-checkbox-container" style="padding: 5px;">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="input-group" style="margin-top: 1.5rem;">
+                            <label for="wa-sch-message">Mensagem do Lembrete</label>
+                            <textarea id="wa-sch-message" rows="4" required style="width: 100%; min-height: 80px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem;" placeholder="Digite a mensagem do lembrete..."></textarea>
+                            <small style="color: var(--text-dim); display: block; margin-top: 0.3rem; font-size: 0.8rem;">Variável disponível: <code>{nome}</code></small>
+                        </div>
+                        <div style="display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
+                            <div class="input-group" style="flex: 1; min-width: 140px; margin: 0;">
+                                <label for="wa-sch-date">Data de Envio</label>
+                                <input type="date" id="wa-sch-date" required>
+                            </div>
+                            <div class="input-group" style="flex: 1; min-width: 100px; margin: 0;">
+                                <label for="wa-sch-time">Horário</label>
+                                <input type="time" id="wa-sch-time" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary" style="width: 100%; font-weight: 700; margin-top: 1.5rem; height: 46px;">Agendar Lembrete</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Panel 4: Lembretes Agendados Table (Admin & Secretary) -->
+            <div class="glass-card table-container" id="wa-schedule-list-panel" style="margin-top: 2rem; padding: 0; display: none;">
+                <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                    <h4 style="margin: 0; font-size: 1.1rem; color: var(--accent-color);">Lembretes Agendados</h4>
+                </div>
+                <div class="table-responsive">
+                    <table class="table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border-color); text-align: left; background: rgba(0,0,0,0.02);">
+                                <th style="padding: 12px 15px; font-weight: 700;">Data/Hora Agendamento</th>
+                                <th style="padding: 12px 15px; font-weight: 700;">Destino</th>
+                                <th style="padding: 12px 15px; font-weight: 700;">Mensagem</th>
+                                <th style="padding: 12px 15px; font-weight: 700;">Status</th>
+                                <th style="padding: 12px 15px; font-weight: 700; text-align: center;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wa-schedule-list-body">
+                            <!-- Populated by JS -->
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-dim);">Nenhum agendamento encontrado.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sub-tab Content: Enviar Mensagens (Painel de Cobranças) -->
+        <div id="wa-content-send" style="display: none;">
+
+            <div class="grid-2" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; align-items: start;">
+                
+                <!-- Coluna da Esquerda: Configurações, Mensagem e Preview -->
+                <div class="glass-card" style="padding: 2rem;">
+                    <h3 style="color: var(--accent-color); margin-bottom: 1.5rem; font-size: 1.3rem; display: flex; align-items: center; gap: 8px; margin-top: 0;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M12.136.326A1.5 1.5 0 0 1 14 1.78V3h.5A1.5 1.5 0 0 1 16 4.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 13.5v-9A1.5 1.5 0 0 1 1.5 3H2V1.78a1.5 1.5 0 0 1 1.864-1.454zM3 3h9v-.22a.5.5 0 0 0-.118-.326L11.5 2H4.5l-.382.454A.5.5 0 0 0 4 2.78zm11 1.5H1.5v9h13z"/>
+                        </svg>
+                        Parâmetros da Cobrança
+                    </h3>
+                    <form id="whatsapp-billing-form">
+                        <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="input-group" style="margin: 0;">
+                                <label for="wa-bill-month">Mês de Referência</label>
+                                <select id="wa-bill-month" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: #ffffff;">
+                                    <option value="1">Janeiro</option>
+                                    <option value="2">Fevereiro</option>
+                                    <option value="3">Março</option>
+                                    <option value="4">Abril</option>
+                                    <option value="5">Maio</option>
+                                    <option value="6">Junho</option>
+                                    <option value="7">Julho</option>
+                                    <option value="8">Agosto</option>
+                                    <option value="9">Setembro</option>
+                                    <option value="10">Outubro</option>
+                                    <option value="11">Novembro</option>
+                                    <option value="12">Dezembro</option>
+                                </select>
+                            </div>
+                            <div class="input-group" style="margin: 0;">
+                                <label for="wa-bill-value">Valor (R$)</label>
+                                <input type="number" id="wa-bill-value" value="20.00" step="0.01" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                            </div>
+                        </div>
+
+                        <div class="input-group" style="margin-bottom: 1rem;">
+                            <label for="wa-bill-pix">Chave PIX para Pagamento</label>
+                            <input type="text" id="wa-bill-pix" value="jdboavista.ap@adventistas.org" placeholder="Chave PIX..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                        </div>
+
+                        <div class="input-group" style="margin-bottom: 1rem;">
+                            <label for="wa-bill-template">Modelo de Mensagem</label>
+                            <textarea id="wa-bill-template" rows="5" required style="width: 100%; min-height: 100px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; resize: vertical;"></textarea>
+                            <small style="color: var(--text-dim); display: block; margin-top: 0.3rem; font-size: 0.8rem;">Tags: <code>{nome}</code>, <code>{mes}</code>, <code>{valor}</code>, <code>{pix}</code></small>
+                        </div>
+
+                        <!-- Preview Box -->
+                        <div class="input-group" style="margin-bottom: 1.5rem;">
+                            <label>Pré-visualização (Primeiro Destinatário)</label>
+                            <div id="wa-bill-preview" style="background: #efeae2; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; font-size: 0.9rem; line-height: 1.4; color: #111b21; white-space: pre-wrap; font-family: sans-serif; position: relative;">
+                                <!-- Preview content here -->
+                            </div>
+                        </div>
+
+                        <!-- Agendamento -->
+                        <div style="border-top: 1px solid var(--border-color); padding-top: 1.2rem; margin-top: 1rem;">
+                            <h4 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--accent-color);">Agendar Envio (Opcional)</h4>
+                            <div class="grid-2" style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div class="input-group" style="margin: 0;">
+                                    <label for="wa-bill-date">Data de Envio</label>
+                                    <input type="date" id="wa-bill-date" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                </div>
+                                <div class="input-group" style="margin: 0;">
+                                    <label for="wa-bill-time">Horário</label>
+                                    <input type="time" id="wa-bill-time" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                </div>
+                            </div>
+                            <small style="color: var(--text-dim); display: block; margin-bottom: 1rem; font-size: 0.8rem;">Deixe a data e hora em branco para realizar o envio imediatamente em segundo plano.</small>
+                        </div>
+
+                        <button type="submit" class="btn-primary" style="width: 100%; font-weight: 700; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178Z"/>
+                            </svg>
+                            <span id="wa-bill-submit-text">Disparar Cobranças</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Coluna da Direita: Lista de Inadimplentes -->
+                <div class="glass-card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+                    <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.01);">
+                        <div>
+                            <h4 style="margin: 0; font-size: 1.1rem; color: var(--accent-color);">Inadimplentes da Mensalidade</h4>
+                            <p style="margin: 3px 0 0 0; font-size: 0.8rem; color: var(--text-dim);" id="wa-bill-count-text">Buscando membros em débito...</p>
+                        </div>
+                        <div>
+                            <input type="text" id="wa-bill-search" placeholder="Pesquisar..." style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem; width: 150px;">
+                        </div>
+                    </div>
+                    <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
+                        <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--border-color); text-align: left; position: sticky; top: 0; z-index: 1;">
+                                    <th style="padding: 12px 15px; width: 45px; text-align: center; background: var(--card-bg, #ffffff);">
+                                        <input type="checkbox" id="wa-bill-select-all" style="width: 18px; height: 18px; cursor: pointer;">
+                                    </th>
+                                    <th style="padding: 12px 15px; font-weight: 700; background: var(--card-bg, #ffffff);">Nome</th>
+                                    <th style="padding: 12px 15px; font-weight: 700; background: var(--card-bg, #ffffff);">Unidade</th>
+                                    <th style="padding: 12px 15px; font-weight: 700; background: var(--card-bg, #ffffff);">Telefone</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wa-bill-members-body">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Sub-tab Content: Painel de Mensagens -->
+        <div id="wa-content-panel" style="display: none;">
+            <div class="whatsapp-web-chat" style="display: flex; height: 680px; background: #eae6df; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                
+                <!-- Painel Esquerdo: Lista de Conversas (35% largura) -->
+                <div class="chat-sidebar" style="width: 35%; min-width: 290px; background: #ffffff; display: flex; flex-direction: column; border-right: 1px solid var(--border-color);">
+                    <!-- Header da lista (Avatar do usuário logado e status de conexão) -->
+                    <div class="sidebar-header" style="padding: 12px 15px; background: #f0f2f5; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.06);">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--accent-color); color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; text-transform: uppercase;" id="wa-my-avatar-text">
+                                U
+                            </div>
+                            <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-color);" id="wa-my-username">Chat</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="wa-conn-text" style="font-size: 0.75rem; color: var(--text-dim);">Conectando...</span>
+                            <div id="wa-connection-status" style="width: 10px; height: 10px; border-radius: 50%; background: #ffc107;" title="Conectando à ZAP API"></div>
+                        </div>
+                    </div>
+                    <!-- Busca de Contatos -->
+                    <div class="sidebar-search" style="padding: 10px; background: #ffffff; border-bottom: 1px solid rgba(0,0,0,0.05);">
+                        <input type="text" id="wa-chat-search" placeholder="Pesquisar conversa..." style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.85rem; background: #f0f2f5; outline: none; transition: border-color 0.2s;">
+                    </div>
+                    <!-- Lista Scrollable de Conversas -->
+                    <div id="wa-chat-list" style="flex-grow: 1; overflow-y: auto; background: #ffffff;">
+                        <!-- Renderizado dinamicamente pelo JS -->
+                        <p style="text-align: center; padding: 2rem; color: var(--text-dim); font-size: 0.9rem;">Carregando conversas...</p>
+                    </div>
+                </div>
+
+                <!-- Painel Direito: Janela de Chat (65% largura) -->
+                <div class="chat-window" style="width: 65%; display: flex; flex-direction: column; background: #efeae2; position: relative;">
+                    
+                    <!-- Tela de Boas-vindas (Quando nenhuma conversa está selecionada) -->
+                    <div id="wa-chat-welcome" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: #f8f9fa; text-align: center; padding: 2rem; z-index: 10; position: absolute; top: 0; left: 0; width: 100%;">
+                        <div style="background: rgba(var(--accent-rgb, 219, 68, 85), 0.08); width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="var(--accent-color)" viewBox="0 0 16 16">
+                                <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/>
+                            </svg>
+                        </div>
+                        <h3 style="color: var(--accent-color); font-size: 1.5rem; margin-bottom: 0.5rem;">WhatsApp Integrado</h3>
+                        <p style="color: var(--text-dim); max-width: 380px; font-size: 0.9rem; line-height: 1.4;">Selecione uma conversa na barra lateral para visualizar as mensagens e responder instantaneamente em tempo real.</p>
+                    </div>
+
+                    <!-- Tela de Conversa Ativa -->
+                    <div id="wa-chat-active" style="display: flex; flex-direction: column; height: 100%; width: 100%;">
+                        <!-- Header do Chat Ativo -->
+                        <div class="chat-header" style="padding: 10px 20px; background: #f0f2f5; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); z-index: 5;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <button id="wa-chat-back" style="background: transparent; border: none; cursor: pointer; color: var(--text-color); display: none; align-items: center; padding: 5px; margin-right: 5px;" title="Voltar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                                    </svg>
+                                </button>
+                                <img id="wa-active-avatar" src="https://via.placeholder.com/40" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-color);">
+                                <div>
+                                    <h4 id="wa-active-name" style="margin: 0; font-size: 0.95rem; color: var(--text-color); font-weight: 700;">Nome do Contato</h4>
+                                    <span id="wa-active-status" style="font-size: 0.75rem; color: var(--text-dim);">conectado</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Corpo das Mensagens (Scrollable) -->
+                        <div id="wa-chat-messages" style="flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #efeae2;">
+                            <!-- Balões de mensagem inseridos dinamicamente -->
+                        </div>
+                        
+                        <!-- Barra de Input e Envio -->
+                        <div class="chat-footer" style="padding: 12px 20px; background: #f0f2f5; display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--border-color); z-index: 5;">
+                            <!-- Envio de Anexo/Mídia -->
+                            <button id="wa-btn-attach" style="background: transparent; border: none; cursor: pointer; color: var(--text-dim); padding: 5px; display: flex; align-items: center; transition: color 0.2s;" title="Enviar Mídia">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0V3Z"/>
+                                </svg>
+                            </button>
+                            <input type="file" id="wa-file-input" style="display: none;">
+                            
+                            <!-- Input de Texto -->
+                            <input type="text" id="wa-message-input" placeholder="Digite uma mensagem..." style="flex-grow: 1; padding: 10px 18px; border-radius: 20px; border: 1px solid var(--border-color); font-size: 0.9rem; background: #ffffff; outline: none; transition: border-color 0.2s;">
+                            
+                            <!-- Botão Enviar -->
+                            <button id="wa-btn-send" class="btn-primary" style="border-radius: 50%; width: 40px; height: 40px; min-height: auto; padding: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 640 640" style="transform: rotate(45deg);">
+                                    <path d="M568.4 37.7C578.2 34.2 589 36.7 596.4 44C603.8 51.3 606.2 62.2 602.7 72L424.7 568.9C419.7 582.8 406.6 592 391.9 592C377.7 592 364.9 583.4 359.6 570.3L295.4 412.3C290.9 401.3 292.9 388.7 300.6 379.7L395.1 267.3C400.2 261.2 399.8 252.3 394.2 246.7C388.6 241.1 379.6 240.7 373.6 245.8L261.2 340.1C252.1 347.7 239.6 349.7 228.6 345.3L70.1 280.8C57 275.5 48.4 262.7 48.4 248.5C48.4 233.8 57.6 220.7 71.5 215.7L568.4 37.7z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,42 @@
+<!-- Profile Page -->
+<div id="profile-page" class="tab-content" style="display: none;">
+    <div class="glass-card" style="padding: 2rem; max-width: 600px; margin: 0 auto;">
+        <h3 style="color: var(--accent-color); margin-bottom: 2rem; text-align: center;">Meu Perfil</h3>
+        <form id="profile-form">
+            <div class="input-group">
+                <label for="profile-name">Nome Completo</label>
+                <input type="text" id="profile-name" required placeholder="Seu nome completo">
+            </div>
+            <div class="grid-2">
+                <div class="input-group">
+                    <label for="profile-responsible">Responsável</label>
+                    <input type="text" id="profile-responsible" placeholder="Nome do responsável">
+                </div>
+                <div class="input-group">
+                    <label for="profile-cpf">CPF</label>
+                    <input type="text" id="profile-cpf" placeholder="000.000.000-00">
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="input-group">
+                    <label for="profile-unit">Unidade</label>
+                    <input type="text" id="profile-unit" readonly class="readonly-field" style="background: rgba(0,0,0,0.05); cursor: not-allowed;">
+                </div>
+                <div class="input-group">
+                    <label for="profile-birth-date">Data de Nascimento</label>
+                    <input type="date" id="profile-birth-date" required>
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="profile-age">Idade</label>
+                <input type="text" id="profile-age" readonly class="readonly-field" style="background: rgba(0,0,0,0.05); cursor: not-allowed;">
+            </div>
+            <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem; font-weight: 700;">Salvar Alterações</button>
+            
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); text-align: center;">
+                <h4 style="margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-dim);">Privacidade e Dados</h4>
+                <button type="button" class="btn-text" onclick="if(document.getElementById('lgpd-modal')) { document.getElementById('accept-lgpd-btn').style.display='none'; document.getElementById('lgpd-close-btn').style.display='block'; document.getElementById('lgpd-modal').style.display='flex'; }" style="color: var(--accent-color); font-size: 0.9rem;">Consultar Termos de Uso e LGPD</button>
+            </div>
+        </form>
+    </div>
+</div>

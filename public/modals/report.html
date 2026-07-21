@@ -1,0 +1,30 @@
+<div id="report-modal" class="modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 20000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div class="modal-content glass-card"
+        style="max-width: 1000px; width: 90%; max-height: 95vh; overflow-y: auto; background: var(--bg-color); padding: 2rem;">
+        <span class="close-modal" style="top: 1rem; right: 1.5rem;">&times;</span>
+        <div id="report-modal-header"
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 2rem; border-bottom: 1px solid var(--border-color); padding: 0 0.5rem 1.5rem 0.5rem;">
+            <h3 style="color: var(--accent-color); margin: 0; font-size: 1.6rem; font-weight: 700;">Visualização do
+                Relatório</h3>
+            <div id="calendar-export-filters" style="display: none; gap: 0.8rem; align-items: center;">
+                <select id="calendar-export-period" style="padding: 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color);">
+                    <option value="1">1º Semestre</option>
+                    <option value="2">2º Semestre</option>
+                    <option value="all">Ano Completo</option>
+                </select>
+                <select id="calendar-export-year" style="padding: 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color);">
+                    <option value="2026">2026</option>
+                    <option value="2027">2027</option>
+                </select>
+            </div>
+            <button onclick="window.print()" class="btn-primary"
+                style="width: auto; background: black; color: white; padding: 0.7rem 2rem; font-size: 1rem; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">Imprimir
+                / Salvar PDF</button>
+        </div>
+        <div id="report-printable" class="report-canvas"
+            style="background: white; padding: 4rem; border-radius: 4px; border: 1px solid #ddd; color: black; box-shadow: 0 10px 30px rgba(0,0,0,0.1); min-height: 1000px;">
+            <!-- Generated Report HTML -->
+        </div>
+    </div>
+</div>

@@ -17,7 +17,7 @@
 /* Removido bloqueio de cor do menu de instalação */
 
 #menu-install-btn {
-    display: none !important; /* Hidden on Desktop */
+     /* Hidden on Desktop */
 }
 
 * {
@@ -117,7 +117,7 @@ body {
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
-    display: none !important;
+    
 }
 
 /* --- PREMIUM LOGIN REDESIGN (SYSTEM COLORS) --- */
@@ -680,7 +680,7 @@ body {
     font-size: 0.95rem;
     text-transform: uppercase; /* Mantido em maiúsculo conforme solicitado */
     letter-spacing: 1px;
-    color: #fff;
+    color: #eee;
     font-weight: 700;
 }
 
@@ -723,8 +723,8 @@ body {
 
 
 .nav-links li:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: #fff;
+    background: rgba(229, 9, 20, 0.15);
+    color: var(--accent-color);
 }
 
 .nav-links li.active {
@@ -1053,7 +1053,7 @@ tfoot td {
     }
 
     .sidebar-header, .sidebar .nav-footer, .sidebar > div:has(#sidebar-install-btn), #sidebar-toggle {
-        display: none !important;
+        
     }
 
     #mobile-install-btn {
@@ -1175,7 +1175,7 @@ tfoot td {
 
     #mobile-logout-btn {
         background: transparent;
-        color: #fff;
+        color: var(--text-color);
         padding: 0.4rem 0.8rem;
         border-radius: 4px;
         font-size: 0.85rem;
@@ -1796,47 +1796,43 @@ tfoot td {
 }
 
 @media print { 
-    @page { margin: 0; size: auto; } /* Remove as margens da página para ocultar cabeçalho e rodapé do navegador */
+    @page { margin: 0; size: auto; }
     body, html { height: auto !important; min-height: 0 !important; background: white !important; margin: 0 !important; padding: 0 !important; }
-    #app { display: none !important; }
-    body * { visibility: hidden !important; } 
-    #report-modal, #report-modal * { visibility: visible !important; } 
-    #report-modal-header, #report-modal-header * { display: none !important; visibility: hidden !important; }
-    #report-modal { 
-        position: relative !important; 
-        left: 0 !important; 
-        top: 0 !important; 
-        width: 100% !important; 
-        height: auto !important; 
-        background: white !important; 
-        display: block !important; 
-        overflow: visible !important; 
-        margin: 0 !important; 
-        padding: 0 !important; 
-    } 
-    .modal-content { 
-        position: static !important; 
-        width: 100% !important; 
-        max-width: none !important; 
-        max-height: none !important; 
-        height: auto !important; 
-        background: white !important; 
-        box-shadow: none !important; 
-        padding: 0 !important; 
-        margin: 0 !important; 
-        overflow: visible !important; 
-    } 
-    #report-printable { 
-        border: none !important; 
-        padding: 2cm !important; /* Adiciona espaçamento interno para não colar nas bordas do papel */
-        margin: 0 !important; 
-        width: 100% !important; 
-        height: auto !important; 
+    
+    /* Esconde TODOS os elementos da página (ex: #app, outros modais) para que NÃO OCUUPEM ESPAÇO em branco */
+    /* Esconde os painéis laterais e overlays que não devem aparecer na impressão */
+    #splash-screen, #view-login-container, .sidebar, .mobile-header, #toast-container { display: none !important; }
+    
+    /* Esconde TODO O CONTEÚDO principal da página (formulários, top-bar, etc) e todos os outros modais, EXCETO o modal de relatório! */
+    .content > *:not(#report-modal) { display: none !important; }
+    
+    /* Exibe APENAS o modal de relatório/impressão */
+    #report-modal { display: block !important; }
+    
+    /* Esconde elementos indesejados da impressão */
+    #report-modal-header, .close-modal, button, .btn-primary { display: none !important; }
+    
+    /* Remove todos os posicionamentos absolutos e limites de tamanho */
+    #report-modal, #report-modal .modal-content, #report-printable {
+        position: static !important;
+        width: 100% !important;
+        height: auto !important;
         min-height: 0 !important;
-        overflow: visible !important; 
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+    
+    /* Adiciona margem segura ao redor do documento impresso */
+    #report-printable {
+        padding: 2cm !important;
         box-sizing: border-box !important;
-    } 
-    button, .close-modal, .btn-primary { display: none !important; } 
+    }
+    
     table { page-break-inside: auto; } 
     tr { page-break-inside: avoid; page-break-after: auto; } 
 }
@@ -2116,7 +2112,7 @@ tfoot td {
     width: 18px;
     left: 3px;
     bottom: 3px;
-    background-color: #fff;
+    background-color: var(--text-color);
     transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 50%;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
@@ -2408,7 +2404,7 @@ input:checked + .slider:before {
 
 @media print {
     #calendar-export-filters {
-        display: none !important;
+        
     }
     .calendar-print-canvas {
         border: 2px solid #000 !important;
@@ -2473,12 +2469,12 @@ input:checked + .slider:before {
     .whatsapp-web-chat .chat-window {
         width: 100% !important;
         min-width: 100% !important;
-        display: none !important;
+        
     }
     
     /* When active chat is shown */
     .whatsapp-web-chat.show-chat .chat-sidebar {
-        display: none !important;
+        
     }
     
     .whatsapp-web-chat.show-chat .chat-window {
@@ -2487,7 +2483,7 @@ input:checked + .slider:before {
     
     /* Hide welcome screen on mobile to focus on sidebar */
     #wa-chat-welcome {
-        display: none !important;
+        
     }
     
     /* Back button display */
@@ -2511,3 +2507,110 @@ input:checked + .slider:before {
 }
 
 
+
+/* Custom scrollbar for sidebar */
+.sidebar {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+.sidebar::-webkit-scrollbar-track {
+    background: #111;
+}
+.sidebar::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+
+/* DinDin Style Modals */
+.dindin-modal {
+    padding: 0 !important;
+    background: var(--card-bg) !important;
+    max-width: 420px !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5) !important;
+    text-align: left !important;
+}
+
+.dindin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dindin-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.dindin-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-color);
+    width: 20px;
+    height: 20px;
+}
+.dindin-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.dindin-title-wrapper h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.dindin-close {
+    color: var(--text-dim);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s;
+}
+.dindin-close:hover {
+    color: var(--text-color);
+}
+
+.dindin-body {
+    padding: 1.5rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-dim);
+}
+
+.dindin-footer {
+    padding: 0 1.5rem 1.5rem 1.5rem;
+}
+
+.dindin-footer .btn-primary {
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.dindin-footer .btn-secondary {
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    background: rgba(255,255,255,0.05) !important;
+    color: var(--text-color) !important;
+}
+.dindin-footer .btn-secondary:hover {
+    background: rgba(255,255,255,0.1) !important;
+}

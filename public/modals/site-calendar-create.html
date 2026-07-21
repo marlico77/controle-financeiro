@@ -1,0 +1,32 @@
+<!-- Site Calendar Modal (Admin/Secretário) -->
+<div id="site-calendar-create-modal" class="modal">
+    <div class="glass-card modal-content">
+        <span class="close-modal">&times;</span>
+        <h3>Nova Data de Saída / Atividade (Site)</h3>
+        <form id="site-calendar-form">
+            <div class="input-group">
+                <label for="sc-name">Nome da Saída / Atividade</label>
+                <input type="text" id="sc-name" required placeholder="Ex: Caminhada Noturna / Acampamento">
+            </div>
+            <div class="input-group">
+                <label for="sc-date">Data</label>
+                <input type="date" id="sc-date" required>
+            </div>
+            <div class="input-group">
+                <label for="sc-desc">Descrição / Detalhes</label>
+                <textarea id="sc-desc"
+                    style="width: 100%; min-height: 80px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;"
+                    placeholder="Descreva a atividade para o público do site..."></textarea>
+            </div>
+            <div class="input-group">
+                <label for="sc-local">Local</label>
+                <input type="text" id="sc-local" placeholder="Ex: CAGV / Jd. Boa Vista">
+            </div>
+            <div class="input-group">
+                <label for="sc-responsible">Responsável</label>
+                <input type="text" id="sc-responsible" placeholder="Ex: Diretoria / Associação">
+            </div>
+            <button type="submit" class="btn-primary" style="margin-top: 1.5rem; width: 100%;">Cadastrar no Site</button>
+        </form>
+    </div>
+</div>

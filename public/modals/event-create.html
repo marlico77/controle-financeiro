@@ -1,0 +1,52 @@
+<!-- Event Modal (Admin Only) -->
+<div id="event-create-modal" class="modal">
+    <div class="glass-card modal-content">
+        <span class="close-modal">&times;</span>
+        <h3>Novo Evento</h3>
+        <form id="event-form">
+            <div class="input-group">
+                <label for="event-name">Nome do Evento</label>
+                <input type="text" id="event-name" required placeholder="Ex: Campori">
+            </div>
+            <div class="input-group">
+                <label for="event-date">Data (Opcional)</label>
+                <input type="date" id="event-date">
+            </div>
+            <div class="input-group">
+                <label for="event-desc">Descrição (Opcional)</label>
+                <textarea id="event-desc"
+                    style="width: 100%; min-height: 80px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;"></textarea>
+            </div>
+            <div class="input-group">
+                <label for="event-payment-type">Tipo de Pagamento</label>
+                <select id="event-payment-type" class="form-control">
+                    <option value="parcelado">Parcelado (Janeiro a Dezembro)</option>
+                    <option value="unico">Pagamento Único (Total)</option>
+                </select>
+            </div>
+            <div class="participants-selector"
+                style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                <h4 style="margin-bottom: 1rem;">Participantes</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.8rem;">
+                    <button type="button" id="ev-clear-all" class="btn-primary"
+                        style="background: var(--error-color); color: white; padding: 0.5rem; font-size: 0.9rem; border: none; border-radius: 4px; cursor: pointer;">Limpar
+                        Seleção</button>
+                    <select id="ev-unit-filter"
+                        style="background: #1a1a1a; color: white; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.5rem; cursor: pointer; font-size: 0.9rem; text-align: center; text-align-last: center;">
+                        <option value="">Selecionar</option>
+                        <option value="ALL">Todos os Membros</option>
+                    </select>
+                </div>
+                <div class="input-group" style="margin-bottom: 1rem;">
+                    <input type="text" id="ev-member-search" placeholder="Pesquisar membro..."
+                        style="width: 100%; padding: 0.6rem; background: white; border: 1px solid var(--border-color); border-radius: 4px; color: black; font-size: 0.9rem;">
+                </div>
+                <div id="event-participants-list" class="checklist-container"
+                    style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem;">
+                    <!-- Checkboxes populated by JS -->
+                </div>
+            </div>
+            <button type="submit" class="btn-primary" style="margin-top: 1.5rem;">Criar Evento</button>
+        </form>
+    </div>
+</div>

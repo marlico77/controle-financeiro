@@ -1,0 +1,36 @@
+<!-- Site Calendar Edit Modal (Admin/Secretário) -->
+<div id="site-calendar-edit-modal" class="modal">
+    <div class="glass-card modal-content">
+        <span class="close-modal">&times;</span>
+        <h3>Editar Data de Saída / Atividade (Site)</h3>
+        <form id="site-calendar-edit-form">
+            <input type="hidden" id="sc-edit-id">
+            <div class="input-group">
+                <label for="sc-edit-name">Nome da Saída / Atividade</label>
+                <input type="text" id="sc-edit-name" required placeholder="Ex: Caminhada Noturna / Acampamento">
+            </div>
+            <div class="input-group">
+                <label for="sc-edit-date">Data</label>
+                <input type="date" id="sc-edit-date" required>
+            </div>
+            <div class="input-group">
+                <label for="sc-edit-desc">Descrição / Detalhes</label>
+                <textarea id="sc-edit-desc"
+                    style="width: 100%; min-height: 80px; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 4px;"
+                    placeholder="Descreva a atividade para o público do site..."></textarea>
+            </div>
+            <div class="input-group">
+                <label for="sc-edit-local">Local</label>
+                <input type="text" id="sc-edit-local" placeholder="Ex: CAGV / Jd. Boa Vista">
+            </div>
+            <div class="input-group">
+                <label for="sc-edit-responsible">Responsável</label>
+                <input type="text" id="sc-edit-responsible" placeholder="Ex: Diretoria / Associação">
+            </div>
+            <div class="modal-actions" style="margin-top: 1.5rem;">
+                <button type="submit" class="btn-primary">Salvar Alterações</button>
+                <button type="button" id="sc-edit-delete-btn" class="btn-danger">Excluir Evento</button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,138 @@
+<!-- Events Page -->
+<div id="events-page" class="tab-content" style="display: none;">
+    <div class="events-submenu" style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+        <button id="tab-internal-events" class="btn-text active" style="font-weight: 700; color: var(--accent-color); border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem;">Gestão de Eventos</button>
+        <button id="tab-site-calendar" class="btn-text" style="font-weight: 700; color: var(--text-dim); padding-bottom: 0.5rem;">Calendário</button>
+    </div>
+
+    <!-- Gestão de Eventos Interno -->
+    <div id="events-internal-container">
+        <div id="events-master-view">
+            <div class="events-grid" id="events-list">
+                <!-- Events cards populated by JS -->
+            </div>
+        </div>
+
+    <div id="events-detail-view" style="display: none;">
+        <button id="back-to-events" class="btn-text"
+            style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--accent-color);">
+            ← Voltar para Todos os Eventos
+        </button>
+
+        <!-- Event Specific Dashboard -->
+        <div id="event-dashboard" style="margin-bottom: 2rem;">
+            <div class="stats-grid">
+                <div class="glass-card stat-card">
+                    <span class="stat-label">Arrecadação do Evento</span>
+                    <h3 id="ev-stat-total">R$ 0,00</h3>
+                </div>
+                <div class="glass-card stat-card">
+                    <span class="stat-label">Direção</span>
+                    <h3 id="ev-stat-direcao">R$ 0,00</h3>
+                </div>
+                <div class="glass-card stat-card">
+                    <span class="stat-label">Desbravadores</span>
+                    <h3 id="ev-stat-desbrava">R$ 0,00</h3>
+                </div>
+            </div>
+
+            <div class="charts-grid" style="margin-top: 1.5rem;">
+                <div class="glass-card chart-container">
+                    <h4>Composição da Receita (Evento)</h4>
+                    <canvas id="evPieChart"></canvas>
+                </div>
+                <div class="glass-card chart-container">
+                    <h4>Receita por Mês (Evento)</h4>
+                    <canvas id="evBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <button id="toggle-event-details" class="btn-text"
+                style="font-weight: 500; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid transparent; transition: all 0.3s ease;">
+                Ver Detalhamento Membro a Membro ↓
+            </button>
+        </div>
+
+        <div id="event-details-table-container" class="glass-card table-container"
+            style="display: none;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color);">
+                <h4 id="detail-event-title" style="margin: 0;">Nome do Evento</h4>
+                <div class="search-bar"
+                    style="max-width: 300px; width: 100%; display: flex; align-items: center; padding: 0.4rem 0.8rem; border-radius: 50px; background: rgba(0,0,0,0.03);">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"
+                        style="width: 16px; height: 16px; fill: var(--text-dim); margin-right: 0.5rem;">
+                        <path
+                            d="M480 272C480 317.9 465.1 360.3 440 394.7L566.6 521.4C579.1 533.9 579.1 554.2 566.6 566.7C554.1 579.2 533.8 579.2 521.3 566.7L394.7 440C360.3 465.1 317.9 480 272 480C157.1 480 64 386.9 64 272C64 157.1 157.1 64 272 64C386.9 64 480 157.1 480 272zM272 416C351.5 416 416 351.5 416 272C416 192.5 351.5 128 272 128C192.5 128 128 192.5 128 272C128 351.5 192.5 416 272 416z" />
+                    </svg>
+                    <input type="text" id="ev-detail-search" placeholder="Filtrar por nome, unidade, status..."
+                        style="background: transparent; border: none; color: var(--text-color); width: 100%; outline: none; font-size: 0.85rem;">
+                </div>
+            </div>
+            <table id="event-detail-table">
+                <thead>
+                    <tr>
+                        <th>Membro</th>
+                        <th>Jan</th>
+                        <th>Fev</th>
+                        <th>Mar</th>
+                        <th>Abr</th>
+                        <th>Mai</th>
+                        <th>Jun</th>
+                        <th>Jul</th>
+                        <th>Ago</th>
+                        <th>Set</th>
+                        <th>Out</th>
+                        <th>Nov</th>
+                        <th>Dez</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="event-detail-body">
+                    <!-- Data populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </div>
+
+    <!-- Calendário do Site -->
+    <div id="events-site-calendar-container" style="display: none;">
+        <div class="glass-card table-container" style="padding: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 1rem;">
+                <h4 style="margin: 0;">Datas de Saídas e Atividades Cadastradas no Site</h4>
+                <div class="search-bar"
+                    style="max-width: 300px; width: 100%; display: flex; align-items: center; padding: 0.4rem 0.8rem; border-radius: 50px; background: rgba(0,0,0,0.03); border: 1px solid rgba(255,255,255,0.1);">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"
+                        style="width: 16px; height: 16px; fill: var(--text-dim); margin-right: 0.5rem;">
+                        <path
+                            d="M480 272C480 317.9 465.1 360.3 440 394.7L566.6 521.4C579.1 533.9 579.1 554.2 566.6 566.7C554.1 579.2 533.8 579.2 521.3 566.7L394.7 440C360.3 465.1 317.9 480 272 480C157.1 480 64 386.9 64 272C64 157.1 157.1 64 272 64C386.9 64 480 157.1 480 272zM272 416C351.5 416 416 351.5 416 272C416 192.5 351.5 128 272 128C192.5 128 128 192.5 128 272C128 351.5 192.5 416 272 416z" />
+                    </svg>
+                    <input type="text" id="site-calendar-search" placeholder="Pesquisar atividades..."
+                        style="background: transparent; border: none; color: var(--text-color); width: 100%; outline: none; font-size: 0.85rem;">
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table id="site-calendar-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Nome da Saída / Atividade</th>
+                            <th>Descrição</th>
+                            <th>Local</th>
+                            <th>Responsável</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="site-calendar-body">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 2rem;">Carregando calendário...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
