@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestao-fin-v18'; // Nome da versão do cache (deve ser atualizado para forçar refresh de arquivos)
+const CACHE_NAME = 'gestao-fin-v19'; // Nome da versão do cache (deve ser atualizado para forçar refresh de arquivos)
 const STATIC_ASSETS = [ // Lista de arquivos estáticos que serão salvos no cache para funcionamento offline
   '/', // Página inicial
   '/login.html',
@@ -77,9 +77,13 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(cachedResponse => {
       const fetchedResponse = fetch(event.request).then(networkResponse => {
+        // Clona a resposta imediatamente antes do consumo pelo navegador
+        const responseToCache = networkResponse.clone();
         // Atualiza o cache com a resposta mais recente da rede
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, networkResponse.clone()));
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache)).catch(console.error);
         return networkResponse;
+      }).catch(err => {
+          // Ignora falhas de fetch offline
       });
       // Retorna o cache se existir, senão retorna a requisição da rede
       return cachedResponse || fetchedResponse;
