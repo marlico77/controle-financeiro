@@ -1053,7 +1053,7 @@ tfoot td {
     }
 
     .sidebar-header, .sidebar .nav-footer, .sidebar > div:has(#sidebar-install-btn), #sidebar-toggle {
-        
+        display: none !important;
     }
 
     #mobile-install-btn {
@@ -2404,7 +2404,7 @@ input:checked + .slider:before {
 
 @media print {
     #calendar-export-filters {
-        
+        display: none !important;
     }
     .calendar-print-canvas {
         border: 2px solid #000 !important;
@@ -2474,7 +2474,7 @@ input:checked + .slider:before {
     
     /* When active chat is shown */
     .whatsapp-web-chat.show-chat .chat-sidebar {
-        
+        display: none !important;
     }
     
     .whatsapp-web-chat.show-chat .chat-window {
@@ -2483,7 +2483,7 @@ input:checked + .slider:before {
     
     /* Hide welcome screen on mobile to focus on sidebar */
     #wa-chat-welcome {
-        
+        display: none !important;
     }
     
     /* Back button display */
