@@ -17,10 +17,11 @@ const renderProfile = async () => {
         }
 
         // Preenche o formulário
-        document.getElementById('profile-name').value = userProfile.name || '';
-        document.getElementById('profile-responsible').value = userProfile.responsible || '';
-        document.getElementById('profile-cpf').value = userProfile.cpf || '';
-        document.getElementById('profile-unit').value = userProfile.unit || 'Sem Unidade';
+        if (document.getElementById('profile-name')) document.getElementById('profile-name').value = userProfile.name || '';
+        if (document.getElementById('profile-email')) document.getElementById('profile-email').value = state.email || '';
+        if (document.getElementById('profile-responsible')) document.getElementById('profile-responsible').value = userProfile.responsible || '';
+        if (document.getElementById('profile-cpf')) document.getElementById('profile-cpf').value = userProfile.cpf || '';
+        if (document.getElementById('profile-unit')) document.getElementById('profile-unit').value = userProfile.unit || 'Sem Unidade';
         
         if (userProfile.birth_date) {
             const date = new Date(userProfile.birth_date);

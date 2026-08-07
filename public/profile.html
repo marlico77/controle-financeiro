@@ -258,6 +258,13 @@
                 <label for="profile-name">Nome Completo</label>
                 <input type="text" id="profile-name" required placeholder="Seu nome completo">
             </div>
+            <div class="input-group">
+                <label for="profile-email">E-mail</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="email" id="profile-email" readonly class="readonly-field" style="background: rgba(0,0,0,0.05); cursor: not-allowed; flex: 1;" placeholder="seu.email@exemplo.com">
+                    <button type="button" class="btn-secondary" onclick="if(document.getElementById('email-modal')) document.getElementById('email-modal').style.display='flex';" style="padding: 0 15px; border-radius: 6px; font-weight: bold; background: var(--border-color); color: var(--text-color);">Alterar</button>
+                </div>
+            </div>
             <div class="grid-2">
                 <div class="input-group">
                     <label for="profile-responsible">Responsável</label>

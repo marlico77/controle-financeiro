@@ -328,6 +328,7 @@ async function checkAuth() {
             state.role = status.role;
             state.username = status.username;
             state.name = status.name;
+            state.email = status.email;
 
             // Salva novamente nos storages para garantir persistência correta (Local vs Sessão)
             const isPersistent = !!localStorage.getItem('token');
@@ -354,6 +355,105 @@ async function checkAuth() {
                 if (lgpdModal) {
                     lgpdModal.style.display = 'flex';
                 }
+            }
+            
+            // Verifica E-mail
+            if (!status.hasEmail) {
+                let emailModal = document.getElementById('email-capture-modal');
+                if (!emailModal) {
+                    emailModal = document.createElement('div');
+                    emailModal.id = 'email-capture-modal';
+                    emailModal.className = 'modal';
+                    emailModal.style.zIndex = '99999';
+                    emailModal.innerHTML = `
+                        <div class="modal-content glass-card animate-fade-in" style="max-width: 400px; text-align: center; padding: 2rem;">
+                            <h2 style="color: var(--accent-color); margin-bottom: 1rem;"><i class="fas fa-envelope"></i> Confirme seu E-mail</h2>
+                            
+                            <!-- Passo 1: Informar E-mail -->
+                            <div id="email-step-1">
+                                <p style="margin-bottom: 1.5rem; font-size: 0.95rem; color: var(--text-dim); line-height: 1.5;">Precisamos do seu e-mail para garantir a segurança da conta e permitir recuperação de senha.</p>
+                                <form id="email-capture-form">
+                                    <div class="input-group" style="text-align: left; margin-bottom: 1.5rem;">
+                                        <label style="display: block; margin-bottom: 0.5rem; color: var(--text-color); font-weight: 600;">E-mail</label>
+                                        <input type="email" id="email-capture-input" placeholder="seu.email@exemplo.com" required style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-color); color: var(--text-color); font-size: 1rem;">
+                                    </div>
+                                    <button type="submit" id="email-capture-btn" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem;">Enviar Código</button>
+                                </form>
+                            </div>
+
+                            <!-- Passo 2: Informar Código -->
+                            <div id="email-step-2" style="display: none;">
+                                <p style="margin-bottom: 1.5rem; font-size: 0.95rem; color: var(--text-dim); line-height: 1.5;">Enviamos um código de 6 dígitos para o seu e-mail. Digite-o abaixo para confirmar.</p>
+                                <form id="email-verify-form">
+                                    <div class="input-group" style="text-align: left; margin-bottom: 1.5rem;">
+                                        <label style="display: block; margin-bottom: 0.5rem; color: var(--text-color); font-weight: 600;">Código de Verificação</label>
+                                        <input type="text" id="email-verify-input" placeholder="Ex: A4X9B2" required maxlength="6" style="width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-color); color: var(--text-color); font-size: 1.2rem; text-align: center; letter-spacing: 2px; text-transform: uppercase;">
+                                    </div>
+                                    <button type="submit" id="email-verify-btn" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem;">Confirmar E-mail</button>
+                                    <button type="button" id="email-back-btn" class="btn-text" style="width: 100%; margin-top: 1rem; color: var(--text-dim);">Voltar e alterar e-mail</button>
+                                </form>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(emailModal);
+
+                    const step1 = document.getElementById('email-step-1');
+                    const step2 = document.getElementById('email-step-2');
+
+                    document.getElementById('email-capture-form').addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const emailInput = document.getElementById('email-capture-input').value;
+                        const btn = document.getElementById('email-capture-btn');
+                        btn.disabled = true;
+                        btn.textContent = 'Enviando código...';
+                        
+                        try {
+                            const res = await apiFetch('/api/user/email/request-verification', {
+                                method: 'POST',
+                                body: JSON.stringify({ email: emailInput })
+                            });
+                            if(res.success) {
+                                step1.style.display = 'none';
+                                step2.style.display = 'block';
+                                showStatus('Código enviado! Verifique seu e-mail.', 'success');
+                            }
+                        } catch(err) {
+                            showStatus(err.message || 'Erro ao enviar código', 'error');
+                        } finally {
+                            btn.disabled = false;
+                            btn.textContent = 'Enviar Código';
+                        }
+                    });
+
+                    document.getElementById('email-back-btn').addEventListener('click', () => {
+                        step2.style.display = 'none';
+                        step1.style.display = 'block';
+                    });
+
+                    document.getElementById('email-verify-form').addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const codeInput = document.getElementById('email-verify-input').value;
+                        const btn = document.getElementById('email-verify-btn');
+                        btn.disabled = true;
+                        btn.textContent = 'Verificando...';
+                        
+                        try {
+                            const res = await apiFetch('/api/user/email/verify', {
+                                method: 'POST',
+                                body: JSON.stringify({ code: codeInput })
+                            });
+                            if(res.success) {
+                                emailModal.style.display = 'none';
+                                showStatus('E-mail verificado e salvo com sucesso!', 'success');
+                            }
+                        } catch(err) {
+                            showStatus(err.message || 'Código inválido', 'error');
+                            btn.disabled = false;
+                            btn.textContent = 'Confirmar E-mail';
+                        }
+                    });
+                }
+                emailModal.style.display = 'flex';
             }
 
             // Tudo OK: Esconde login/splash e libera o Dashboard principal

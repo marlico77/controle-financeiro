@@ -51,32 +51,32 @@ if (closeRecover) {
     closeRecover.onclick = () => recoverModal.style.display = 'none';
 }
 
-// Processa o formulário de redefinição de senha (via Usuário + CPF)
+// Processa o formulário de solicitação de recuperação de senha via E-mail
 if (recoverForm) {
     recoverForm.onsubmit = async (e) => {
         e.preventDefault();
-        const username = document.getElementById('recover-username').value;
-        const cpf = document.getElementById('recover-cpf').value;
-        const newPassword = document.getElementById('recover-new-password').value;
+        const email = document.getElementById('recover-email').value;
         const errorDiv = document.getElementById('recover-error');
+        const btn = document.getElementById('recover-submit-btn');
 
-        // Valida se a nova senha atende aos requisitos mínimos
-        if (!complexityRegex.test(newPassword)) {
-            errorDiv.textContent = 'A senha deve ter no mínimo 5 caracteres, 1 número e 1 caractere especial.';
-            return;
-        }
+        errorDiv.textContent = '';
+        btn.disabled = true;
+        btn.textContent = 'Enviando...';
 
         try {
-            // Chamada de API para redefinir sem necessidade de login prévio
-            await apiFetch('/api/auth/reset-lost-password', {
+            // Chamada de API para enviar o link
+            await apiFetch('/api/auth/forgot-password-email', {
                 method: 'POST',
-                body: JSON.stringify({ username, cpf, newPassword })
+                body: JSON.stringify({ email })
             });
-            showStatus('Senha redefinida com sucesso! Agora você pode fazer login.', 'success');
+            showStatus('Um e-mail de recuperação foi enviado para ' + email, 'success');
             recoverModal.style.display = 'none';
             recoverForm.reset();
         } catch (err) {
-            errorDiv.textContent = err.message || 'Erro ao redefinir senha';
+            errorDiv.textContent = err.message || 'Erro ao solicitar recuperação';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Enviar Link';
         }
     };
 }

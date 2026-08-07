@@ -5,6 +5,7 @@ const multer = require('multer'); // Middleware para manipulação de upload de 
 const path = require('path'); // Módulo nativo para manipulação de caminhos de arquivos
 const jwt = require('jsonwebtoken'); // Biblioteca para geração e validação de tokens JWT
 const bcrypt = require('bcryptjs'); // Biblioteca para criptografia de senhas
+const crypto = require('crypto'); // Biblioteca para geração de tokens aleatórios
 const xlsx = require('xlsx'); // Biblioteca para leitura e escrita de arquivos Excel
 const sharp = require('sharp'); // Biblioteca de alto desempenho para processamento de imagens
 const db = require('./database'); // Importa a configuração do banco de dados (Pool do Postgres)
@@ -12,6 +13,7 @@ const UAParser = require('ua-parser-js'); // Analisador de User-Agent (detecta n
 const webPush = require('web-push'); // Biblioteca para envio de notificações push
 const cron = require('node-cron'); // Agendador de tarefas (não usado explicitamente mas carregado)
 const { createClient } = require('@supabase/supabase-js'); // Cliente para integração com Supabase Storage
+const { getMonthlyReceiptEmailHtml, getEventReceiptEmailHtml } = require('./utils/emailTemplates');
 
 // Inicializa o cliente do Supabase para armazenamento de arquivos em nuvem
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
@@ -80,7 +82,7 @@ app.get('/', (req, res) => {
 });
 
 // --- Configuração de E-mail (Resend) ---
-const sendResendEmail = async ({ to, subject, html }) => {
+const sendResendEmail = async ({ to, subject, html, attachments }) => {
     const apiKey = process.env.RESEND_API_KEY;
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'contato@tribodedavi.net.br';
 
@@ -101,7 +103,8 @@ const sendResendEmail = async ({ to, subject, html }) => {
                 from: fromEmail,
                 to: Array.isArray(to) ? to : [to],
                 subject: subject,
-                html: html
+                html: html,
+                ...(attachments && { attachments })
             })
         });
 
@@ -631,6 +634,14 @@ const initDB = async () => {
 
         await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS lgpd_accepted BOOLEAN DEFAULT FALSE');
         await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS lgpd_accepted_at TIMESTAMP');
+        
+        // E-mail e Recuperação de Senha
+        await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)');
+        await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_token VARCHAR(255)');
+        await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_expires TIMESTAMP');
+        await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_email VARCHAR(255)');
+        await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_code VARCHAR(10)');
+        await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_expires TIMESTAMP');
 
         // --- WhatsApp W-API Integration Database Schema ---
         await db.query('ALTER TABLE people ADD COLUMN IF NOT EXISTS phone VARCHAR(50)');
@@ -803,7 +814,8 @@ app.post('/api/login', async (req, res) => {
       name: user.name || dbUsername,
       personId: personId,
       mustChangePassword: !!must_change_password,
-      lgpdAccepted: !!user.lgpd_accepted
+      lgpdAccepted: !!user.lgpd_accepted,
+      hasEmail: !!user.email
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -816,7 +828,7 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/auth/status', authenticateToken, async (req, res) => {
     try {
         const result = await db.query(`
-            SELECT u.must_change_password, u.role, u.person_id, u.username, u.lgpd_accepted, p.name 
+            SELECT u.must_change_password, u.role, u.person_id, u.username, u.lgpd_accepted, u.email, p.name 
             FROM users u 
             LEFT JOIN people p ON u.person_id = p.id 
             WHERE u.id = $1
@@ -830,10 +842,75 @@ app.get('/api/auth/status', authenticateToken, async (req, res) => {
             username: user.username,
             name: user.name || user.username,
             personId: user.person_id,
-            lgpdAccepted: !!user.lgpd_accepted
+            lgpdAccepted: !!user.lgpd_accepted,
+            hasEmail: !!user.email,
+            email: user.email
         });
     } catch{
         res.status(500).json({ error: 'Erro ao verificar status' });
+    }
+});
+
+// Salva o e-mail do usuário no banco
+const emailVerificationRoutes = require('./routes/emailVerification');
+emailVerificationRoutes(app, db, sendResendEmail, logAction, authenticateToken);
+
+// Solicita recuperação de senha via E-mail
+app.post('/api/auth/forgot-password-email', async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'E-mail é obrigatório' });
+    try {
+        const result = await db.query('SELECT u.id, u.username, p.name FROM users u LEFT JOIN people p ON u.person_id = p.id WHERE u.email = $1', [email]);
+        const user = result.rows[0];
+        if (!user) return res.status(404).json({ error: 'Nenhuma conta encontrada com este e-mail' });
+        
+        const token = crypto.randomBytes(32).toString('hex');
+        const expires = new Date(Date.now() + 3600000); // 1 hora
+        
+        await db.query('UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE id = $3', [token, expires, user.id]);
+        
+        const systemUrl = process.env.APP_URL || 'https://app.tribodedavi.net.br';
+        const resetUrl = `${systemUrl}/reset-password.html?token=${token}`;
+        const { getPasswordResetEmailHtml } = require('./utils/emailTemplates');
+        
+        sendResendEmail({
+            to: email,
+            subject: '[Tribo de Davi] Recuperação de Senha',
+            html: getPasswordResetEmailHtml(user.name || user.username, resetUrl)
+        }).catch(e => console.error('[EMAIL] Erro ao enviar recuperação:', e));
+        
+        logAction({ user: { username: 'SYSTEM' }, ip: req.ip }, 'FORGOT_PASSWORD_REQUESTED', { username: user.username, email });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Erro no forgot-password:', err);
+        res.status(500).json({ error: 'Erro ao solicitar recuperação' });
+    }
+});
+
+// Redefine a senha com o token do e-mail
+app.post('/api/auth/reset-password-email', async (req, res) => {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ error: 'Dados incompletos' });
+    
+    // Validação de complexidade: min 5 chars, 1 maiúscula, 1 número e 1 especial
+    const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{5,}$/;
+    if (!regex.test(newPassword)) {
+        return res.status(400).json({ error: 'A senha deve ter no mínimo 5 caracteres, incluindo 1 letra maiúscula, 1 número e 1 caractere especial (@$!%*?&).' });
+    }
+
+    try {
+        const result = await db.query('SELECT id, username FROM users WHERE reset_password_token = $1 AND reset_password_expires > NOW()', [token]);
+        const user = result.rows[0];
+        if (!user) return res.status(400).json({ error: 'Token inválido ou expirado' });
+        
+        const hash = bcrypt.hashSync(newPassword, 10);
+        await db.query('UPDATE users SET password_hash = $1, reset_password_token = NULL, reset_password_expires = NULL, must_change_password = FALSE WHERE id = $2', [hash, user.id]);
+        
+        logAction({ user: { username: 'SYSTEM' }, ip: req.ip }, 'PASSWORD_RESET_VIA_EMAIL', { username: user.username });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Erro no reset-password:', err);
+        res.status(500).json({ error: 'Erro ao redefinir senha' });
     }
 });
 
@@ -1301,6 +1378,28 @@ app.post('/api/payments', authenticateToken, blockSabbathUploads, upload.single(
             }
             results.push({ id: newId, updated: false });
         }
+    }
+
+    if (status === 'pending') {
+        const monthNamesPt = monthList.map(m => monthNames[m-1]);
+        const adminName = 'Marlon';
+        const html = getMonthlyReceiptEmailHtml(personName, monthNamesPt, adminName);
+        
+        let emailAttachments = undefined;
+        if (compressed && compressed.buffer) {
+            emailAttachments = [{
+                filename: receipt_filename || 'comprovante.jpg',
+                content: compressed.buffer.toString('base64')
+            }];
+        }
+        
+        const adminEmail = 'marlonssoficial@gmail.com'; 
+        sendResendEmail({
+            to: adminEmail,
+            subject: `[Tribo de Davi] Novo Comprovante - Mensalidade`,
+            html: html,
+            attachments: emailAttachments
+        }).catch(e => console.error('[EMAIL] Erro ao enviar notificação de comprovante mensal:', e));
     }
 
     logAction(req, 'CREATE_PAYMENT_BATCH', { person_id, months: monthList, year, total_amount: amount, status });
@@ -1957,6 +2056,22 @@ app.post('/api/event-payments', authenticateToken, blockSabbathUploads, upload.s
                 for (const admin of adminsResult.rows) {
                     await createNotification(admin.id, 'Novo Comprovante', `O membro ${person.name} atualizou um comprovante para o evento ${event.name}.`, 'info', existing.id, 'event');
                 }
+                const adminName = 'Marlon';
+                const html = getEventReceiptEmailHtml(person.name, event.name, adminName);
+                let emailAttachments = undefined;
+                if (compressed && compressed.buffer) {
+                    emailAttachments = [{
+                        filename: receipt_filename || 'comprovante.jpg',
+                        content: compressed.buffer.toString('base64')
+                    }];
+                }
+                const adminEmail = 'marlonssoficial@gmail.com';
+                sendResendEmail({
+                    to: adminEmail,
+                    subject: `[Tribo de Davi] Atualização de Comprovante - Evento`,
+                    html: html,
+                    attachments: emailAttachments
+                }).catch(e => console.error('[EMAIL] Erro ao enviar notificação de evento:', e));
             }
             res.json({ id: existing.id, updated: true, status });
         } else {
@@ -1979,6 +2094,22 @@ app.post('/api/event-payments', authenticateToken, blockSabbathUploads, upload.s
                 for (const admin of adminsResult.rows) {
                     await createNotification(admin.id, 'Novo Comprovante', `O membro ${person.name} enviou um novo comprovante para o evento ${event.name}.`, 'info', newId, 'event');
                 }
+                const adminName = 'Marlon';
+                const html = getEventReceiptEmailHtml(person.name, event.name, adminName);
+                let emailAttachments = undefined;
+                if (compressed && compressed.buffer) {
+                    emailAttachments = [{
+                        filename: receipt_filename || 'comprovante.jpg',
+                        content: compressed.buffer.toString('base64')
+                    }];
+                }
+                const adminEmail = 'marlonssoficial@gmail.com';
+                sendResendEmail({
+                    to: adminEmail,
+                    subject: `[Tribo de Davi] Novo Comprovante - Evento`,
+                    html: html,
+                    attachments: emailAttachments
+                }).catch(e => console.error('[EMAIL] Erro ao enviar notificação de evento:', e));
             }
             res.json({ id: newId, updated: false, status });
         }
