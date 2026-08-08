@@ -4,7 +4,6 @@ const STATIC_ASSETS = [ // Lista de arquivos estáticos que serão salvos no cac
   '/login.html',
   '/style.css', // Estilos CSS
   '/logo.png', // Logotipo do sistema
-  '/core/loader.js',
   '/js/state.js',
   '/js/utils.js',
   '/js/core.js',
