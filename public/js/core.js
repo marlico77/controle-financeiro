@@ -808,7 +808,6 @@ function handleUnauthorized(originUrl = '') {
 
 // Executa o logout completo limpando todos os dados da sessão
 function logout() {
-    const hadToken = !!getStorageItem('token');
     // Remove todos os itens salvos nos storages
     removeStorageItem('token');
     removeStorageItem('role');
@@ -818,16 +817,8 @@ function logout() {
     state.token = null;
     state.role = null;
 
-    // Se havia uma sessão ativa, recarrega a página para limpar estados residuais do JS
-    if (hadToken) {
-        window.location.reload();
-    } else {
-        // Caso contrário, apenas altera a visibilidade
-        document.getElementById('main-section').style.display = 'none';
-        document.getElementById('login-section').style.display = 'flex';
-        const splash = document.getElementById('splash-screen');
-        if (splash) splash.style.display = 'none';
-    }
+    // Redireciona diretamente para a tela de login
+    window.location.href = '/login.html';
 }
 
 // Atribui o clique do botão Sair

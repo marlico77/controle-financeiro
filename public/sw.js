@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestao-fin-v20'; // Nome da versão do cache (deve ser atualizado para forçar refresh de arquivos)
+const CACHE_NAME = 'gestao-fin-v21'; // Nome da versão do cache (deve ser atualizado para forçar refresh de arquivos)
 const STATIC_ASSETS = [ // Lista de arquivos estáticos que serão salvos no cache para funcionamento offline
   '/', // Página inicial
   '/login.html',
