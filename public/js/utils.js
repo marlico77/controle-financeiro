@@ -186,3 +186,30 @@ async function showAlert(message, title = 'Aviso', icon = '⚠️') {
     });
 }
 
+// Configura o funcionamento dos botões de "olhinho" para mostrar/esconder senhas nos formulários
+const initializePasswordToggles = () => {
+    document.querySelectorAll('.toggle-password').forEach(button => {
+        button.onclick = (e) => {
+            e.preventDefault();
+            const targetId = button.getAttribute('data-target'); // Pega o ID do input alvo
+            const input = document.getElementById(targetId);
+            if (!input) return;
+            
+            const openPath = button.querySelector('.eye-open'); // Ícone olho aberto
+            const closedPath = button.querySelector('.eye-closed'); // Ícone olho fechado
+
+            // Alterna o tipo do input entre 'password' (escondido) e 'text' (visível)
+            if (input.type === 'password') {
+                input.type = 'text';
+                if (openPath) openPath.style.display = 'none';
+                if (closedPath) closedPath.style.display = 'block';
+            } else {
+                input.type = 'password';
+                if (openPath) openPath.style.display = 'block';
+                if (closedPath) closedPath.style.display = 'none';
+            }
+        };
+    });
+};
+
+document.addEventListener('DOMContentLoaded', initializePasswordToggles);

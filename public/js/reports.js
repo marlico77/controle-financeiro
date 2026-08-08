@@ -556,30 +556,4 @@ if (document.readyState === 'loading') {
 setTimeout(initGeneratorListeners, 1000);
 setTimeout(initGeneratorListeners, 3000);
 
-// Configura o funcionamento dos botões de "olhinho" para mostrar/esconder senhas nos formulários
-const initializePasswordToggles = () => {
-    document.querySelectorAll('.toggle-password').forEach(button => {
-        button.onclick = (e) => {
-            e.preventDefault();
-            const targetId = button.getAttribute('data-target'); // Pega o ID do input alvo
-            const input = document.getElementById(targetId);
-            const openPath = button.querySelector('.eye-open'); // Ícone olho aberto
-            const closedPath = button.querySelector('.eye-closed'); // Ícone olho fechado
-
-            // Alterna o tipo do input entre 'password' (escondido) e 'text' (visível)
-            if (input.type === 'password') {
-                input.type = 'text';
-                openPath.style.display = 'none';
-                closedPath.style.display = 'block';
-            } else {
-                input.type = 'password';
-                openPath.style.display = 'block';
-                closedPath.style.display = 'none';
-            }
-        };
-    });
-};
-
-// Chama a inicialização dos botões de senha
-initializePasswordToggles();
 
