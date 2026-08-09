@@ -371,7 +371,7 @@ async function checkAuth() {
                             
                             <!-- Passo 1: Informar E-mail -->
                             <div id="email-step-1">
-                                <p style="margin-bottom: 1.5rem; font-size: 0.95rem; color: var(--text-dim); line-height: 1.5;">Precisamos do seu e-mail para garantir a segurança da conta e permitir recuperação de senha.</p>
+                                <p style="margin-bottom: 1.5rem; font-size: 0.95rem; color: var(--text-dim); line-height: 1.5;">Precisamos do seu e-mail para garantir a segurança de sua conta.</p>
                                 <form id="email-capture-form">
                                     <div class="input-group" style="text-align: left; margin-bottom: 1.5rem;">
                                         <label style="display: block; margin-bottom: 0.5rem; color: var(--text-color); font-weight: 600;">E-mail</label>
