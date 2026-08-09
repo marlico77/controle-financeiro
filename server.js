@@ -884,9 +884,8 @@ app.post('/api/auth/forgot-password-email', async (req, res) => {
         if (!user) return res.status(404).json({ error: 'Nenhuma conta encontrada com este e-mail' });
         
         const token = crypto.randomBytes(32).toString('hex');
-        const expires = new Date(Date.now() + 3600000); // 1 hora
         
-        await db.query('UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE id = $3', [token, expires, user.id]);
+        await db.query(`UPDATE users SET reset_password_token = $1, reset_password_expires = NOW() + INTERVAL '1 hour' WHERE id = $2`, [token, user.id]);
         
         const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
         const resetUrl = `${systemUrl}/reset-password.html?token=${token}`;
@@ -911,22 +910,26 @@ app.post('/api/auth/reset-password-email', async (req, res) => {
     const { token, newPassword } = req.body;
     if (!token || !newPassword) return res.status(400).json({ error: 'Dados incompletos' });
     
-    // Validação de complexidade: min 5 chars, 1 maiúscula, 1 número e 1 especial
-    const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{5,}$/;
-    if (!regex.test(newPassword)) {
-        return res.status(400).json({ error: 'A senha deve ter no mínimo 5 caracteres, incluindo 1 letra maiúscula, 1 número e 1 caractere especial (@$!%*?&).' });
+    // Validação de complexidade: min 5 chars, 1 número e 1 especial
+    const complexityRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*()_+=\[\]{};':"\\|,.<>\/?-]).{5,}$/;
+    if (!complexityRegex.test(newPassword)) {
+        return res.status(400).json({ error: 'A senha deve ter no mínimo 5 caracteres, incluindo 1 número e 1 caractere especial.' });
     }
 
     try {
-        const result = await db.query('SELECT id, username FROM users WHERE reset_password_token = $1 AND reset_password_expires > NOW()', [token]);
+        const result = await db.query('SELECT id, username, password_hash FROM users WHERE reset_password_token = $1 AND reset_password_expires > NOW()', [token]);
         const user = result.rows[0];
         if (!user) return res.status(400).json({ error: 'Token inválido ou expirado' });
+        
+        if (bcrypt.compareSync(newPassword, user.password_hash)) {
+            return res.status(400).json({ error: 'A nova senha não pode ser igual à senha anterior.' });
+        }
         
         const hash = bcrypt.hashSync(newPassword, 10);
         await db.query('UPDATE users SET password_hash = $1, reset_password_token = NULL, reset_password_expires = NULL, must_change_password = FALSE WHERE id = $2', [hash, user.id]);
         
         logAction({ user: { username: 'SYSTEM' }, ip: req.ip }, 'PASSWORD_RESET_VIA_EMAIL', { username: user.username });
-        res.json({ success: true });
+        res.json({ success: true, message: 'Senha alterada com sucesso!' });
     } catch (err) {
         console.error('Erro no reset-password:', err);
         res.status(500).json({ error: 'Erro ao redefinir senha' });
@@ -942,7 +945,7 @@ app.post('/api/auth/reset-lost-password', async (req, res) => {
     }
 
     // Validação de complexidade: min 5 chars, 1 maiúscula, 1 número e 1 especial
-    const complexityRegex = /^(?=.*[0-9])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{5,}$/;
+    const complexityRegex = /^(?=.*[0-9])(?=.*[A-Z])(?=.*[!@#$%^&*()_+=\[\]{};':"\\|,.<>\/?-]).{5,}$/;
     if (!complexityRegex.test(newPassword)) {
         return res.status(400).json({ error: 'A senha deve ter no mínimo 5 caracteres, incluindo 1 letra maiúscula, 1 número e 1 caractere especial.' });
     }
@@ -982,7 +985,7 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
         return res.status(400).json({ error: 'Nova senha é obrigatória' });
     }
 
-    const complexityRegex = /^(?=.*[0-9])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{5,}$/;
+    const complexityRegex = /^(?=.*[0-9])(?=.*[A-Z])(?=.*[!@#$%^&*()_+=\[\]{};':"\\|,.<>\/?-]).{5,}$/;
     if (!complexityRegex.test(newPassword)) {
         return res.status(400).json({ error: 'A senha deve ter no mínimo 5 caracteres, incluindo 1 letra maiúscula, 1 número e 1 caractere especial.' });
     }
