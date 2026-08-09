@@ -496,7 +496,7 @@ window.updateEventMembersSelect = updateEventMembersSelect;
 
 // Inicializa os ouvintes de eventos (listeners) para botões de relatórios e autorizações
 const initGeneratorListeners = () => {
-    console.log('[INIT] Inicializando listeners de relatórios e autorizações');
+    // console.log('[INIT] Inicializando listeners de relatórios e autorizações');
 
     const typeSelect = document.getElementById('report-type-select');
     if (typeSelect) {

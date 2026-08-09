@@ -13,7 +13,7 @@ async function apiFetch(url, options = {}) {
         headers['Content-Type'] = 'application/json';
     }
 
-    console.log(`[API] Chamando: ${url} | Token: ${(state.token || localStorage.getItem('token')) ? 'Presente' : 'AUSENTE'}`);
+    // console.log(`[API] Chamando: ${url} | Token: ${(state.token || localStorage.getItem('token')) ? 'Presente' : 'AUSENTE'}`);
     const res = await fetch(url, {
         ...options,
         headers
