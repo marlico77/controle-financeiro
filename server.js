@@ -62,7 +62,25 @@ const JWT_SECRET = SECRET || 'dev-secret-only';
 
 
 // Configurações de Middleware do Express
-app.use(cors()); // Habilita CORS
+const allowedOrigins = [
+    'https://www.tribodedavi.net.br',
+    'https://tribodedavi.net.br',
+    'https://wwwtribodedavi.com.br',
+    'https://tribodedavi.com.br',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Permite requisições sem origin (como mobile apps, curl, ou o próprio server)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            return callback(new Error('Acesso não autorizado por política de CORS (Origem inválida).'), false);
+        }
+        return callback(null, true);
+    }
+})); // Habilita CORS com restrições de domínio
 app.use(express.json()); // Habilita parsing de JSON no corpo das requisições
 app.use(express.static('public', { index: 'clube.html' })); // Serve os arquivos estáticos da pasta 'public' (frontend), tendo clube.html como página inicial padrão
 
@@ -301,12 +319,13 @@ const upload = multer({
 // Registra ações críticas (login, exclusão, etc) com detalhes do dispositivo e IP
 const logAction = async (req, action, details = {}) => {
     try {
-        const ua = req.headers['user-agent'];
+        const headers = req && req.headers ? req.headers : {};
+        const ua = headers['user-agent'] || '';
         const parser = new UAParser(ua);
         const result = parser.getResult();
         
         // Obtém o IP do cliente (considerando proxies como Cloudflare/Render)
-        let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+        let ip = headers['x-forwarded-for'] || (req && req.socket ? req.socket.remoteAddress : '') || (req && req.ip ? req.ip : '');
         if (ip === '::1') ip = '127.0.0.1';
         if (ip.startsWith('::ffff:')) ip = ip.split(':').pop();
         
@@ -869,7 +888,7 @@ app.post('/api/auth/forgot-password-email', async (req, res) => {
         
         await db.query('UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE id = $3', [token, expires, user.id]);
         
-        const systemUrl = process.env.APP_URL || 'https://app.tribodedavi.net.br';
+        const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
         const resetUrl = `${systemUrl}/reset-password.html?token=${token}`;
         const { getPasswordResetEmailHtml } = require('./utils/emailTemplates');
         
