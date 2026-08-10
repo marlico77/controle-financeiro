@@ -173,6 +173,7 @@ document.getElementById('add-person-btn').onclick = () => {
     document.getElementById('person-modal-title').textContent = 'Novo Membro';
     document.getElementById('p-id').value = '';
     document.getElementById('person-form').reset();
+    if (document.getElementById('p-email')) document.getElementById('p-email').value = '';
 
     // Controle de exibição da seção de credenciais (apenas Admin pode ver/gerenciar senhas)
     const credentialsSection = document.getElementById('admin-only-credentials');
@@ -205,6 +206,7 @@ const editPerson = (id) => {
     document.getElementById('p-birth').value = person.birth_date || '';
     document.getElementById('p-cpf').value = formatCPF(person.cpf || '');
     document.getElementById('p-phone').value = person.phone || '';
+    if (document.getElementById('p-email')) document.getElementById('p-email').value = person.email || '';
 
     // Configura seção de credenciais de login para Admin
     const credentialsSection = document.getElementById('admin-only-credentials');

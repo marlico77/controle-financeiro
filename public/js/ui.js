@@ -134,6 +134,7 @@ document.getElementById('person-form').onsubmit = async (e) => {
         birth_date: document.getElementById('p-birth').value,
         cpf: document.getElementById('p-cpf').value,
         phone: document.getElementById('p-phone').value.trim(),
+        email: document.getElementById('p-email') ? document.getElementById('p-email').value.trim() : null,
         username: document.getElementById('u-username').value,
         password: document.getElementById('u-password').value,
         role: document.getElementById('u-role').value,

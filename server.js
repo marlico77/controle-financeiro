@@ -1059,7 +1059,7 @@ app.get('/api/people', authenticateToken, async (req, res) => {
     // Administradores e Secretários podem ver todos os membros e seus dados de usuário vinculados
     if (req.user.role === 'admin' || req.user.role === 'secretário') {
       const result = await db.query(`
-        SELECT p.*, u.username, u.role, u.id as u_id
+        SELECT p.*, u.username, u.role, u.id as u_id, u.email
         FROM people p 
         LEFT JOIN users u ON p.id = u.person_id 
         ORDER BY p.name ASC
@@ -1075,7 +1075,7 @@ app.get('/api/people', authenticateToken, async (req, res) => {
       const parentName = parentResult.rows[0].name.trim();
       
       const result = await db.query(`
-        SELECT p.*, u.username, u.role, u.id as u_id
+        SELECT p.*, u.username, u.role, u.id as u_id, u.email
         FROM people p
         LEFT JOIN users u ON p.id = u.person_id
         WHERE p.id = $1 OR (p.responsible IS NOT NULL AND LOWER(TRIM(p.responsible)) = LOWER($2))
@@ -1098,7 +1098,7 @@ app.get('/api/people', authenticateToken, async (req, res) => {
 app.post('/api/people', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
   
-  let { name, responsible, birth_date, cpf, unit, phone, username, role } = req.body || {};
+  let { name, responsible, birth_date, cpf, unit, phone, email, username, role } = req.body || {};
   // Valida se o nome tem pelo menos duas partes (Nome e Sobrenome)
   if (!name || name.trim().split(/\s+/).length < 2) {
       return res.status(400).json({ error: 'O nome deve conter pelo menos Nome e Sobrenome.' });
@@ -1138,8 +1138,8 @@ app.post('/api/people', authenticateToken, async (req, res) => {
 
           // Cria a conta na tabela 'users'
           await client.query(
-              'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE)',
-              [finalUsername, hash, finalRole, personId]
+              'INSERT INTO users (username, password_hash, role, person_id, must_change_password, email) VALUES ($1, $2, $3, $4, TRUE, $5)',
+              [finalUsername, hash, finalRole, personId, email || null]
           );
       }
 
@@ -1519,7 +1519,7 @@ app.delete('/api/payments/:id', authenticateToken, async (req, res) => {
 // Atualiza dados cadastrais de um membro (Admin ou o próprio usuário)
 app.put('/api/people/:id', authenticateToken, async (req, res) => {
   try {
-    let { name, responsible, birth_date, cpf, unit, phone, username, password, role, responsiblePassword } = req.body || {};
+    let { name, responsible, birth_date, cpf, unit, phone, email, username, password, role, responsiblePassword } = req.body || {};
     // Normaliza username para evitar erros de digitação e acentuação
     if (username) username = username.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const { id } = req.params;
@@ -1575,18 +1575,18 @@ app.put('/api/people/:id', authenticateToken, async (req, res) => {
                     
                     // Apenas Admin Master pode alterar o nível de acesso (Role)
                     if (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) {
-                        await db.query('UPDATE users SET username = $1, password_hash = $2, role = $3, must_change_password = TRUE WHERE id = $4', 
-                          [username, hash, role, existingUser.id]);
+                        await db.query('UPDATE users SET username = $1, password_hash = $2, role = $3, email = $4, must_change_password = TRUE WHERE id = $5', 
+                          [username, hash, role, email || null, existingUser.id]);
                     } else {
-                        await db.query('UPDATE users SET username = $1, password_hash = $2, must_change_password = TRUE WHERE id = $3', 
-                          [username, hash, existingUser.id]);
+                        await db.query('UPDATE users SET username = $1, password_hash = $2, email = $3, must_change_password = TRUE WHERE id = $4', 
+                          [username, hash, email || null, existingUser.id]);
                     }
                 } else {
-                    // Atualização apenas de username ou role sem alterar a senha
+                    // Atualização apenas de username, role e email sem alterar a senha
                     if (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) {
-                        await db.query('UPDATE users SET username = $1, role = $2 WHERE id = $3', [username, role, existingUser.id]);
+                        await db.query('UPDATE users SET username = $1, role = $2, email = $3 WHERE id = $4', [username, role, email || null, existingUser.id]);
                     } else {
-                        await db.query('UPDATE users SET username = $1 WHERE id = $2', [username, existingUser.id]);
+                        await db.query('UPDATE users SET username = $1, email = $2 WHERE id = $3', [username, email || null, existingUser.id]);
                     }
                 }
             }
