@@ -13,7 +13,7 @@ const UAParser = require('ua-parser-js'); // Analisador de User-Agent (detecta n
 const webPush = require('web-push'); // Biblioteca para envio de notificações push
 const cron = require('node-cron'); // Agendador de tarefas (não usado explicitamente mas carregado)
 const { createClient } = require('@supabase/supabase-js'); // Cliente para integração com Supabase Storage
-const { getMonthlyReceiptEmailHtml, getEventReceiptEmailHtml } = require('./utils/emailTemplates');
+const { getMonthlyReceiptEmailHtml, getEventReceiptEmailHtml, getPaymentApprovedEmailHtml, getPaymentRejectedEmailHtml } = require('./utils/emailTemplates');
 
 // Inicializa o cliente do Supabase para armazenamento de arquivos em nuvem
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
@@ -1438,17 +1438,28 @@ app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403);
     
     try {
-        const paymentResult = await db.query('SELECT person_id, month FROM payments WHERE id = $1', [req.params.id]);
+        const paymentResult = await db.query('SELECT p.person_id, p.month, pe.name as person_name FROM payments p JOIN people pe ON p.person_id = pe.id WHERE p.id = $1', [req.params.id]);
         const payment = paymentResult.rows[0];
         if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
 
         await db.query('UPDATE payments SET status = \'approved\', rejection_reason = NULL WHERE id = $1', [req.params.id]);
         
         // Notifica o membro que seu pagamento foi aprovado
-        const userResult = await db.query('SELECT id FROM users WHERE person_id = $1', [payment.person_id]);
+        const userResult = await db.query('SELECT id, email FROM users WHERE person_id = $1', [payment.person_id]);
         const userForMember = userResult.rows[0];
         if (userForMember) {
             await createNotification(userForMember.id, 'Pagamento Aprovado', `Seu pagamento do mês de ${monthNames[payment.month-1]} foi aprovado com sucesso!`, 'success');
+            
+            if (userForMember.email) {
+                const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
+                const loginUrl = `${systemUrl}/login.html`;
+                const html = getPaymentApprovedEmailHtml(payment.person_name, 'Mensalidade', `Mês de ${monthNames[payment.month-1]}`, loginUrl);
+                sendResendEmail({
+                    to: userForMember.email,
+                    subject: '[Tribo de Davi] Comprovante Aprovado',
+                    html: html
+                }).catch(e => console.error('[EMAIL] Erro ao enviar email de aprovação:', e));
+            }
         }
 
         res.json({ success: true });
@@ -1464,17 +1475,28 @@ app.post('/api/payments/:id/reject', authenticateToken, async (req, res) => {
     const { reason } = req.body || {};
     
     try {
-        const paymentResult = await db.query('SELECT person_id, month FROM payments WHERE id = $1', [req.params.id]);
+        const paymentResult = await db.query('SELECT p.person_id, p.month, pe.name as person_name FROM payments p JOIN people pe ON p.person_id = pe.id WHERE p.id = $1', [req.params.id]);
         const payment = paymentResult.rows[0];
         if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
 
         await db.query('UPDATE payments SET status = \'rejected\', rejection_reason = $1 WHERE id = $2', [reason || 'Comprovante inválido', req.params.id]);
         
         // Notifica o membro sobre a rejeição e o motivo
-        const userResult = await db.query('SELECT id FROM users WHERE person_id = $1', [payment.person_id]);
+        const userResult = await db.query('SELECT id, email FROM users WHERE person_id = $1', [payment.person_id]);
         const userForMember = userResult.rows[0];
         if (userForMember) {
             await createNotification(userForMember.id, 'Pagamento Rejeitado', `Seu pagamento do mês de ${monthNames[payment.month-1]} foi rejeitado. Motivo: ${reason || 'Comprovante inválido'}. Por favor, corrija-o.`, 'error');
+            
+            if (userForMember.email) {
+                const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
+                const loginUrl = `${systemUrl}/login.html`;
+                const html = getPaymentRejectedEmailHtml(payment.person_name, 'Mensalidade', `Mês de ${monthNames[payment.month-1]}`, reason || 'Comprovante inválido', loginUrl);
+                sendResendEmail({
+                    to: userForMember.email,
+                    subject: '[Tribo de Davi] Comprovante Rejeitado',
+                    html: html
+                }).catch(e => console.error('[EMAIL] Erro ao enviar email de rejeição:', e));
+            }
         }
 
         res.json({ success: true });
@@ -2223,17 +2245,28 @@ app.post('/api/event-payments/:id/approve', authenticateToken, async (req, res) 
     if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
         // Busca dados do pagamento para notificação
-        const paymentResult = await db.query('SELECT ep.*, e.name as event_name FROM event_payments ep JOIN events e ON ep.event_id = e.id WHERE ep.id = $1', [req.params.id]);
+        const paymentResult = await db.query('SELECT ep.*, e.name as event_name, pe.name as person_name FROM event_payments ep JOIN events e ON ep.event_id = e.id JOIN people pe ON ep.person_id = pe.id WHERE ep.id = $1', [req.params.id]);
         const payment = paymentResult.rows[0];
         if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
 
         await db.query('UPDATE event_payments SET status = \'approved\', rejection_reason = NULL WHERE id = $1', [req.params.id]);
         
         // Notifica o membro
-        const userResult = await db.query('SELECT id FROM users WHERE person_id = $1', [payment.person_id]);
+        const userResult = await db.query('SELECT id, email FROM users WHERE person_id = $1', [payment.person_id]);
         const userForMember = userResult.rows[0];
         if (userForMember) {
             await createNotification(userForMember.id, 'Pagamento de Evento Aprovado', `Seu pagamento para o evento ${payment.event_name} foi aprovado!`, 'success');
+            
+            if (userForMember.email) {
+                const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
+                const loginUrl = `${systemUrl}/login.html`;
+                const html = getPaymentApprovedEmailHtml(payment.person_name, 'Evento', payment.event_name, loginUrl);
+                sendResendEmail({
+                    to: userForMember.email,
+                    subject: '[Tribo de Davi] Comprovante de Evento Aprovado',
+                    html: html
+                }).catch(e => console.error('[EMAIL] Erro ao enviar email de aprovação (evento):', e));
+            }
         }
         res.json({ success: true });
     } catch{
@@ -2246,17 +2279,28 @@ app.post('/api/event-payments/:id/reject', authenticateToken, async (req, res) =
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { reason } = req.body || {};
     try {
-        const paymentResult = await db.query('SELECT ep.*, e.name as event_name FROM event_payments ep JOIN events e ON ep.event_id = e.id WHERE ep.id = $1', [req.params.id]);
+        const paymentResult = await db.query('SELECT ep.*, e.name as event_name, pe.name as person_name FROM event_payments ep JOIN events e ON ep.event_id = e.id JOIN people pe ON ep.person_id = pe.id WHERE ep.id = $1', [req.params.id]);
         const payment = paymentResult.rows[0];
         if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
 
         await db.query('UPDATE event_payments SET status = \'rejected\', rejection_reason = $1 WHERE id = $2', [reason || 'Inválido', req.params.id]);
         
         // Notifica o membro sobre a rejeição
-        const userResult = await db.query('SELECT id FROM users WHERE person_id = $1', [payment.person_id]);
+        const userResult = await db.query('SELECT id, email FROM users WHERE person_id = $1', [payment.person_id]);
         const userForMember = userResult.rows[0];
         if (userForMember) {
             await createNotification(userForMember.id, 'Pagamento de Evento Rejeitado', `Seu pagamento para o evento ${payment.event_name} foi rejeitado. Motivo: ${reason}`, 'error');
+            
+            if (userForMember.email) {
+                const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
+                const loginUrl = `${systemUrl}/login.html`;
+                const html = getPaymentRejectedEmailHtml(payment.person_name, 'Evento', payment.event_name, reason || 'Inválido', loginUrl);
+                sendResendEmail({
+                    to: userForMember.email,
+                    subject: '[Tribo de Davi] Comprovante de Evento Rejeitado',
+                    html: html
+                }).catch(e => console.error('[EMAIL] Erro ao enviar email de rejeição (evento):', e));
+            }
         }
         res.json({ success: true });
     } catch{

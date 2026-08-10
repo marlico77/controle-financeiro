@@ -233,9 +233,123 @@ function getEmailVerificationHtml(personName, code) {
     `;
 }
 
+
+function getPaymentApprovedEmailHtml(personName, paymentType, paymentDescription, systemUrl) {
+    return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprovante Aprovado</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f6f6f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-font-smoothing: antialiased;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f6f6f6; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" max-width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                        <td align="center" style="padding: 40px 40px 20px 40px; border-bottom: 1px solid #f0f0f0;">
+                            <img src="https://www.tribodedavi.net.br/logo.png" alt="Logo Tribo de Davi" width="100" style="display: block; width: 100px; max-width: 100px; height: auto;" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 30px 40px 40px 40px;">
+                            <h2 style="font-size: 16px; font-weight: bold; color: #111111; margin-top: 0; margin-bottom: 20px;">Olá, ${personName}</h2>
+                            <p style="font-size: 14px; line-height: 1.6; color: #444444; margin-top: 0; margin-bottom: 20px;">
+                                Temos uma boa notícia! O seu comprovante de pagamento de <strong>${paymentType}</strong> (${paymentDescription}) foi avaliado e <strong style="color: #28a745;">aprovado</strong> pela secretaria do clube.
+                            </p>
+                            <p style="font-size: 14px; line-height: 1.6; color: #444444; margin-top: 0; margin-bottom: 30px;">
+                                O pagamento já consta como baixado no sistema financeiro.
+                            </p>
+                            <div style="text-align: center; margin-bottom: 30px;">
+                                <a href="${systemUrl}" style="background-color: #e50914; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: bold; display: inline-block;">Acessar o Sistema</a>
+                            </div>
+                            <div style="border-top: 1px solid #eeeeee; padding-top: 20px;">
+                                <p style="font-size: 14px; font-weight: bold; color: #222222; margin: 0 0 5px 0;">Clube de Desbravadores Tribo de Davi</p>
+                                <p style="font-size: 13px; color: #666666; margin: 0;">Sistema Financeiro</p>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                <table role="presentation" width="100%" max-width="600" style="max-width: 600px; margin-top: 20px;" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                        <td align="center" style="font-size: 10px; color: #888888; text-transform: uppercase; letter-spacing: 1px;">
+                            POWERED BY <br>
+                            <strong style="color: #666666; font-size: 11px;">SISTEMA TRIBO DE DAVI</strong>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+    `;
+}
+
+function getPaymentRejectedEmailHtml(personName, paymentType, paymentDescription, rejectionReason, systemUrl) {
+    return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprovante Rejeitado</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f6f6f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-font-smoothing: antialiased;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f6f6f6; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" max-width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                        <td align="center" style="padding: 40px 40px 20px 40px; border-bottom: 1px solid #f0f0f0;">
+                            <img src="https://www.tribodedavi.net.br/logo.png" alt="Logo Tribo de Davi" width="100" style="display: block; width: 100px; max-width: 100px; height: auto;" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 30px 40px 40px 40px;">
+                            <h2 style="font-size: 16px; font-weight: bold; color: #111111; margin-top: 0; margin-bottom: 20px;">Olá, ${personName}</h2>
+                            <p style="font-size: 14px; line-height: 1.6; color: #444444; margin-top: 0; margin-bottom: 20px;">
+                                O seu comprovante de pagamento de <strong>${paymentType}</strong> (${paymentDescription}) foi avaliado e <strong style="color: #dc3545;">rejeitado</strong> pela secretaria.
+                            </p>
+                            <div style="background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                                <p style="font-size: 14px; color: #721c24; margin: 0;"><strong>Motivo da Rejeição:</strong><br>${rejectionReason}</p>
+                            </div>
+                            <p style="font-size: 14px; line-height: 1.6; color: #444444; margin-top: 0; margin-bottom: 30px;">
+                                O pagamento voltou ao status de "Pendente". Por favor, acesse o sistema para verificar o erro e enviar um novo comprovante corrigido.
+                            </p>
+                            <div style="text-align: center; margin-bottom: 30px;">
+                                <a href="${systemUrl}" style="background-color: #e50914; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: bold; display: inline-block;">Corrigir Pagamento</a>
+                            </div>
+                            <div style="border-top: 1px solid #eeeeee; padding-top: 20px;">
+                                <p style="font-size: 14px; font-weight: bold; color: #222222; margin: 0 0 5px 0;">Clube de Desbravadores Tribo de Davi</p>
+                                <p style="font-size: 13px; color: #666666; margin: 0;">Sistema Financeiro</p>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                <table role="presentation" width="100%" max-width="600" style="max-width: 600px; margin-top: 20px;" cellspacing="0" cellpadding="0" border="0">
+                    <tr>
+                        <td align="center" style="font-size: 10px; color: #888888; text-transform: uppercase; letter-spacing: 1px;">
+                            POWERED BY <br>
+                            <strong style="color: #666666; font-size: 11px;">SISTEMA TRIBO DE DAVI</strong>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+    `;
+}
+
 module.exports = {
     getMonthlyReceiptEmailHtml,
     getEventReceiptEmailHtml,
     getPasswordResetEmailHtml,
-    getEmailVerificationHtml
+    getEmailVerificationHtml,
+    getPaymentApprovedEmailHtml,
+    getPaymentRejectedEmailHtml
 };
