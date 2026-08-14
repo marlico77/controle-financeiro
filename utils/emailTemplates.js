@@ -257,7 +257,7 @@ function getPaymentApprovedEmailHtml(personName, paymentType, paymentDescription
                         <td style="padding: 30px 40px 40px 40px;">
                             <h2 style="font-size: 16px; font-weight: bold; color: #111111; margin-top: 0; margin-bottom: 20px;">Olá, ${personName}</h2>
                             <p style="font-size: 14px; line-height: 1.6; color: #444444; margin-top: 0; margin-bottom: 20px;">
-                                Temos uma boa notícia! O seu comprovante de pagamento de <strong>${paymentType}</strong> (${paymentDescription}) foi avaliado e <strong style="color: #28a745;">aprovado</strong> pela secretaria do clube.
+                                Temos uma boa notícia! O seu comprovante de pagamento de <strong>${paymentType}</strong> (${paymentDescription}) foi avaliado e <strong style="color: #28a745;">aprovado</strong> pela tesouraria do clube.
                             </p>
                             <p style="font-size: 14px; line-height: 1.6; color: #444444; margin-top: 0; margin-bottom: 30px;">
                                 O pagamento já consta como baixado no sistema financeiro.
