@@ -103,6 +103,8 @@ app.get('/', (req, res) => {
 const sendResendEmail = async ({ to, subject, html, attachments }) => {
     const apiKey = process.env.RESEND_API_KEY;
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'contato@tribodedavi.net.br';
+    const fromName = process.env.RESEND_FROM_NAME || 'Tribo de Davi';
+    const fromAddress = `${fromName} <${fromEmail}>`;
 
     if (!apiKey) {
         console.log(`[RESEND SIMULATION] To: ${to} | Subject: ${subject}`);
@@ -118,7 +120,7 @@ const sendResendEmail = async ({ to, subject, html, attachments }) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                from: fromEmail,
+                from: fromAddress,
                 to: Array.isArray(to) ? to : [to],
                 subject: subject,
                 html: html,
