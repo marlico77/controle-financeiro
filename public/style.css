@@ -1036,17 +1036,23 @@ tfoot td {
 
     .sidebar {
         position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100% !important;
-        height: 70px;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100% - 32px) !important;
+        max-width: 400px;
+        height: 65px;
         flex-direction: row;
         padding: 0;
         z-index: 1000;
         border-right: none;
-        border-top: 1px solid #333;
-        background: #111 !important;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+        border-top: none;
+        background: rgba(30, 30, 30, 0.95) !important;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 35px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.5);
         opacity: 1 !important;
         visibility: visible !important;
         pointer-events: auto !important;
@@ -1076,8 +1082,9 @@ tfoot td {
         align-items: center;
         margin: 0;
         scrollbar-width: none;
-        padding: 0 0.5rem;
+        padding: 0 8px; /* Pequeno espaçamento nas bordas */
         gap: 0;
+        height: 100%;
     }
 
     .nav-links::-webkit-scrollbar {
@@ -1091,7 +1098,7 @@ tfoot td {
 
     .nav-links li {
         margin: 0;
-        padding: 0.6rem 0.4rem; /* Maior área de toque */
+        padding: 0.6rem 0.2rem;
         flex-shrink: 0;
         text-align: center;
         font-size: 0.75rem;
@@ -1100,16 +1107,19 @@ tfoot td {
         align-items: center !important;
         justify-content: center !important;
         gap: 4px;
-        border-radius: 8px;
+        border-radius: 20px; /* Mais arredondado para combinar com o menu */
         background: transparent;
         color: #888;
         text-transform: none;
         font-weight: 600;
         letter-spacing: -0.2px;
-        min-width: 65px; /* Largura mínima para facilitar o toque */
-        max-width: 85px;
+        /* Para exibir 4 itens por vez, subtraímos o padding do container (16px total) */
+        flex: 0 0 calc((100% - 16px) / 4);
+        min-width: calc((100% - 16px) / 4);
+        max-width: calc((100% - 16px) / 4);
         transition: all 0.2s ease;
         -webkit-tap-highlight-color: transparent;
+        height: 85%; /* Um pouco menor que o container */
     }
 
     .nav-links li * {
