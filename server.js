@@ -26,7 +26,7 @@ const SECRET = process.env.JWT_SECRET; // Segredo para assinatura dos tokens JWT
 // Reduz o tamanho de comprovantes enviados para economizar espaço e banda
 const compressReceipt = async (file) => {
     if (!file) return null;
-    
+
     // Processa apenas arquivos que sejam imagens
     if (file.mimetype.startsWith('image/')) {
         try {
@@ -39,14 +39,14 @@ const compressReceipt = async (file) => {
             console.log(`[COMPRESS] Sucesso: ${(buffer.length / 1024).toFixed(1)} KB`);
             return {
                 buffer,
-                mimetype: 'image/jpeg' 
+                mimetype: 'image/jpeg'
             };
         } catch (err) {
             console.error('[COMPRESS] Erro ao comprimir imagem, usando original:', err);
             return { buffer: file.buffer, mimetype: file.mimetype };
         }
     }
-    
+
     // Se for PDF ou outro formato, retorna o arquivo original sem alteração
     return { buffer: file.buffer, mimetype: file.mimetype };
 };
@@ -213,7 +213,7 @@ app.post('/api/contact', async (req, res) => {
 
         // 3. Envia E-mail 2: Notificação para a Liderança 
         const email2Result = await sendResendEmail({
-            to: 'marlonssoficial@gmail.com',
+            to: ['marlonssoficial@gmail.com', 'gomeaj606@gmail.com', 'rafaellasouvasilva@gmail.com', 'ARTHUR.ROC.NASCIMENTO@GMAIL.COM', 'goncalveslucasgustavo@gmail.com'],
             subject: `[Tribo de Davi] Novo Contato: ${name}`,
             html: `
 <!DOCTYPE html>
@@ -312,7 +312,7 @@ app.post('/api/contact', async (req, res) => {
 
 // Configuração do Multer: Usa MemoryStorage para processar arquivos em memória antes de salvar
 const storage = multer.memoryStorage();
-const upload = multer({ 
+const upload = multer({
     storage,
     limits: { fileSize: 10 * 1024 * 1024 } // Limite de 10MB por arquivo
 });
@@ -325,12 +325,12 @@ const logAction = async (req, action, details = {}) => {
         const ua = headers['user-agent'] || '';
         const parser = new UAParser(ua);
         const result = parser.getResult();
-        
+
         // Obtém o IP do cliente (considerando proxies como Cloudflare/Render)
         let ip = headers['x-forwarded-for'] || (req && req.socket ? req.socket.remoteAddress : '') || (req && req.ip ? req.ip : '');
         if (ip === '::1') ip = '127.0.0.1';
         if (ip.startsWith('::ffff:')) ip = ip.split(':').pop();
-        
+
         const userId = req.user ? req.user.id : (details.userId || null);
         const username = req.user ? req.user.username : (details.username || 'guest');
 
@@ -340,12 +340,12 @@ const logAction = async (req, action, details = {}) => {
             (user_id, username, action, details, ip_address, user_agent, device_type, os, browser) 
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         `, [
-            userId, 
-            username, 
-            action, 
-            JSON.stringify(details), 
-            ip, 
-            ua, 
+            userId,
+            username,
+            action,
+            JSON.stringify(details),
+            ip,
+            ua,
             result.device.type || 'desktop',
             `${result.os.name || ''} ${result.os.version || ''}`.trim(),
             `${result.browser.name || ''} ${result.browser.version || ''}`.trim()
@@ -399,7 +399,7 @@ const blockSabbathUploads = (req, res, next) => {
     }
 
     const now = new Date();
-    
+
     // Tenta usar o fuso horário enviado pelo navegador do usuário, caso contrário usa o de Brasília
     let userTimezone = 'America/Sao_Paulo';
     try {
@@ -419,21 +419,21 @@ const blockSabbathUploads = (req, res, next) => {
         hour: 'numeric',
         hour12: false
     });
-    
+
     const parts = formatter.formatToParts(now);
     let weekday = '';
     let hour = 0;
-    
+
     for (const part of parts) {
         if (part.type === 'weekday') weekday = part.value;
         if (part.type === 'hour') hour = parseInt(part.value, 10);
     }
-    
+
     // Sexta >= 18h ou Sábado < 18h no fuso do usuário
     if ((weekday === 'Fri' && hour >= 18) || (weekday === 'Sat' && hour < 18)) {
         return res.status(403).json({ error: 'O sistema não aceita envios de comprovantes de pagamento durante as horas do Sábado no seu fuso horário local.' });
     }
-    
+
     next();
 };
 
@@ -453,7 +453,7 @@ const syncMemberUsers = async () => {
             WHERE u.id IS NULL
         `);
         const people = missingUsersResult.rows;
-        
+
         const defaultHash = await bcrypt.hash('tribo@2026', 10); // Senha padrão para novos acessos
 
         if (people.length > 0) {
@@ -463,18 +463,18 @@ const syncMemberUsers = async () => {
                 const nameParts = p.name.trim().split(/\s+/);
                 const first = nameParts[0].toLowerCase();
                 const last = nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
-                
+
                 let baseUsername = (last ? `${first}.${last}` : first);
                 // Normaliza para remover acentos e caracteres especiais
                 baseUsername = baseUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-                
+
                 try {
                     // Tenta inserir o usuário; se o username já existir, não faz nada (DO NOTHING)
                     const insertResult = await db.query(
                         'INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, $3, $4, TRUE) ON CONFLICT (username) DO NOTHING RETURNING id',
                         [baseUsername, defaultHash, 'member', p.id]
                     );
-                    
+
                     if (insertResult.rowCount === 0) {
                         // Fallback: Se colidir username, anexa o ID da pessoa para garantir unicidade
                         await db.query(
@@ -502,7 +502,7 @@ const syncMemberUsers = async () => {
               AND birth_date IS NOT NULL 
               AND birth_date <> ''
         `);
-        
+
         const minors = minorsResult.rows;
         const today = new Date();
 
@@ -510,7 +510,7 @@ const syncMemberUsers = async () => {
             // Calcula idade
             const birth = new Date(m.birth_date);
             if (isNaN(birth)) continue;
-            
+
             let age = today.getFullYear() - birth.getFullYear();
             const monthDiff = today.getMonth() - birth.getMonth();
             if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
@@ -521,7 +521,7 @@ const syncMemberUsers = async () => {
             if (age >= 18) continue;
 
             const parentName = m.responsible.trim();
-            
+
             // Verifica se o responsável já está cadastrado na tabela de pessoas (people)
             let parentId = null;
             const parentSearch = await db.query(
@@ -552,7 +552,7 @@ const syncMemberUsers = async () => {
                 const nameParts = parentName.split(/\s+/);
                 const first = nameParts[0].toLowerCase();
                 const last = nameParts.length > 1 ? nameParts[nameParts.length - 1].toLowerCase() : '';
-                
+
                 let baseUsername = (last ? `${first}.${last}` : first);
                 baseUsername = baseUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
@@ -561,7 +561,7 @@ const syncMemberUsers = async () => {
                         "INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1, $2, 'responsible', $3, TRUE) ON CONFLICT (username) DO NOTHING RETURNING id",
                         [baseUsername, defaultHash, parentId]
                     );
-                    
+
                     if (insertResult.rowCount === 0) {
                         const fallbackUsername = `${baseUsername}${parentId}`;
                         await db.query(
@@ -655,7 +655,7 @@ const initDB = async () => {
 
         await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS lgpd_accepted BOOLEAN DEFAULT FALSE');
         await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS lgpd_accepted_at TIMESTAMP');
-        
+
         // E-mail e Recuperação de Senha
         await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)');
         await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_token VARCHAR(255)');
@@ -791,58 +791,58 @@ syncMemberUsers();
 
 // Rota de Login: Valida credenciais e gera token JWT
 app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body || {};
-  try {
-    // Busca usuário pelo username (ignora maiúsculas/minúsculas)
-    const result = await db.query(`
+    const { username, password } = req.body || {};
+    try {
+        // Busca usuário pelo username (ignora maiúsculas/minúsculas)
+        const result = await db.query(`
         SELECT u.*, p.name 
         FROM users u 
         LEFT JOIN people p ON u.person_id = p.id 
         WHERE u.username ILIKE $1
     `, [username]);
-    const user = result.rows[0];
+        const user = result.rows[0];
 
-    // Verifica se usuário existe e se a senha criptografada coincide
-    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
+        // Verifica se usuário existe e se a senha criptografada coincide
+        if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+            return res.status(401).json({ error: 'Credenciais inválidas' });
+        }
+
+        const { role, username: dbUsername, person_id, must_change_password, id: userId } = user;
+        const { force, rememberMe } = req.body || {};
+
+        const finalRole = role || 'member';
+        const personId = person_id || null;
+
+        // Gera o token JWT com expiração baseada na escolha "Lembrar-me"
+        const expiresIn = rememberMe ? '30d' : '24h';
+        const token = jwt.sign({
+            id: userId,
+            username: dbUsername,
+            role: finalRole,
+            personId: personId
+        }, JWT_SECRET, { expiresIn });
+
+        console.log(`Login Successful: ${dbUsername} as ${finalRole} ${force ? '[FORCED]' : ''}`);
+
+        // Registra o sucesso do login no log de auditoria
+        logAction(req, 'LOGIN_SUCCESS', { username: dbUsername, userId, force: !!force });
+
+        // Retorna dados essenciais para o frontend
+        res.json({
+            token,
+            role: finalRole,
+            username: dbUsername,
+            name: user.name || dbUsername,
+            personId: personId,
+            mustChangePassword: !!must_change_password,
+            lgpdAccepted: !!user.lgpd_accepted,
+            hasEmail: !!user.email
+        });
+    } catch (err) {
+        console.error('Login error:', err);
+        logAction(req, 'LOGIN_FAILED', { username, error: err.message });
+        res.status(500).json({ error: 'Erro no servidor durante login' });
     }
-
-    const { role, username: dbUsername, person_id, must_change_password, id: userId } = user;
-    const { force, rememberMe } = req.body || {};
-
-    const finalRole = role || 'member';
-    const personId = person_id || null;
-    
-    // Gera o token JWT com expiração baseada na escolha "Lembrar-me"
-    const expiresIn = rememberMe ? '30d' : '24h';
-    const token = jwt.sign({ 
-      id: userId, 
-      username: dbUsername, 
-      role: finalRole, 
-      personId: personId
-    }, JWT_SECRET, { expiresIn });
-
-    console.log(`Login Successful: ${dbUsername} as ${finalRole} ${force ? '[FORCED]' : ''}`);
-    
-    // Registra o sucesso do login no log de auditoria
-    logAction(req, 'LOGIN_SUCCESS', { username: dbUsername, userId, force: !!force });
-
-    // Retorna dados essenciais para o frontend
-    res.json({ 
-      token, 
-      role: finalRole, 
-      username: dbUsername,
-      name: user.name || dbUsername,
-      personId: personId,
-      mustChangePassword: !!must_change_password,
-      lgpdAccepted: !!user.lgpd_accepted,
-      hasEmail: !!user.email
-    });
-  } catch (err) {
-    console.error('Login error:', err);
-    logAction(req, 'LOGIN_FAILED', { username, error: err.message });
-    res.status(500).json({ error: 'Erro no servidor durante login' });
-  }
 });
 
 // Obtém o status atual do usuário (permissões e se precisa mudar senha)
@@ -856,7 +856,7 @@ app.get('/api/auth/status', authenticateToken, async (req, res) => {
         `, [req.user.id]);
         const user = result.rows[0];
         if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
-        
+
         res.json({
             mustChangePassword: !!user.must_change_password,
             role: user.role,
@@ -867,7 +867,7 @@ app.get('/api/auth/status', authenticateToken, async (req, res) => {
             hasEmail: !!user.email,
             email: user.email
         });
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao verificar status' });
     }
 });
@@ -884,21 +884,21 @@ app.post('/api/auth/forgot-password-email', async (req, res) => {
         const result = await db.query('SELECT u.id, u.username, p.name FROM users u LEFT JOIN people p ON u.person_id = p.id WHERE u.email = $1', [email]);
         const user = result.rows[0];
         if (!user) return res.status(404).json({ error: 'Nenhuma conta encontrada com este e-mail' });
-        
+
         const token = crypto.randomBytes(32).toString('hex');
-        
+
         await db.query(`UPDATE users SET reset_password_token = $1, reset_password_expires = NOW() + INTERVAL '1 hour' WHERE id = $2`, [token, user.id]);
-        
+
         const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
         const resetUrl = `${systemUrl}/reset-password.html?token=${token}`;
         const { getPasswordResetEmailHtml } = require('./utils/emailTemplates');
-        
+
         sendResendEmail({
             to: email,
             subject: '[Tribo de Davi] Recuperação de Senha',
             html: getPasswordResetEmailHtml(user.name || user.username, resetUrl)
         }).catch(e => console.error('[EMAIL] Erro ao enviar recuperação:', e));
-        
+
         logAction({ user: { username: 'SYSTEM' }, ip: req.ip }, 'FORGOT_PASSWORD_REQUESTED', { username: user.username, email });
         res.json({ success: true });
     } catch (err) {
@@ -911,7 +911,7 @@ app.post('/api/auth/forgot-password-email', async (req, res) => {
 app.post('/api/auth/reset-password-email', async (req, res) => {
     const { token, newPassword } = req.body;
     if (!token || !newPassword) return res.status(400).json({ error: 'Dados incompletos' });
-    
+
     // Validação de complexidade: min 5 chars, 1 número e 1 especial
     const complexityRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*()_+=\[\]{};':"\\|,.<>\/?-]).{5,}$/;
     if (!complexityRegex.test(newPassword)) {
@@ -922,14 +922,14 @@ app.post('/api/auth/reset-password-email', async (req, res) => {
         const result = await db.query('SELECT id, username, password_hash FROM users WHERE reset_password_token = $1 AND reset_password_expires > NOW()', [token]);
         const user = result.rows[0];
         if (!user) return res.status(400).json({ error: 'Token inválido ou expirado' });
-        
+
         if (bcrypt.compareSync(newPassword, user.password_hash)) {
             return res.status(400).json({ error: 'A nova senha não pode ser igual à senha anterior.' });
         }
-        
+
         const hash = bcrypt.hashSync(newPassword, 10);
         await db.query('UPDATE users SET password_hash = $1, reset_password_token = NULL, reset_password_expires = NULL, must_change_password = FALSE WHERE id = $2', [hash, user.id]);
-        
+
         logAction({ user: { username: 'SYSTEM' }, ip: req.ip }, 'PASSWORD_RESET_VIA_EMAIL', { username: user.username });
         res.json({ success: true, message: 'Senha alterada com sucesso!' });
     } catch (err) {
@@ -941,7 +941,7 @@ app.post('/api/auth/reset-password-email', async (req, res) => {
 // Redefinição de senha perdida (Exige Usuário + CPF cadastrado)
 app.post('/api/auth/reset-lost-password', async (req, res) => {
     const { username, cpf, newPassword } = req.body || {};
-    
+
     if (!username || !cpf || !newPassword) {
         return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
     }
@@ -968,10 +968,10 @@ app.post('/api/auth/reset-lost-password', async (req, res) => {
 
         const salt = bcrypt.genSaltSync(10);
         const hash = bcrypt.hashSync(newPassword, salt);
-        
+
         // Atualiza a senha e remove a obrigatoriedade de troca
         await db.query('UPDATE users SET password_hash = $1, must_change_password = FALSE WHERE id = $2', [hash, user.id]);
-        
+
         res.json({ success: true, message: 'Senha redefinida com sucesso' });
     } catch (err) {
         console.error(err);
@@ -982,7 +982,7 @@ app.post('/api/auth/reset-lost-password', async (req, res) => {
 // Troca de senha solicitada pelo sistema (no primeiro acesso)
 app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
     const { newPassword } = req.body || {};
-    
+
     if (!newPassword) {
         return res.status(400).json({ error: 'Nova senha é obrigatória' });
     }
@@ -995,9 +995,9 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
     try {
         const salt = bcrypt.genSaltSync(10);
         const hash = bcrypt.hashSync(newPassword, salt);
-        
+
         await db.query('UPDATE users SET password_hash = $1, must_change_password = FALSE WHERE id = $2', [hash, req.user.id]);
-        
+
         res.json({ success: true, message: 'Senha alterada com sucesso' });
     } catch (err) {
         console.error(err);
@@ -1021,8 +1021,8 @@ app.post('/api/auth/lgpd-accept', authenticateToken, async (req, res) => {
 // Cria uma notificação no banco para um usuário específico
 const createNotification = async (userId, title, message, type = 'info', relatedId = null, relatedType = null) => {
     try {
-        await db.query('INSERT INTO notifications (user_id, title, message, type, related_id, related_type) VALUES ($1, $2, $3, $4, $5, $6)', 
-          [userId, title, message, type, relatedId, relatedType]);
+        await db.query('INSERT INTO notifications (user_id, title, message, type, related_id, related_type) VALUES ($1, $2, $3, $4, $5, $6)',
+            [userId, title, message, type, relatedId, relatedType]);
     } catch (err) {
         console.error('Error creating notification:', err);
     }
@@ -1038,7 +1038,7 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20', [req.user.id]);
         res.json(result.rows);
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao buscar notificações' });
     }
 });
@@ -1048,7 +1048,7 @@ app.patch('/api/notifications/read-all', authenticateToken, async (req, res) => 
     try {
         await db.query('UPDATE notifications SET is_read = TRUE WHERE user_id = $1', [req.user.id]);
         res.json({ success: true });
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao atualizar notificações' });
     }
 });
@@ -1057,181 +1057,181 @@ app.patch('/api/notifications/read-all', authenticateToken, async (req, res) => 
 
 // Lista todos os membros cadastrados
 app.get('/api/people', authenticateToken, async (req, res) => {
-  try {
-    // Administradores e Secretários podem ver todos os membros e seus dados de usuário vinculados
-    if (req.user.role === 'admin' || req.user.role === 'secretário') {
-      const result = await db.query(`
+    try {
+        // Administradores e Secretários podem ver todos os membros e seus dados de usuário vinculados
+        if (req.user.role === 'admin' || req.user.role === 'secretário') {
+            const result = await db.query(`
         SELECT p.*, u.username, u.role, u.id as u_id, u.email
         FROM people p 
         LEFT JOIN users u ON p.id = u.person_id 
         ORDER BY p.name ASC
       `);
-      return res.json(result.rows);
-    }
-    
-    // Responsável vê seus próprios dados e os dados de todos os seus filhos
-    if (req.user.role === 'responsible') {
-      if (!req.user.personId) return res.json([]);
-      const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
-      if (parentResult.rows.length === 0) return res.json([]);
-      const parentName = parentResult.rows[0].name.trim();
-      
-      const result = await db.query(`
+            return res.json(result.rows);
+        }
+
+        // Responsável vê seus próprios dados e os dados de todos os seus filhos
+        if (req.user.role === 'responsible') {
+            if (!req.user.personId) return res.json([]);
+            const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
+            if (parentResult.rows.length === 0) return res.json([]);
+            const parentName = parentResult.rows[0].name.trim();
+
+            const result = await db.query(`
         SELECT p.*, u.username, u.role, u.id as u_id, u.email
         FROM people p
         LEFT JOIN users u ON p.id = u.person_id
         WHERE p.id = $1 OR (p.responsible IS NOT NULL AND LOWER(TRIM(p.responsible)) = LOWER($2))
         ORDER BY p.name ASC
       `, [req.user.personId, parentName]);
-      return res.json(result.rows);
-    }
+            return res.json(result.rows);
+        }
 
-    // Usuários comuns (membros) só podem ver seus próprios dados
-    if (!req.user.personId) return res.json([]);
-    const result = await db.query('SELECT * FROM people WHERE id = $1', [req.user.personId]);
-    res.json(result.rows);
-  } catch (err) {
-    console.error('Error fetching people:', err);
-    res.status(500).json({ error: 'Erro ao buscar dados' });
-  }
+        // Usuários comuns (membros) só podem ver seus próprios dados
+        if (!req.user.personId) return res.json([]);
+        const result = await db.query('SELECT * FROM people WHERE id = $1', [req.user.personId]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching people:', err);
+        res.status(500).json({ error: 'Erro ao buscar dados' });
+    }
 });
 
 // Cadastra um novo membro (Apenas Admin/Secretário)
 app.post('/api/people', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
-  
-  let { name, responsible, birth_date, cpf, unit, phone, email, username, role } = req.body || {};
-  // Valida se o nome tem pelo menos duas partes (Nome e Sobrenome)
-  if (!name || name.trim().split(/\s+/).length < 2) {
-      return res.status(400).json({ error: 'O nome deve conter pelo menos Nome e Sobrenome.' });
-  }
-  if (!unit) {
-      return res.status(400).json({ error: 'A unidade é obrigatória.' });
-  }
+    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
 
-  const client = await db.pool.connect(); // Obtém um cliente do pool para transação
-  try {
-      await client.query('BEGIN'); // Inicia transação SQL
-      
-      // Insere na tabela 'people'
-      const result = await client.query(
-        'INSERT INTO people (name, responsible, birth_date, cpf, unit, phone) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id', 
-        [name, responsible || null, birth_date || null, cpf || null, unit || null, phone || null]
-      );
-      
-      const personId = result.rows[0].id;
+    let { name, responsible, birth_date, cpf, unit, phone, email, username, role } = req.body || {};
+    // Valida se o nome tem pelo menos duas partes (Nome e Sobrenome)
+    if (!name || name.trim().split(/\s+/).length < 2) {
+        return res.status(400).json({ error: 'O nome deve conter pelo menos Nome e Sobrenome.' });
+    }
+    if (!unit) {
+        return res.status(400).json({ error: 'A unidade é obrigatória.' });
+    }
 
-      let finalUsernameUsed = '';
-      // Se for Admin cadastrando, cria automaticamente a conta de usuário
-      if (req.user.role === 'admin') {
-          const nameParts = name.trim().split(/\s+/);
-          const first = nameParts[0].toLowerCase();
-          const last = nameParts[nameParts.length - 1].toLowerCase();
-          const baseUsername = `${first}.${last}`;
+    const client = await db.pool.connect(); // Obtém um cliente do pool para transação
+    try {
+        await client.query('BEGIN'); // Inicia transação SQL
 
-          // Normaliza o username (sem acentos, minúsculo)
-          let finalUsername = username || baseUsername;
-          finalUsername = finalUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-          finalUsernameUsed = finalUsername;
+        // Insere na tabela 'people'
+        const result = await client.query(
+            'INSERT INTO people (name, responsible, birth_date, cpf, unit, phone) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+            [name, responsible || null, birth_date || null, cpf || null, unit || null, phone || null]
+        );
 
-          // Apenas o Administrador master pode definir outros admins
-          const finalRole = (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) ? role : 'member';
-          const hash = await bcrypt.hash('tribo@2026', 10); // Senha inicial padrão
+        const personId = result.rows[0].id;
 
-          // Cria a conta na tabela 'users'
-          await client.query(
-              'INSERT INTO users (username, password_hash, role, person_id, must_change_password, email) VALUES ($1, $2, $3, $4, TRUE, $5)',
-              [finalUsername, hash, finalRole, personId, email || null]
-          );
-      }
+        let finalUsernameUsed = '';
+        // Se for Admin cadastrando, cria automaticamente a conta de usuário
+        if (req.user.role === 'admin') {
+            const nameParts = name.trim().split(/\s+/);
+            const first = nameParts[0].toLowerCase();
+            const last = nameParts[nameParts.length - 1].toLowerCase();
+            const baseUsername = `${first}.${last}`;
 
-      await client.query('COMMIT'); // Finaliza transação com sucesso
-      syncMemberUsers(); // Sincroniza em segundo plano (cria acessos normais e de responsáveis)
-      logAction(req, 'CREATE_PERSON', { id: personId, name, unit }); // Log de auditoria
-      res.json({ id: personId, name, username: finalUsernameUsed });
-  } catch (err) {
-      await client.query('ROLLBACK'); // Reverte alterações se houver erro
-      console.error('Create Person Error:', err);
-      res.status(500).json({ error: 'Erro ao cadastrar membro' });
-  } finally {
-      client.release(); // Libera o cliente de volta para o pool
-  }
+            // Normaliza o username (sem acentos, minúsculo)
+            let finalUsername = username || baseUsername;
+            finalUsername = finalUsername.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            finalUsernameUsed = finalUsername;
+
+            // Apenas o Administrador master pode definir outros admins
+            const finalRole = (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) ? role : 'member';
+            const hash = await bcrypt.hash('tribo@2026', 10); // Senha inicial padrão
+
+            // Cria a conta na tabela 'users'
+            await client.query(
+                'INSERT INTO users (username, password_hash, role, person_id, must_change_password, email) VALUES ($1, $2, $3, $4, TRUE, $5)',
+                [finalUsername, hash, finalRole, personId, email || null]
+            );
+        }
+
+        await client.query('COMMIT'); // Finaliza transação com sucesso
+        syncMemberUsers(); // Sincroniza em segundo plano (cria acessos normais e de responsáveis)
+        logAction(req, 'CREATE_PERSON', { id: personId, name, unit }); // Log de auditoria
+        res.json({ id: personId, name, username: finalUsernameUsed });
+    } catch (err) {
+        await client.query('ROLLBACK'); // Reverte alterações se houver erro
+        console.error('Create Person Error:', err);
+        res.status(500).json({ error: 'Erro ao cadastrar membro' });
+    } finally {
+        client.release(); // Libera o cliente de volta para o pool
+    }
 });
 
 // Importação em massa de membros via planilha Excel
 app.post('/api/people/import', authenticateToken, upload.single('file'), async (req, res) => {
-  if (req.user.role !== 'admin') return res.sendStatus(403);
-  
-  // Apenas o administrador master pode importar planilhas (por segurança e controle de usuários)
-  if (req.user.username.toUpperCase() !== 'ADMINISTRADOR') {
-      return res.status(403).json({ error: 'Apenas o administrador master pode importar planilhas.' });
-  }
-  if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    if (req.user.role !== 'admin') return res.sendStatus(403);
 
-  const client = await db.pool.connect();
-  try {
-    const workbook = xlsx.read(req.file.buffer); // Lê a planilha da memória
-    const data = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]); // Converte primeira aba em JSON
-    let count = 0;
-    
-    await client.query('BEGIN');
-    try {
-        for (const item of data) {
-            // Busca colunas de forma flexível (case-insensitive)
-            const keys = Object.keys(item);
-            const nameKey = keys.find(k => k.trim().toUpperCase() === 'NOME');
-            const unitKey = keys.find(k => k.trim().toUpperCase() === 'UNIDADE');
-            const birthKey = keys.find(k => k.trim().toUpperCase().includes('NASCIMENTO'));
-            const phoneKey = keys.find(k => {
-                const upper = k.trim().toUpperCase();
-                return upper === 'TELEFONE' || upper === 'CELULAR' || upper === 'WHATSAPP' || upper === 'PHONE';
-            });
-            
-            const name = nameKey ? item[nameKey] : null;
-            const unit = unitKey ? item[unitKey] : null;
-            let birthDate = birthKey ? item[birthKey] : null;
-            const phone = phoneKey ? item[phoneKey] : null;
-
-            // Converte data do formato numérico do Excel para String se necessário
-            if (typeof birthDate === 'number') {
-                const date = xlsx.utils.format_cell({ v: birthDate, t: 'd' });
-                birthDate = date;
-            }
-            
-            if (name) {
-                await client.query(
-                    'INSERT INTO people (name, unit, birth_date, phone) VALUES ($1, $2, $3, $4)', 
-                    [name.toString().trim(), unit ? unit.toString().trim() : null, birthDate || null, phone ? phone.toString().trim() : null]
-                );
-                count++;
-            }
-        }
-        await client.query('COMMIT');
-        
-        // Sincroniza usuários em segundo plano para os novos membros importados
-        console.log(`[IMPORT] Success. Synching ${count} new members to users...`);
-        syncMemberUsers(); 
-
-        res.json({ success: true, count });
-    } catch (innerErr) {
-        await client.query('ROLLBACK');
-        throw innerErr;
+    // Apenas o administrador master pode importar planilhas (por segurança e controle de usuários)
+    if (req.user.username.toUpperCase() !== 'ADMINISTRADOR') {
+        return res.status(403).json({ error: 'Apenas o administrador master pode importar planilhas.' });
     }
-  } catch (err) {
-    console.error('Import Error:', err);
-    res.status(500).json({ error: 'Erro ao processar planilha: ' + err.message });
-  } finally {
-    client.release();
-  }
+    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+
+    const client = await db.pool.connect();
+    try {
+        const workbook = xlsx.read(req.file.buffer); // Lê a planilha da memória
+        const data = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]); // Converte primeira aba em JSON
+        let count = 0;
+
+        await client.query('BEGIN');
+        try {
+            for (const item of data) {
+                // Busca colunas de forma flexível (case-insensitive)
+                const keys = Object.keys(item);
+                const nameKey = keys.find(k => k.trim().toUpperCase() === 'NOME');
+                const unitKey = keys.find(k => k.trim().toUpperCase() === 'UNIDADE');
+                const birthKey = keys.find(k => k.trim().toUpperCase().includes('NASCIMENTO'));
+                const phoneKey = keys.find(k => {
+                    const upper = k.trim().toUpperCase();
+                    return upper === 'TELEFONE' || upper === 'CELULAR' || upper === 'WHATSAPP' || upper === 'PHONE';
+                });
+
+                const name = nameKey ? item[nameKey] : null;
+                const unit = unitKey ? item[unitKey] : null;
+                let birthDate = birthKey ? item[birthKey] : null;
+                const phone = phoneKey ? item[phoneKey] : null;
+
+                // Converte data do formato numérico do Excel para String se necessário
+                if (typeof birthDate === 'number') {
+                    const date = xlsx.utils.format_cell({ v: birthDate, t: 'd' });
+                    birthDate = date;
+                }
+
+                if (name) {
+                    await client.query(
+                        'INSERT INTO people (name, unit, birth_date, phone) VALUES ($1, $2, $3, $4)',
+                        [name.toString().trim(), unit ? unit.toString().trim() : null, birthDate || null, phone ? phone.toString().trim() : null]
+                    );
+                    count++;
+                }
+            }
+            await client.query('COMMIT');
+
+            // Sincroniza usuários em segundo plano para os novos membros importados
+            console.log(`[IMPORT] Success. Synching ${count} new members to users...`);
+            syncMemberUsers();
+
+            res.json({ success: true, count });
+        } catch (innerErr) {
+            await client.query('ROLLBACK');
+            throw innerErr;
+        }
+    } catch (err) {
+        console.error('Import Error:', err);
+        res.status(500).json({ error: 'Erro ao processar planilha: ' + err.message });
+    } finally {
+        client.release();
+    }
 });
 
 // Busca lista de membros inadimplentes de mensalidade por mês e ano
 app.get('/api/payments/unpaid', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
-    
+
     const month = parseInt(req.query.month) || (new Date().getMonth() + 1);
     const year = parseInt(req.query.year) || new Date().getFullYear();
-    
+
     try {
         const result = await db.query(`
             SELECT p.id, p.name, p.phone, p.unit
@@ -1253,41 +1253,41 @@ app.get('/api/payments/unpaid', authenticateToken, async (req, res) => {
 
 // Busca histórico de pagamentos por ano
 app.get('/api/payments', authenticateToken, async (req, res) => {
-  const { year } = req.query;
-  const targetYear = parseInt(year) || new Date().getFullYear();
+    const { year } = req.query;
+    const targetYear = parseInt(year) || new Date().getFullYear();
 
-  try {
-    // Admin e Secretário veem todos os pagamentos do ano selecionado
-    if (req.user.role === 'admin' || req.user.role === 'secretário') {
-      const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason FROM payments WHERE year = $1', [targetYear]);
-      return res.json(result.rows);
-    }
+    try {
+        // Admin e Secretário veem todos os pagamentos do ano selecionado
+        if (req.user.role === 'admin' || req.user.role === 'secretário') {
+            const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason FROM payments WHERE year = $1', [targetYear]);
+            return res.json(result.rows);
+        }
 
-    // Responsável vê seus próprios pagamentos e os de seus filhos
-    if (req.user.role === 'responsible') {
-      if (!req.user.personId) return res.json([]);
-      const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
-      if (parentResult.rows.length === 0) return res.json([]);
-      const parentName = parentResult.rows[0].name.trim();
-      
-      const result = await db.query(`
+        // Responsável vê seus próprios pagamentos e os de seus filhos
+        if (req.user.role === 'responsible') {
+            if (!req.user.personId) return res.json([]);
+            const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
+            if (parentResult.rows.length === 0) return res.json([]);
+            const parentName = parentResult.rows[0].name.trim();
+
+            const result = await db.query(`
         SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason 
         FROM payments 
         WHERE (person_id = $1 OR person_id IN (
             SELECT id FROM people WHERE responsible IS NOT NULL AND LOWER(TRIM(responsible)) = LOWER($2)
         )) AND year = $3
       `, [req.user.personId, parentName, targetYear]);
-      return res.json(result.rows);
-    }
+            return res.json(result.rows);
+        }
 
-    // Membro vê apenas os seus próprios pagamentos
-    if (!req.user.personId) return res.json([]);
-    const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason FROM payments WHERE person_id = $1 AND year = $2', [req.user.personId, targetYear]);
-    res.json(result.rows);
-  } catch (err) {
-    console.error('Error fetching payments:', err);
-    res.status(500).json({ error: 'Erro ao buscar pagamentos' });
-  }
+        // Membro vê apenas os seus próprios pagamentos
+        if (!req.user.personId) return res.json([]);
+        const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason FROM payments WHERE person_id = $1 AND year = $2', [req.user.personId, targetYear]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching payments:', err);
+        res.status(500).json({ error: 'Erro ao buscar pagamentos' });
+    }
 });
 
 // Busca detalhes de um pagamento específico
@@ -1297,165 +1297,165 @@ app.get('/api/payments/detail/:id', authenticateToken, async (req, res) => {
         const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, rejection_reason FROM payments WHERE id = $1', [req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Pagamento não encontrado' });
         res.json(result.rows[0]);
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao buscar detalhes' });
     }
 });
 
 // Registra novo pagamento (com suporte a múltiplos meses em um único envio)
 app.post('/api/payments', authenticateToken, blockSabbathUploads, upload.single('receipt'), async (req, res) => {
-  const { person_id, month, year, amount, months } = req.body;
-  
-  if (!person_id || (!month && !months) || !year || !amount) {
-    return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
-  }
+    const { person_id, month, year, amount, months } = req.body;
 
-  // Validação de segurança: Membro comum só paga pra si, responsável paga pra si ou filhos
-  if (req.user.role !== 'admin') {
-      if (parseInt(person_id) !== req.user.personId) {
-          if (req.user.role === 'responsible') {
-              const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
-              if (parentResult.rows.length > 0) {
-                  const parentName = parentResult.rows[0].name.trim();
-                  const childCheck = await db.query('SELECT 1 FROM people WHERE id = $1 AND responsible IS NOT NULL AND LOWER(TRIM(responsible)) = LOWER($2)', [person_id, parentName]);
-                  if (childCheck.rows.length === 0) {
-                      return res.status(403).json({ error: 'Você não tem permissão para realizar pagamentos para este membro.' });
-                  }
-              } else {
-                  return res.status(403).json({ error: 'Você não tem permissão para realizar pagamentos para este membro.' });
-              }
-          } else {
-              return res.status(403).json({ error: 'Você não tem permissão para realizar pagamentos para este membro.' });
-          }
-      }
-  }
-
-  // Se 'months' for enviado, trata como pagamento em lote. Senão, mês único.
-  const monthList = months ? JSON.parse(months) : [month];
-  const amountPerMonth = (parseFloat(amount) / monthList.length).toFixed(2);
-  const status = req.user.role === 'admin' ? 'approved' : 'pending';
-
-  try {
-    // Processa e comprime o comprovante apenas uma vez para o lote todo
-    const compressed = await compressReceipt(req.file);
-    const receipt_content = compressed ? compressed.buffer : null;
-    const receipt_mime = compressed ? compressed.mimetype : null;
-    const receipt_filename = req.file ? `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
-    const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
-
-    let isUploadedToStorage = false;
-    // Tenta fazer upload para o Supabase Storage (Nuvem)
-    if (req.file && compressed) {
-        console.log(`[STORAGE] Multi-month upload to Supabase: ${receipt_filename}`);
-        const { error } = await supabase.storage
-            .from('receipts')
-            .upload(receipt_filename, compressed.buffer, {
-                contentType: compressed.mimetype,
-                upsert: true
-            });
-        
-        if (!error) isUploadedToStorage = true;
-        else console.error('[STORAGE] Error in multi-month upload:', error);
+    if (!person_id || (!month && !months) || !year || !amount) {
+        return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
     }
 
-    // Se subiu para nuvem, não guarda o binário no banco de dados para economizar espaço
-    const finalDBContent = isUploadedToStorage ? null : receipt_content;
-    const results = [];
+    // Validação de segurança: Membro comum só paga pra si, responsável paga pra si ou filhos
+    if (req.user.role !== 'admin') {
+        if (parseInt(person_id) !== req.user.personId) {
+            if (req.user.role === 'responsible') {
+                const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
+                if (parentResult.rows.length > 0) {
+                    const parentName = parentResult.rows[0].name.trim();
+                    const childCheck = await db.query('SELECT 1 FROM people WHERE id = $1 AND responsible IS NOT NULL AND LOWER(TRIM(responsible)) = LOWER($2)', [person_id, parentName]);
+                    if (childCheck.rows.length === 0) {
+                        return res.status(403).json({ error: 'Você não tem permissão para realizar pagamentos para este membro.' });
+                    }
+                } else {
+                    return res.status(403).json({ error: 'Você não tem permissão para realizar pagamentos para este membro.' });
+                }
+            } else {
+                return res.status(403).json({ error: 'Você não tem permissão para realizar pagamentos para este membro.' });
+            }
+        }
+    }
 
-    const personResult = await db.query("SELECT name FROM people WHERE id = $1", [person_id]);
-    const personName = personResult.rows[0]?.name || 'Membro';
-    const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
+    // Se 'months' for enviado, trata como pagamento em lote. Senão, mês único.
+    const monthList = months ? JSON.parse(months) : [month];
+    const amountPerMonth = (parseFloat(amount) / monthList.length).toFixed(2);
+    const status = req.user.role === 'admin' ? 'approved' : 'pending';
 
-    // Itera sobre cada mês do lote para salvar individualmente
-    for (const m of monthList) {
-        const existingResult = await db.query('SELECT id FROM payments WHERE person_id = $1 AND month = $2 AND year = $3', [person_id, m, year]);
-        const existing = existingResult.rows[0];
+    try {
+        // Processa e comprime o comprovante apenas uma vez para o lote todo
+        const compressed = await compressReceipt(req.file);
+        const receipt_content = compressed ? compressed.buffer : null;
+        const receipt_mime = compressed ? compressed.mimetype : null;
+        const receipt_filename = req.file ? `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
+        const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
 
-        if (existing) {
-            // Se já existe um registro para o mês, atualiza-o (correção de comprovante ou reenvio)
-            await db.query(`
+        let isUploadedToStorage = false;
+        // Tenta fazer upload para o Supabase Storage (Nuvem)
+        if (req.file && compressed) {
+            console.log(`[STORAGE] Multi-month upload to Supabase: ${receipt_filename}`);
+            const { error } = await supabase.storage
+                .from('receipts')
+                .upload(receipt_filename, compressed.buffer, {
+                    contentType: compressed.mimetype,
+                    upsert: true
+                });
+
+            if (!error) isUploadedToStorage = true;
+            else console.error('[STORAGE] Error in multi-month upload:', error);
+        }
+
+        // Se subiu para nuvem, não guarda o binário no banco de dados para economizar espaço
+        const finalDBContent = isUploadedToStorage ? null : receipt_content;
+        const results = [];
+
+        const personResult = await db.query("SELECT name FROM people WHERE id = $1", [person_id]);
+        const personName = personResult.rows[0]?.name || 'Membro';
+        const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
+
+        // Itera sobre cada mês do lote para salvar individualmente
+        for (const m of monthList) {
+            const existingResult = await db.query('SELECT id FROM payments WHERE person_id = $1 AND month = $2 AND year = $3', [person_id, m, year]);
+            const existing = existingResult.rows[0];
+
+            if (existing) {
+                // Se já existe um registro para o mês, atualiza-o (correção de comprovante ou reenvio)
+                await db.query(`
                 UPDATE payments 
                 SET amount = $1, receipt_path = COALESCE($2, receipt_path), receipt_content = COALESCE($3, receipt_content), receipt_mime = COALESCE($4, receipt_mime), status = $5, rejection_reason = NULL 
                 WHERE id = $6
             `, [amountPerMonth, receipt_path, finalDBContent, receipt_mime, status, existing.id]);
-            
-            // Notifica administradores se for um novo envio de membro
-            if (status === 'pending') {
-                for (const admin of adminsResult.rows) {
-                    await createNotification(admin.id, 'Novo Comprovante', `O membro ${personName} atualizou um comprovante para o mês de ${monthNames[m-1]}.`, 'info', existing.id, 'monthly');
+
+                // Notifica administradores se for um novo envio de membro
+                if (status === 'pending') {
+                    for (const admin of adminsResult.rows) {
+                        await createNotification(admin.id, 'Novo Comprovante', `O membro ${personName} atualizou um comprovante para o mês de ${monthNames[m - 1]}.`, 'info', existing.id, 'monthly');
+                    }
                 }
-            }
-            results.push({ id: existing.id, updated: true });
-        } else {
-            // Se não existe, cria um novo registro de pagamento
-            const insertResult = await db.query(`
+                results.push({ id: existing.id, updated: true });
+            } else {
+                // Se não existe, cria um novo registro de pagamento
+                const insertResult = await db.query(`
                 INSERT INTO payments (person_id, month, year, amount, receipt_path, receipt_content, receipt_mime, status) 
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
                 RETURNING id
             `, [person_id, m, year, amountPerMonth, receipt_path, finalDBContent, receipt_mime, status]);
-            const newId = insertResult.rows[0].id;
+                const newId = insertResult.rows[0].id;
 
-            if (status === 'pending') {
-                for (const admin of adminsResult.rows) {
-                    await createNotification(admin.id, 'Novo Comprovante', `O membro ${personName} enviou um novo comprovante para o mês de ${monthNames[m-1]}.`, 'info', newId, 'monthly');
+                if (status === 'pending') {
+                    for (const admin of adminsResult.rows) {
+                        await createNotification(admin.id, 'Novo Comprovante', `O membro ${personName} enviou um novo comprovante para o mês de ${monthNames[m - 1]}.`, 'info', newId, 'monthly');
+                    }
                 }
+                results.push({ id: newId, updated: false });
             }
-            results.push({ id: newId, updated: false });
         }
-    }
 
-    if (status === 'pending') {
-        const monthNamesPt = monthList.map(m => monthNames[m-1]);
-        const adminName = 'Marlon';
-        const html = getMonthlyReceiptEmailHtml(personName, monthNamesPt, adminName);
-        
-        let emailAttachments = undefined;
-        if (compressed && compressed.buffer) {
-            emailAttachments = [{
-                filename: receipt_filename || 'comprovante.jpg',
-                content: compressed.buffer.toString('base64')
-            }];
+        if (status === 'pending') {
+            const monthNamesPt = monthList.map(m => monthNames[m - 1]);
+            const adminName = 'Marlon';
+            const html = getMonthlyReceiptEmailHtml(personName, monthNamesPt, adminName);
+
+            let emailAttachments = undefined;
+            if (compressed && compressed.buffer) {
+                emailAttachments = [{
+                    filename: receipt_filename || 'comprovante.jpg',
+                    content: compressed.buffer.toString('base64')
+                }];
+            }
+
+            const adminEmail = 'marlonssoficial@gmail.com';
+            sendResendEmail({
+                to: adminEmail,
+                subject: `[Tribo de Davi] Novo Comprovante - Mensalidade`,
+                html: html,
+                attachments: emailAttachments
+            }).catch(e => console.error('[EMAIL] Erro ao enviar notificação de comprovante mensal:', e));
         }
-        
-        const adminEmail = 'marlonssoficial@gmail.com'; 
-        sendResendEmail({
-            to: adminEmail,
-            subject: `[Tribo de Davi] Novo Comprovante - Mensalidade`,
-            html: html,
-            attachments: emailAttachments
-        }).catch(e => console.error('[EMAIL] Erro ao enviar notificação de comprovante mensal:', e));
+
+        logAction(req, 'CREATE_PAYMENT_BATCH', { person_id, months: monthList, year, total_amount: amount, status });
+        res.json({ results, status });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao salvar pagamentos' });
     }
-
-    logAction(req, 'CREATE_PAYMENT_BATCH', { person_id, months: monthList, year, total_amount: amount, status });
-    res.json({ results, status });
-
-  } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Erro ao salvar pagamentos' });
-  }
 });
 
 // Aprova um pagamento pendente (Admin)
 app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403);
-    
+
     try {
         const paymentResult = await db.query('SELECT p.person_id, p.month, pe.name as person_name FROM payments p JOIN people pe ON p.person_id = pe.id WHERE p.id = $1', [req.params.id]);
         const payment = paymentResult.rows[0];
         if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
 
         await db.query('UPDATE payments SET status = \'approved\', rejection_reason = NULL WHERE id = $1', [req.params.id]);
-        
+
         // Notifica o membro que seu pagamento foi aprovado
         const userResult = await db.query('SELECT id, email FROM users WHERE person_id = $1', [payment.person_id]);
         const userForMember = userResult.rows[0];
         if (userForMember) {
-            await createNotification(userForMember.id, 'Pagamento Aprovado', `Seu pagamento do mês de ${monthNames[payment.month-1]} foi aprovado com sucesso!`, 'success');
-            
+            await createNotification(userForMember.id, 'Pagamento Aprovado', `Seu pagamento do mês de ${monthNames[payment.month - 1]} foi aprovado com sucesso!`, 'success');
+
             if (userForMember.email) {
                 const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
                 const loginUrl = `${systemUrl}/login.html`;
-                const html = getPaymentApprovedEmailHtml(payment.person_name, 'Mensalidade', `Mês de ${monthNames[payment.month-1]}`, loginUrl);
+                const html = getPaymentApprovedEmailHtml(payment.person_name, 'Mensalidade', `Mês de ${monthNames[payment.month - 1]}`, loginUrl);
                 sendResendEmail({
                     to: userForMember.email,
                     subject: '[Tribo de Davi] Comprovante Aprovado',
@@ -1466,7 +1466,7 @@ app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
 
         res.json({ success: true });
         logAction(req, 'APPROVE_PAYMENT', { id: req.params.id, person_id: payment.person_id, month: payment.month });
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao aprovar pagamento' });
     }
 });
@@ -1475,24 +1475,24 @@ app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
 app.post('/api/payments/:id/reject', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { reason } = req.body || {};
-    
+
     try {
         const paymentResult = await db.query('SELECT p.person_id, p.month, pe.name as person_name FROM payments p JOIN people pe ON p.person_id = pe.id WHERE p.id = $1', [req.params.id]);
         const payment = paymentResult.rows[0];
         if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
 
         await db.query('UPDATE payments SET status = \'rejected\', rejection_reason = $1 WHERE id = $2', [reason || 'Comprovante inválido', req.params.id]);
-        
+
         // Notifica o membro sobre a rejeição e o motivo
         const userResult = await db.query('SELECT id, email FROM users WHERE person_id = $1', [payment.person_id]);
         const userForMember = userResult.rows[0];
         if (userForMember) {
-            await createNotification(userForMember.id, 'Pagamento Rejeitado', `Seu pagamento do mês de ${monthNames[payment.month-1]} foi rejeitado. Motivo: ${reason || 'Comprovante inválido'}. Por favor, corrija-o.`, 'error');
-            
+            await createNotification(userForMember.id, 'Pagamento Rejeitado', `Seu pagamento do mês de ${monthNames[payment.month - 1]} foi rejeitado. Motivo: ${reason || 'Comprovante inválido'}. Por favor, corrija-o.`, 'error');
+
             if (userForMember.email) {
                 const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
                 const loginUrl = `${systemUrl}/login.html`;
-                const html = getPaymentRejectedEmailHtml(payment.person_name, 'Mensalidade', `Mês de ${monthNames[payment.month-1]}`, reason || 'Comprovante inválido', loginUrl);
+                const html = getPaymentRejectedEmailHtml(payment.person_name, 'Mensalidade', `Mês de ${monthNames[payment.month - 1]}`, reason || 'Comprovante inválido', loginUrl);
                 sendResendEmail({
                     to: userForMember.email,
                     subject: '[Tribo de Davi] Comprovante Rejeitado',
@@ -1502,123 +1502,123 @@ app.post('/api/payments/:id/reject', authenticateToken, async (req, res) => {
         }
 
         res.json({ success: true });
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao rejeitar pagamento' });
     }
 });
 
 // Exclui um registro de pagamento definitivamente (Admin)
 app.delete('/api/payments/:id', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin') return res.sendStatus(403);
-  try {
-    await db.query('DELETE FROM payments WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch{
-    res.status(500).json({ error: 'Erro ao deletar pagamento' });
-  }
+    if (req.user.role !== 'admin') return res.sendStatus(403);
+    try {
+        await db.query('DELETE FROM payments WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch {
+        res.status(500).json({ error: 'Erro ao deletar pagamento' });
+    }
 });
 
 // Atualiza dados cadastrais de um membro (Admin ou o próprio usuário)
 app.put('/api/people/:id', authenticateToken, async (req, res) => {
-  try {
-    let { name, responsible, birth_date, cpf, unit, phone, email, username, password, role, responsiblePassword } = req.body || {};
-    // Normaliza username para evitar erros de digitação e acentuação
-    if (username) username = username.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    const { id } = req.params;
-    
-    // Verifica permissão: Admin pode tudo, usuário só pode editar a si mesmo ou seu filho (caso seja responsável)
-    let hasPermission = false;
-    if (req.user.role === 'admin') {
-        hasPermission = true;
-    } else if (parseInt(id) === req.user.personId) {
-        hasPermission = true;
-    } else if (req.user.role === 'responsible') {
-        const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
-        if (parentResult.rows.length > 0) {
-            const parentName = parentResult.rows[0].name.trim();
-            const childCheck = await db.query('SELECT 1 FROM people WHERE id = $1 AND responsible IS NOT NULL AND LOWER(TRIM(responsible)) = LOWER($2)', [id, parentName]);
-            if (childCheck.rows.length > 0) {
-                hasPermission = true;
+    try {
+        let { name, responsible, birth_date, cpf, unit, phone, email, username, password, role, responsiblePassword } = req.body || {};
+        // Normaliza username para evitar erros de digitação e acentuação
+        if (username) username = username.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        const { id } = req.params;
+
+        // Verifica permissão: Admin pode tudo, usuário só pode editar a si mesmo ou seu filho (caso seja responsável)
+        let hasPermission = false;
+        if (req.user.role === 'admin') {
+            hasPermission = true;
+        } else if (parseInt(id) === req.user.personId) {
+            hasPermission = true;
+        } else if (req.user.role === 'responsible') {
+            const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
+            if (parentResult.rows.length > 0) {
+                const parentName = parentResult.rows[0].name.trim();
+                const childCheck = await db.query('SELECT 1 FROM people WHERE id = $1 AND responsible IS NOT NULL AND LOWER(TRIM(responsible)) = LOWER($2)', [id, parentName]);
+                if (childCheck.rows.length > 0) {
+                    hasPermission = true;
+                }
             }
         }
-    }
 
-    if (!hasPermission) {
-        return res.sendStatus(403);
-    }
+        if (!hasPermission) {
+            return res.sendStatus(403);
+        }
 
-    if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
+        if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
 
-    // Atualiza tabela people
-    const updateResult = await db.query('UPDATE people SET name = $1, responsible = $2, birth_date = $3, cpf = $4, unit = $5, phone = $6 WHERE id = $7', 
-      [name, responsible || null, birth_date || null, cpf || null, unit || null, phone || null, id]);
-    
-    // Sincroniza em segundo plano caso a alteração mude o responsável ou nascimento
-    syncMemberUsers();
-    
-    if (updateResult.rowCount === 0) {
-      return res.status(404).json({ error: 'Membro não encontrado' });
-    }
+        // Atualiza tabela people
+        const updateResult = await db.query('UPDATE people SET name = $1, responsible = $2, birth_date = $3, cpf = $4, unit = $5, phone = $6 WHERE id = $7',
+            [name, responsible || null, birth_date || null, cpf || null, unit || null, phone || null, id]);
 
-    // Se for Admin alterando credenciais de acesso
-    if (req.user.role === 'admin' && username) {
-        const userCheck = await db.query('SELECT id, username FROM users WHERE person_id = $1', [id]);
-        const existingUser = userCheck.rows[0];
-        
-        if (existingUser) {
-            // Proteção especial: Sub-administradores não podem editar o Administrador Master
-            if (existingUser.username.toUpperCase() === 'ADMINISTRADOR' && req.user.username.toUpperCase() !== 'ADMINISTRADOR') {
-                console.warn(`[AUTH] Tentativa de sub-admin (${req.user.username}) editar o admin master.`);
-            } else {
-                if (password) {
-                    // Criptografa a nova senha se fornecida
-                    const salt = bcrypt.genSaltSync(10);
-                    const hash = bcrypt.hashSync(password, salt);
-                    
-                    // Apenas Admin Master pode alterar o nível de acesso (Role)
-                    if (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) {
-                        await db.query('UPDATE users SET username = $1, password_hash = $2, role = $3, email = $4, must_change_password = TRUE WHERE id = $5', 
-                          [username, hash, role, email || null, existingUser.id]);
-                    } else {
-                        await db.query('UPDATE users SET username = $1, password_hash = $2, email = $3, must_change_password = TRUE WHERE id = $4', 
-                          [username, hash, email || null, existingUser.id]);
-                    }
+        // Sincroniza em segundo plano caso a alteração mude o responsável ou nascimento
+        syncMemberUsers();
+
+        if (updateResult.rowCount === 0) {
+            return res.status(404).json({ error: 'Membro não encontrado' });
+        }
+
+        // Se for Admin alterando credenciais de acesso
+        if (req.user.role === 'admin' && username) {
+            const userCheck = await db.query('SELECT id, username FROM users WHERE person_id = $1', [id]);
+            const existingUser = userCheck.rows[0];
+
+            if (existingUser) {
+                // Proteção especial: Sub-administradores não podem editar o Administrador Master
+                if (existingUser.username.toUpperCase() === 'ADMINISTRADOR' && req.user.username.toUpperCase() !== 'ADMINISTRADOR') {
+                    console.warn(`[AUTH] Tentativa de sub-admin (${req.user.username}) editar o admin master.`);
                 } else {
-                    // Atualização apenas de username, role e email sem alterar a senha
-                    if (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) {
-                        await db.query('UPDATE users SET username = $1, role = $2, email = $3 WHERE id = $4', [username, role, email || null, existingUser.id]);
+                    if (password) {
+                        // Criptografa a nova senha se fornecida
+                        const salt = bcrypt.genSaltSync(10);
+                        const hash = bcrypt.hashSync(password, salt);
+
+                        // Apenas Admin Master pode alterar o nível de acesso (Role)
+                        if (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) {
+                            await db.query('UPDATE users SET username = $1, password_hash = $2, role = $3, email = $4, must_change_password = TRUE WHERE id = $5',
+                                [username, hash, role, email || null, existingUser.id]);
+                        } else {
+                            await db.query('UPDATE users SET username = $1, password_hash = $2, email = $3, must_change_password = TRUE WHERE id = $4',
+                                [username, hash, email || null, existingUser.id]);
+                        }
                     } else {
-                        await db.query('UPDATE users SET username = $1, email = $2 WHERE id = $3', [username, email || null, existingUser.id]);
+                        // Atualização apenas de username, role e email sem alterar a senha
+                        if (req.user.username.toUpperCase() === 'ADMINISTRADOR' && role) {
+                            await db.query('UPDATE users SET username = $1, role = $2, email = $3 WHERE id = $4', [username, role, email || null, existingUser.id]);
+                        } else {
+                            await db.query('UPDATE users SET username = $1, email = $2 WHERE id = $3', [username, email || null, existingUser.id]);
+                        }
                     }
                 }
             }
         }
-    }
 
-    // Se for Admin alterando credenciais de acesso do responsável
-    if (req.user.role === 'admin' && responsiblePassword && responsible) {
-        const respPersonCheck = await db.query('SELECT id FROM people WHERE LOWER(TRIM(name)) = LOWER($1)', [responsible.trim()]);
-        if (respPersonCheck.rows.length > 0) {
-            const respPersonId = respPersonCheck.rows[0].id;
-            const respUserCheck = await db.query('SELECT id, username FROM users WHERE person_id = $1', [respPersonId]);
-            if (respUserCheck.rows.length > 0) {
-                const respUser = respUserCheck.rows[0];
-                if (respUser.username.toUpperCase() !== 'ADMINISTRADOR' || req.user.username.toUpperCase() === 'ADMINISTRADOR') {
-                    const salt = bcrypt.genSaltSync(10);
-                    const hash = bcrypt.hashSync(responsiblePassword, salt);
-                    await db.query('UPDATE users SET password_hash = $1, must_change_password = TRUE WHERE id = $2', [hash, respUser.id]);
-                    console.log(`[AUTH] Senha do responsável (${responsible}) resetada com sucesso pelo admin.`);
+        // Se for Admin alterando credenciais de acesso do responsável
+        if (req.user.role === 'admin' && responsiblePassword && responsible) {
+            const respPersonCheck = await db.query('SELECT id FROM people WHERE LOWER(TRIM(name)) = LOWER($1)', [responsible.trim()]);
+            if (respPersonCheck.rows.length > 0) {
+                const respPersonId = respPersonCheck.rows[0].id;
+                const respUserCheck = await db.query('SELECT id, username FROM users WHERE person_id = $1', [respPersonId]);
+                if (respUserCheck.rows.length > 0) {
+                    const respUser = respUserCheck.rows[0];
+                    if (respUser.username.toUpperCase() !== 'ADMINISTRADOR' || req.user.username.toUpperCase() === 'ADMINISTRADOR') {
+                        const salt = bcrypt.genSaltSync(10);
+                        const hash = bcrypt.hashSync(responsiblePassword, salt);
+                        await db.query('UPDATE users SET password_hash = $1, must_change_password = TRUE WHERE id = $2', [hash, respUser.id]);
+                        console.log(`[AUTH] Senha do responsável (${responsible}) resetada com sucesso pelo admin.`);
+                    }
                 }
             }
         }
-    }
 
-    res.json({ success: true });
-    logAction(req, 'UPDATE_PERSON', { id, name, unit });
-  } catch (error) {
-    console.error('Update Error:', error);
-    res.status(500).json({ error: 'Erro interno no servidor' });
-  }
+        res.json({ success: true });
+        logAction(req, 'UPDATE_PERSON', { id, name, unit });
+    } catch (error) {
+        console.error('Update Error:', error);
+        res.status(500).json({ error: 'Erro interno no servidor' });
+    }
 });
 
 
@@ -1642,7 +1642,7 @@ app.get('/api/site-calendar', authenticateToken, async (req, res) => {
     try {
         const result = await db.query('SELECT id, name, description, date, local, responsible FROM site_calendar_events ORDER BY date ASC');
         res.json(result.rows);
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao buscar datas do calendário' });
     }
 });
@@ -1667,7 +1667,7 @@ app.delete('/api/site-calendar/:id', authenticateToken, async (req, res) => {
         await db.query('DELETE FROM site_calendar_events WHERE id = $1', [req.params.id]);
         logAction(req, 'DELETE_SITE_CALENDAR', { id: req.params.id });
         res.json({ success: true });
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao deletar do calendário do site' });
     }
 });
@@ -1804,7 +1804,7 @@ app.post('/api/events', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { name, description, date, payment_type, participant_ids } = req.body || {};
     if (!name) return res.status(400).json({ error: 'Nome do evento é obrigatório' });
-    
+
     try {
         await db.query('BEGIN'); // Transação para garantir criação atômica
         const eventResult = await db.query('INSERT INTO events (name, description, date, payment_type) VALUES ($1, $2, $3, $4) RETURNING id', [name, description || null, date || null, payment_type || 'parcelado']);
@@ -1818,7 +1818,7 @@ app.post('/api/events', authenticateToken, async (req, res) => {
         }
         await db.query('COMMIT');
         res.json({ id: eventId, name });
-    } catch{
+    } catch {
         await db.query('ROLLBACK');
         res.status(500).json({ error: 'Erro ao criar evento' });
     }
@@ -1941,7 +1941,7 @@ app.delete('/api/events/:id', authenticateToken, async (req, res) => {
     try {
         await db.query('DELETE FROM events WHERE id = $1', [req.params.id]);
         res.json({ success: true });
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao deletar evento' });
     }
 });
@@ -1959,13 +1959,13 @@ app.get('/api/event-payments', authenticateToken, async (req, res) => {
             if (event_id) { conditions.push('ep.event_id = $' + (params.length + 1)); params.push(event_id); }
             if (month) { conditions.push('ep.month = $' + (params.length + 1)); params.push(month); }
             if (year) { conditions.push('ep.year = $' + (params.length + 1)); params.push(year); }
-            
+
             if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
-            
+
             const result = await db.query(sql, params);
             return res.json(result.rows);
         }
-        
+
         // Responsável vê pagamentos de eventos dele e dos filhos
         if (req.user.role === 'responsible') {
             if (!req.user.personId) return res.json([]);
@@ -1999,7 +1999,7 @@ app.get('/api/event-payments', authenticateToken, async (req, res) => {
 
         const result = await db.query(sql, params);
         res.json(result.rows);
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao buscar pagamentos de eventos' });
     }
 });
@@ -2011,7 +2011,7 @@ app.get('/api/event-payments/detail/:id', authenticateToken, async (req, res) =>
         const result = await db.query('SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, rejection_reason FROM event_payments WHERE id = $1', [req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Pagamento de evento não encontrado' });
         res.json(result.rows[0]);
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao buscar detalhes' });
     }
 });
@@ -2019,14 +2019,14 @@ app.get('/api/event-payments/detail/:id', authenticateToken, async (req, res) =>
 // Registra pagamento de evento
 app.post('/api/event-payments', authenticateToken, blockSabbathUploads, upload.single('receipt'), async (req, res) => {
     const { person_id, event_id, amount, month, year } = req.body || {};
-    
+
     // Processa e comprime a imagem do comprovante
     const compressed = await compressReceipt(req.file);
     const receipt_content = compressed ? compressed.buffer : null;
     const receipt_mime = compressed ? compressed.mimetype : null;
     const receipt_filename = req.file ? `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(req.file.originalname)}` : null;
     const receipt_path = receipt_filename ? `uploads/${receipt_filename}` : null;
-    
+
     // Define quem é o dono do pagamento (Admin/Responsável pode escolher o membro)
     let effectivePersonId = req.user.personId;
     if (req.user.role === 'admin') {
@@ -2076,9 +2076,9 @@ app.post('/api/event-payments', authenticateToken, blockSabbathUploads, upload.s
         const existingSql = (month && year)
             ? 'SELECT id FROM event_payments WHERE person_id = $1 AND event_id = $2 AND month = $3 AND year = $4'
             : 'SELECT id FROM event_payments WHERE person_id = $1 AND event_id = $2 AND month IS NULL';
-        
+
         const existingParams = (month && year)
-            ? [effectivePersonId, event_id, month, year] 
+            ? [effectivePersonId, event_id, month, year]
             : [effectivePersonId, event_id];
 
         const existingResult = await db.query(existingSql, existingParams);
@@ -2091,7 +2091,7 @@ app.post('/api/event-payments', authenticateToken, blockSabbathUploads, upload.s
                 SET amount = $1, receipt_path = COALESCE($2, receipt_path), receipt_content = COALESCE($3, receipt_content), receipt_mime = COALESCE($4, receipt_mime), status = $5, rejection_reason = NULL 
                 WHERE id = $6
             `, [amount, receipt_path, finalDBContent, receipt_mime, status, existing.id]);
-            
+
             // Notifica administradores sobre a atualização
             if (status === 'pending') {
                 const adminsResult = await db.query("SELECT id FROM users WHERE role = 'admin'");
@@ -2180,7 +2180,7 @@ app.get('/api/sales', authenticateToken, async (req, res) => {
         sql += ' ORDER BY date DESC';
         const result = await db.query(sql, params);
         res.json(result.rows);
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao buscar vendas' });
     }
 });
@@ -2189,7 +2189,7 @@ app.get('/api/sales', authenticateToken, async (req, res) => {
 app.post('/api/sales', authenticateToken, blockSabbathUploads, upload.single('receipt'), async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { event_name, amount, date, description } = req.body || {};
-    
+
     if (!event_name || !amount || !date) {
         return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
     }
@@ -2235,7 +2235,7 @@ app.delete('/api/sales/:id', authenticateToken, async (req, res) => {
         await db.query('DELETE FROM sales WHERE id = $1', [req.params.id]);
         res.json({ success: true });
         logAction(req, 'DELETE_SALE', { id: req.params.id });
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao deletar venda' });
     }
 });
@@ -2252,13 +2252,13 @@ app.post('/api/event-payments/:id/approve', authenticateToken, async (req, res) 
         if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
 
         await db.query('UPDATE event_payments SET status = \'approved\', rejection_reason = NULL WHERE id = $1', [req.params.id]);
-        
+
         // Notifica o membro
         const userResult = await db.query('SELECT id, email FROM users WHERE person_id = $1', [payment.person_id]);
         const userForMember = userResult.rows[0];
         if (userForMember) {
             await createNotification(userForMember.id, 'Pagamento de Evento Aprovado', `Seu pagamento para o evento ${payment.event_name} foi aprovado!`, 'success');
-            
+
             if (userForMember.email) {
                 const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
                 const loginUrl = `${systemUrl}/login.html`;
@@ -2271,7 +2271,7 @@ app.post('/api/event-payments/:id/approve', authenticateToken, async (req, res) 
             }
         }
         res.json({ success: true });
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao aprovar' });
     }
 });
@@ -2286,13 +2286,13 @@ app.post('/api/event-payments/:id/reject', authenticateToken, async (req, res) =
         if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
 
         await db.query('UPDATE event_payments SET status = \'rejected\', rejection_reason = $1 WHERE id = $2', [reason || 'Inválido', req.params.id]);
-        
+
         // Notifica o membro sobre a rejeição
         const userResult = await db.query('SELECT id, email FROM users WHERE person_id = $1', [payment.person_id]);
         const userForMember = userResult.rows[0];
         if (userForMember) {
             await createNotification(userForMember.id, 'Pagamento de Evento Rejeitado', `Seu pagamento para o evento ${payment.event_name} foi rejeitado. Motivo: ${reason}`, 'error');
-            
+
             if (userForMember.email) {
                 const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
                 const loginUrl = `${systemUrl}/login.html`;
@@ -2305,7 +2305,7 @@ app.post('/api/event-payments/:id/reject', authenticateToken, async (req, res) =
             }
         }
         res.json({ success: true });
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao rejeitar' });
     }
 });
@@ -2316,7 +2316,7 @@ app.delete('/api/event-payments/:id', authenticateToken, async (req, res) => {
     try {
         await db.query('DELETE FROM event_payments WHERE id = $1', [req.params.id]);
         res.json({ success: true });
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao deletar' });
     }
 });
@@ -2329,7 +2329,7 @@ app.get('/api/outflows', authenticateToken, async (req, res) => {
     try {
         const result = await db.query('SELECT id, amount, category, date, description, receipt_path, receipt_mime, created_at FROM outflows ORDER BY date DESC');
         res.json(result.rows);
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao buscar saídas' });
     }
 });
@@ -2339,7 +2339,7 @@ app.post('/api/outflows', authenticateToken, blockSabbathUploads, upload.single(
     try {
         if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
         const { amount, category, date, description } = req.body;
-        
+
         if (!amount || !category || !date) {
             return res.status(400).json({ error: 'Valor, categoria e data são obrigatórios.' });
         }
@@ -2369,7 +2369,7 @@ app.post('/api/outflows', authenticateToken, blockSabbathUploads, upload.single(
             INSERT INTO outflows (amount, category, date, description, receipt_path, receipt_content, receipt_mime) 
             VALUES ($1, $2, $3, $4, $5, $6, $7)
         `, [amount, category, date, description || null, receipt_path, finalDBContent, receipt_mime]);
-        
+
         logAction(req, 'CREATE_OUTFLOW', { amount, category, date });
         res.json({ success: true });
     } catch (err) {
@@ -2385,15 +2385,15 @@ app.delete('/api/outflows/:id', authenticateToken, async (req, res) => {
         await db.query('DELETE FROM outflows WHERE id = $1', [req.params.id]);
         logAction(req, 'DELETE_OUTFLOW', { id: req.params.id });
         res.json({ success: true });
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao deletar saída' });
     }
 });
 
 // Middleware global de tratamento de erros
 app.use((err, req, res, next) => {
-  console.error('SERVER ERROR:', err);
-  res.status(500).json({ error: 'Erro interno no servidor: ' + err.message });
+    console.error('SERVER ERROR:', err);
+    res.status(500).json({ error: 'Erro interno no servidor: ' + err.message });
 });
 
 // --- ACESSO SEGURO A ARQUIVOS ---
@@ -2418,13 +2418,13 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
         }
 
         console.log(`[STORAGE] Arquivo não no Supabase, tentando banco de dados: ${filename}`);
-        
+
         // 2. Busca o conteúdo binário no banco de dados se não estiver na nuvem
-        
+
         // Tenta em mensalidades
         let result = await db.query('SELECT person_id, receipt_content, receipt_mime FROM payments WHERE receipt_path = $1', [fullRelativePath]);
         let payment = result.rows[0];
-        
+
         // Tenta em pagamentos de eventos
         if (!payment) {
             result = await db.query('SELECT person_id, receipt_content, receipt_mime FROM event_payments WHERE receipt_path = $1', [fullRelativePath]);
@@ -2448,7 +2448,7 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
             console.warn(`[SECURITY] Acesso negado ao arquivo ${filename} para o usuário ${req.user.username}`);
             return res.sendStatus(403);
         }
-        
+
         // Saídas são restritas a Admin e Secretário
         if (isOutflow && req.user.role !== 'admin' && req.user.role !== 'secretário') {
             return res.sendStatus(403);
@@ -2457,11 +2457,11 @@ app.get('/api/files/receipt/:filename', authenticateToken, async (req, res) => {
         if (!payment.receipt_content) {
             return res.status(404).json({ error: 'Conteúdo do arquivo não encontrado no banco de dados' });
         }
-        
+
         // Envia o binário com o MIME-type correto (JPG, PDF, etc)
         res.set('Content-Type', payment.receipt_mime || 'application/octet-stream');
         res.send(payment.receipt_content);
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao processar arquivo' });
     }
 });
@@ -2476,7 +2476,7 @@ app.get('/api/admin/logs', authenticateToken, async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM system_logs ORDER BY created_at DESC LIMIT 200');
         res.json(result.rows);
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao buscar logs' });
     }
 });
@@ -2492,7 +2492,7 @@ app.get('/api/notifications/vapid-public-key', (req, res) => {
 app.post('/api/notifications/subscribe', authenticateToken, async (req, res) => {
     const { subscription } = req.body;
     if (!subscription) return res.status(400).json({ error: 'Inscrição ausente' });
-    
+
     try {
         await db.query(`
             INSERT INTO push_subscriptions (user_id, subscription_data)
@@ -2516,7 +2516,7 @@ app.get('/api/notifications/unread', authenticateToken, async (req, res) => {
             ORDER BY created_at DESC
         `, [req.user.id]);
         res.json(result.rows);
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao buscar notificações' });
     }
 });
@@ -2526,7 +2526,7 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
     try {
         await db.query('UPDATE notifications SET is_read = true WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)', [req.params.id, req.user.id]);
         res.json({ success: true });
-    } catch{
+    } catch {
         res.status(500).json({ error: 'Erro ao marcar como lida' });
     }
 });
@@ -2534,9 +2534,9 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
 // Envia notificação manual para usuários (Broadcast ou Individual)
 app.post('/api/notifications/send', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403).json({ error: 'Acesso negado' });
-    
+
     const { userId, userIds, title, content } = req.body;
-    
+
     // Normaliza para um array de IDs
     let targetIds = [];
     if (userIds && Array.isArray(userIds)) {
@@ -2603,9 +2603,9 @@ async function processWhatsAppQueue() {
     return; // DESATIVADO TEMPORARIAMENTE
     if (isProcessingWhatsAppQueue) return;
     isProcessingWhatsAppQueue = true;
-    
+
     console.log('[WA-WORKER] Iniciando processamento da fila do WhatsApp...');
-    
+
     try {
         while (true) {
             // Busca a próxima mensagem pendente
@@ -2615,43 +2615,43 @@ async function processWhatsAppQueue() {
                 ORDER BY created_at ASC, id ASC 
                 LIMIT 1
             `);
-            
+
             if (nextMsgResult.rows.length === 0) {
                 console.log('[WA-WORKER] Fila vazia. Finalizando processamento.');
                 break;
             }
-            
+
             const msg = nextMsgResult.rows[0];
-            
+
             // Marca como em envio
             await db.query('UPDATE whatsapp_queue SET status = $1 WHERE id = $2', ['sending', msg.id]);
-            
+
             // Busca configurações
             const settingsResult = await db.query('SELECT * FROM whatsapp_settings LIMIT 1');
             const settings = settingsResult.rows[0];
-            
+
             if (!settings) {
                 const errMsg = 'Configurações de WhatsApp não encontradas.';
                 console.error(`[WA-WORKER] ${errMsg}`);
                 await db.query('UPDATE whatsapp_queue SET status = $1, error_message = $2, sent_at = NOW() WHERE id = $3', ['error', errMsg, msg.id]);
                 break;
             }
-            
+
             console.log(`[WA-WORKER] Enviando mensagem ID ${msg.id} para ${msg.phone}...`);
             const sendResult = await sendWhatsAppMessage(
-                settings.base_url, 
-                settings.instance_id, 
-                settings.api_key, 
-                msg.phone, 
+                settings.base_url,
+                settings.instance_id,
+                settings.api_key,
+                msg.phone,
                 msg.message
             );
-            
+
             let delay;
             if (sendResult.success) {
                 await db.query('UPDATE whatsapp_queue SET status = $1, sent_at = NOW() WHERE id = $2', ['sent', msg.id]);
                 successCounter++;
                 console.log(`[WA-WORKER] Mensagem ID ${msg.id} enviada com sucesso. (Sucessos nesta sessão: ${successCounter})`);
-                
+
                 if (successCounter >= 15) {
                     delay = Math.floor(Math.random() * (5 - 3 + 1) + 3) * 60 * 1000; // 3 a 5 minutos
                     successCounter = 0; // Reseta o contador
@@ -2664,12 +2664,12 @@ async function processWhatsAppQueue() {
                 const errMsg = sendResult.error || 'Erro desconhecido.';
                 await db.query('UPDATE whatsapp_queue SET status = $1, error_message = $2, sent_at = NOW() WHERE id = $3', ['error', errMsg, msg.id]);
                 console.error(`[WA-WORKER] Erro ao enviar mensagem ID ${msg.id}: ${errMsg}`);
-                
+
                 // Em caso de erro, ainda aplica o cooldown de 35 a 60 segundos
                 delay = Math.floor(Math.random() * (60 - 35 + 1) + 35) * 1000;
                 console.log(`[WA-WORKER] Cooldown pós-erro ativo: aguardando ${delay / 1000} segundos...`);
             }
-            
+
             // Aguarda o cooldown/pausa antes da próxima mensagem
             await new Promise(resolve => setTimeout(resolve, delay));
         }
@@ -2712,12 +2712,12 @@ const sendWhatsAppMessage = async (baseUrl, instanceId, apiKey, number, message)
             },
             body: JSON.stringify({ number, message })
         });
-        
+
         if (!response.ok) {
             const errText = await response.text();
             throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
         }
-        
+
         const data = await response.json();
         return { success: true, data };
     } catch (err) {
@@ -2749,7 +2749,7 @@ app.post('/api/whatsapp/settings', authenticateToken, async (req, res) => {
             SET api_key = $1, base_url = $2, instance_id = $3, enabled = $4, reminder_template = $5, updated_at = NOW()
             WHERE id = (SELECT id FROM whatsapp_settings LIMIT 1)
         `, [api_key, base_url, instance_id, enabled || false, reminder_template]);
-        
+
         logAction(req, 'UPDATE_WHATSAPP_SETTINGS', { base_url, instance_id, enabled });
         res.json({ success: true });
     } catch (err) {
@@ -2774,28 +2774,28 @@ app.get('/api/whatsapp/scheduled', authenticateToken, async (req, res) => {
 app.post('/api/whatsapp/scheduled', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { message, date, time, target_type, target_value } = req.body || {};
-    
+
     if (!message || !date || !time || !target_type) {
         return res.status(400).json({ error: 'Parâmetros obrigatórios ausentes.' });
     }
-    
+
     try {
         const scheduledAt = new Date(`${date}T${time}`);
         if (isNaN(scheduledAt.getTime())) {
             return res.status(400).json({ error: 'Data ou hora inválida.' });
         }
-        
+
         if (scheduledAt <= new Date()) {
             return res.status(400).json({ error: 'O agendamento precisa ser para uma data e hora no futuro.' });
         }
-        
+
         const finalTargetValue = typeof target_value === 'object' ? JSON.stringify(target_value) : (target_value || null);
-        
+
         await db.query(`
             INSERT INTO scheduled_reminders (message, scheduled_at, target_type, target_value)
             VALUES ($1, $2, $3, $4)
         `, [message, scheduledAt, target_type, finalTargetValue]);
-        
+
         logAction(req, 'CREATE_SCHEDULED_REMINDER', { scheduled_at: scheduledAt, target_type });
         res.json({ success: true });
     } catch (err) {
@@ -2807,18 +2807,18 @@ app.post('/api/whatsapp/scheduled', authenticateToken, async (req, res) => {
 app.delete('/api/whatsapp/scheduled/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { id } = req.params;
-    
+
     try {
         const result = await db.query(`
             DELETE FROM scheduled_reminders 
             WHERE id = $1 AND status = 'pending'
             RETURNING id
         `, [id]);
-        
+
         if (result.rowCount === 0) {
             return res.status(404).json({ error: 'Agendamento não encontrado ou já enviado.' });
         }
-        
+
         logAction(req, 'DELETE_SCHEDULED_REMINDER', { id });
         res.json({ success: true });
     } catch (err) {
@@ -2830,26 +2830,26 @@ app.delete('/api/whatsapp/scheduled/:id', authenticateToken, async (req, res) =>
 app.post('/api/whatsapp/send', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { personIds, message } = req.body || {};
-    
+
     if (!personIds || !Array.isArray(personIds) || personIds.length === 0 || !message) {
         return res.status(400).json({ error: 'Parâmetros obrigatórios ausentes.' });
     }
-    
+
     try {
         const settingsResult = await db.query('SELECT * FROM whatsapp_settings LIMIT 1');
         const settings = settingsResult.rows[0];
-        
+
         if (!settings) {
             return res.status(400).json({ error: 'Configurações de WhatsApp não encontradas.' });
         }
-        
+
         const peopleResult = await db.query('SELECT id, name, phone FROM people WHERE id = ANY($1::int[])', [personIds]);
         const targets = peopleResult.rows.filter(p => p.phone);
-        
+
         if (targets.length === 0) {
             return res.status(400).json({ error: 'Nenhum dos membros selecionados possui telefone cadastrado.' });
         }
-        
+
         // Insere as mensagens na fila do banco de dados
         for (const target of targets) {
             const normalizedPhone = normalizePhoneNumber(target.phone);
@@ -2862,10 +2862,10 @@ app.post('/api/whatsapp/send', authenticateToken, async (req, res) => {
                 );
             }
         }
-        
+
         // Acorda o worker da fila
         processWhatsAppQueue().catch(err => console.error('[WA-WORKER] Erro ao acordar worker após envio manual:', err));
-        
+
         res.json({ success: true, message: `Mensagens para ${targets.length} membros foram adicionadas à fila de envio do WhatsApp.` });
     } catch (err) {
         console.error('[WA] Erro na rota de envio:', err);
@@ -2905,19 +2905,19 @@ app.get('/api/whatsapp/chats', authenticateToken, async (req, res) => {
         }
         const domain = getBaseDomain(settings.base_url);
         const url = `${domain}/api/v1/instances/${settings.instance_id}/chats`;
-        
+
         const response = await fetch(url, {
             headers: {
                 'x-api-key': settings.api_key,
                 'Authorization': `Bearer ${settings.api_key}`
             }
         });
-        
+
         if (!response.ok) {
             const errText = await response.text();
             throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
         }
-        
+
         const data = await response.json();
         res.json(data);
     } catch (err) {
@@ -2937,21 +2937,21 @@ app.get('/api/whatsapp/chats/:chatId/messages', authenticateToken, async (req, r
         }
         const domain = getBaseDomain(settings.base_url);
         const url = `${domain}/api/v1/instances/${settings.instance_id}/chats/${chatId}/messages?limit=${limit}`;
-        
+
         const response = await fetch(url, {
             headers: {
                 'x-api-key': settings.api_key,
                 'Authorization': `Bearer ${settings.api_key}`
             }
         });
-        
+
         if (!response.ok) {
             const errText = await response.text();
             throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
         }
-        
+
         const messages = await response.json();
-        
+
         if (Array.isArray(messages) && messages.length > 0) {
             const messageIds = messages.map(m => m.id).filter(Boolean);
             if (messageIds.length > 0) {
@@ -2974,7 +2974,7 @@ app.get('/api/whatsapp/chats/:chatId/messages', authenticateToken, async (req, r
                 }
             }
         }
-        
+
         res.json(messages);
     } catch (err) {
         console.error('[WA-PROXY] Erro ao buscar mensagens:', err.message);
@@ -2992,21 +2992,21 @@ app.get('/api/whatsapp/chats/:chatId/avatar', authenticateToken, async (req, res
         }
         const domain = getBaseDomain(settings.base_url);
         const url = `${domain}/api/v1/instances/${settings.instance_id}/chats/${chatId}/avatar`;
-        
+
         const response = await fetch(url, {
             headers: {
                 'x-api-key': settings.api_key,
                 'Authorization': `Bearer ${settings.api_key}`
             }
         });
-        
+
         if (!response.ok) {
             return res.redirect('https://via.placeholder.com/150?text=No+Avatar');
         }
-        
+
         const contentType = response.headers.get('content-type') || 'image/jpeg';
         res.setHeader('Content-Type', contentType);
-        
+
         const buffer = await response.arrayBuffer();
         res.send(Buffer.from(buffer));
     } catch (err) {
@@ -3026,27 +3026,27 @@ app.get('/api/whatsapp/media/:messageId', authenticateToken, async (req, res) =>
         }
         const domain = getBaseDomain(settings.base_url);
         const url = `${domain}/api/v1/instances/${settings.instance_id}/messages/${messageId}/media?chatId=${chatId}`;
-        
+
         const response = await fetch(url, {
             headers: {
                 'x-api-key': settings.api_key,
                 'Authorization': `Bearer ${settings.api_key}`
             }
         });
-        
+
         if (!response.ok) {
             const errText = await response.text();
             throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
         }
-        
+
         const contentType = response.headers.get('content-type') || 'application/octet-stream';
         res.setHeader('Content-Type', contentType);
-        
+
         const contentDisposition = response.headers.get('content-disposition');
         if (contentDisposition) {
             res.setHeader('Content-Disposition', contentDisposition);
         }
-        
+
         const buffer = await response.arrayBuffer();
         res.send(Buffer.from(buffer));
     } catch (err) {
@@ -3061,9 +3061,9 @@ app.post('/api/whatsapp/send-text', authenticateToken, async (req, res) => {
     if (!chatId || !message) {
         return res.status(400).json({ error: 'Parâmetros chatId e message são obrigatórios.' });
     }
-    
+
     const targetNumber = (chatId.includes('@g.us') || chatId.includes('@lid')) ? chatId : chatId.split('@')[0];
-    
+
     try {
         const settings = await getWhatsAppSettings();
         if (!settings || !settings.api_key) {
@@ -3071,12 +3071,12 @@ app.post('/api/whatsapp/send-text', authenticateToken, async (req, res) => {
         }
         const domain = getBaseDomain(settings.base_url);
         const url = `${domain}/api/v1/instances/${settings.instance_id}/send-text`;
-        
+
         const senderName = await getSenderFirstName(req.user);
         const formattedMessage = `*${senderName}*:\n${message}`;
-        
+
         console.log(`[WA-PROXY] Enviando texto para chatId: ${chatId}, targetNumber: ${targetNumber}`);
-        
+
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -3086,14 +3086,14 @@ app.post('/api/whatsapp/send-text', authenticateToken, async (req, res) => {
             },
             body: JSON.stringify({ number: targetNumber, message: formattedMessage })
         });
-        
+
         if (!response.ok) {
             const errText = await response.text();
             throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
         }
-        
+
         const data = await response.json();
-        
+
         // Salva mapeamento do remetente no banco de dados
         const msgId = data.messageId || data.id || (data.message && data.message.id) || (data.key && data.key.id) || (data.data && data.data.id);
         if (msgId) {
@@ -3106,7 +3106,7 @@ app.post('/api/whatsapp/send-text', authenticateToken, async (req, res) => {
                 console.error('[WA-PROXY] Erro ao salvar remetente no banco:', dbErr.message);
             }
         }
-        
+
         res.json(data);
     } catch (err) {
         console.error(`[WA-PROXY] Erro ao enviar mensagem de texto para chatId: ${chatId}, targetNumber: ${targetNumber}:`, err.message);
@@ -3120,9 +3120,9 @@ app.post('/api/whatsapp/send-media', authenticateToken, async (req, res) => {
     if (!chatId || !media) {
         return res.status(400).json({ error: 'Parâmetros chatId e media são obrigatórios.' });
     }
-    
+
     const targetNumber = (chatId.includes('@g.us') || chatId.includes('@lid')) ? chatId : chatId.split('@')[0];
-    
+
     try {
         const settings = await getWhatsAppSettings();
         if (!settings || !settings.api_key) {
@@ -3130,12 +3130,12 @@ app.post('/api/whatsapp/send-media', authenticateToken, async (req, res) => {
         }
         const domain = getBaseDomain(settings.base_url);
         const url = `${domain}/api/v1/instances/${settings.instance_id}/send-media`;
-        
+
         const senderName = await getSenderFirstName(req.user);
         const formattedCaption = caption ? `*${senderName}*:\n${caption}` : `*${senderName}*`;
-        
+
         console.log(`[WA-PROXY] Enviando mídia para chatId: ${chatId}, targetNumber: ${targetNumber}`);
-        
+
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -3145,14 +3145,14 @@ app.post('/api/whatsapp/send-media', authenticateToken, async (req, res) => {
             },
             body: JSON.stringify({ number: targetNumber, media, fileName, caption: formattedCaption })
         });
-        
+
         if (!response.ok) {
             const errText = await response.text();
             throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
         }
-        
+
         const data = await response.json();
-        
+
         // Salva mapeamento do remetente no banco de dados
         const msgId = data.messageId || data.id || (data.message && data.message.id) || (data.key && data.key.id) || (data.data && data.data.id);
         if (msgId) {
@@ -3165,7 +3165,7 @@ app.post('/api/whatsapp/send-media', authenticateToken, async (req, res) => {
                 console.error('[WA-PROXY] Erro ao salvar remetente no banco:', dbErr.message);
             }
         }
-        
+
         res.json(data);
     } catch (err) {
         console.error(`[WA-PROXY] Erro ao enviar mídia para chatId: ${chatId}, targetNumber: ${targetNumber}:`, err.message);
@@ -3183,7 +3183,7 @@ app.post('/api/whatsapp/chats/:chatId/seen', authenticateToken, async (req, res)
         }
         const domain = getBaseDomain(settings.base_url);
         const url = `${domain}/api/v1/instances/${settings.instance_id}/chats/${chatId}/seen`;
-        
+
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -3191,12 +3191,12 @@ app.post('/api/whatsapp/chats/:chatId/seen', authenticateToken, async (req, res)
                 'Authorization': `Bearer ${settings.api_key}`
             }
         });
-        
+
         if (!response.ok) {
             const errText = await response.text();
             throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
         }
-        
+
         res.json({ success: true });
     } catch (err) {
         console.error('[WA-PROXY] Erro ao marcar como lido:', err.message);
@@ -3214,7 +3214,7 @@ app.delete('/api/whatsapp/chats/:chatId/messages/:messageId', authenticateToken,
         }
         const domain = getBaseDomain(settings.base_url);
         const url = `${domain}/api/v1/instances/${settings.instance_id}/chats/${chatId}/messages/${messageId}`;
-        
+
         const response = await fetch(url, {
             method: 'DELETE',
             headers: {
@@ -3222,12 +3222,12 @@ app.delete('/api/whatsapp/chats/:chatId/messages/:messageId', authenticateToken,
                 'Authorization': `Bearer ${settings.api_key}`
             }
         });
-        
+
         if (!response.ok) {
             const errText = await response.text();
             throw new Error(`Erro na API externa: Status ${response.status} - ${errText}`);
         }
-        
+
         res.json({ success: true });
     } catch (err) {
         console.error('[WA-PROXY] Erro ao revogar mensagem:', err.message);
@@ -3237,7 +3237,7 @@ app.delete('/api/whatsapp/chats/:chatId/messages/:messageId', authenticateToken,
 
 app.get('/api/whatsapp/chat-sse', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
-    
+
     try {
         const settings = await getWhatsAppSettings();
         if (!settings || !settings.api_key) {
@@ -3245,25 +3245,25 @@ app.get('/api/whatsapp/chat-sse', authenticateToken, async (req, res) => {
         }
         const domain = getBaseDomain(settings.base_url);
         const sseUrl = `${domain}/api/v1/instances/${settings.instance_id}/chat-sse?api_key=${settings.api_key}`;
-        
+
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
         res.flushHeaders();
-        
+
         const https = require('https');
         const http = require('http');
         const client = sseUrl.startsWith('https') ? https : http;
-        
+
         const sseReq = client.get(sseUrl, (sseRes) => {
             sseRes.pipe(res);
         });
-        
+
         sseReq.on('error', (err) => {
             console.error('[WA-PROXY] Erro no request SSE:', err.message);
             res.end();
         });
-        
+
         req.on('close', () => {
             sseReq.destroy();
         });
@@ -3288,7 +3288,7 @@ app.get('/api/site-albums', async (req, res) => {
 app.post('/api/site-albums', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário' && req.user.role !== 'social_midia') return res.sendStatus(403);
     const { title, description, cover_url, album_url } = req.body || {};
-    
+
     if (!title || !cover_url) {
         return res.status(400).json({ error: 'Título e link da foto de capa são obrigatórios.' });
     }
@@ -3336,7 +3336,7 @@ app.delete('/api/site-albums/:id', authenticateToken, async (req, res) => {
     try {
         const result = await db.query('DELETE FROM site_albums WHERE id = $1 RETURNING title', [id]);
         if (result.rowCount === 0) return res.status(404).json({ error: 'Álbum não encontrado.' });
-        
+
         logAction(req, 'DELETE_ALBUM', { id, title: result.rows[0].title });
         res.json({ success: true });
     } catch (err) {
@@ -3371,7 +3371,7 @@ const sendPaymentReminders = async () => {
         const waResult = await db.query('SELECT * FROM whatsapp_settings LIMIT 1');
         const waSettings = waResult.rows[0];
         const waEnabled = waSettings && waSettings.enabled;
-        
+
         const getMonthNamePT = (monthNumber) => {
             const months = [
                 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -3383,12 +3383,12 @@ const sendPaymentReminders = async () => {
 
         for (let i = 0; i < unpaidMembers.rows.length; i++) {
             const member = unpaidMembers.rows[i];
-            
+
             // 1. Envia notificações internas do sistema e push se o membro tiver um usuário vinculado
             if (member.user_id) {
                 const title = 'Lembrete de Mensalidade';
                 const content = `Olá ${member.name || member.username}, lembramos que a mensalidade deste mês ainda está pendente. Regularize para nos ajudar a manter o clube!`;
-                
+
                 // Salva no banco de notificações do sistema
                 await db.query(`
                     INSERT INTO notifications (user_id, title, message, type)
@@ -3420,7 +3420,7 @@ const sendPaymentReminders = async () => {
                         .replace(/{valor}/g, '20,00')
                         .replace(/{pix}/g, 'jdboavista.ap@adventistas.org');
                     const finalMessage = parseSpintax(waMessage);
-                    
+
                     console.log(`[CRON-WA] Enfileirando lembrete de WhatsApp para ${member.name} (${normalizedPhone}).`);
                     await db.query(
                         'INSERT INTO whatsapp_queue (phone, message, status) VALUES ($1, $2, $3)',
@@ -3429,7 +3429,7 @@ const sendPaymentReminders = async () => {
                 }
             }
         }
-        
+
         // Acorda o worker da fila
         processWhatsAppQueue().catch(err => console.error('[WA-WORKER] Erro ao acordar worker após lembretes automáticos:', err));
     } catch (err) {
@@ -3442,7 +3442,7 @@ cron.schedule('0 9 * * *', async () => {
     const today = new Date();
     const day = today.getDate();
     const dayOfWeek = today.getDay(); // 0: Dom, 6: Sáb
-    
+
     // Lógica do Dia 20 (Vencimento secundário)
     if (day === 20) {
         if (dayOfWeek === 6) { // Se for Sábado, aguarda o pôr do sol (Sabbath)
@@ -3468,7 +3468,7 @@ cron.schedule('0 9 * * *', async () => {
             )
             SELECT d FROM work_days WHERE count = 5
         `);
-        
+
         const fifthWorkingDay = new Date(result.rows[0].d).getDate();
         if (day === fifthWorkingDay) {
             console.log('[CRON] Hoje é o 5º dia útil. Enviando lembretes.');
@@ -3481,34 +3481,34 @@ cron.schedule('0 9 * * *', async () => {
 cron.schedule('* * * * *', async () => {
     // Garante que a fila do WhatsApp esteja ativa se houver envios pendentes
     processWhatsAppQueue().catch(err => console.error('[CRON] Erro ao acordar worker da fila:', err));
-    
+
     try {
         // Busca lembretes pendentes agendados para a data/hora atual ou passados que ainda não foram enviados
         const pendingReminders = await db.query(`
             SELECT * FROM scheduled_reminders 
             WHERE status = 'pending' AND scheduled_at <= NOW()
         `);
-        
+
         if (pendingReminders.rows.length === 0) return;
-        
+
         console.log(`[CRON-SCH] Encontrados ${pendingReminders.rows.length} lembretes pendentes para processar.`);
-        
+
         // Busca configurações do WhatsApp
         const waResult = await db.query('SELECT * FROM whatsapp_settings LIMIT 1');
         const waSettings = waResult.rows[0];
-        
+
         if (!waSettings) {
             console.error('[CRON-SCH] Configurações de WhatsApp não encontradas. Abortando.');
             return;
         }
-        
+
         for (const reminder of pendingReminders.rows) {
             try {
                 // Atualiza status para processing para evitar duplicidade de disparos
                 await db.query('UPDATE scheduled_reminders SET status = $1 WHERE id = $2', ['processing', reminder.id]);
-                
+
                 let targets = [];
-                
+
                 if (reminder.target_type === 'all') {
                     const result = await db.query('SELECT id, name, phone FROM people WHERE phone IS NOT NULL');
                     targets = result.rows;
@@ -3520,14 +3520,14 @@ cron.schedule('* * * * *', async () => {
                     const result = await db.query('SELECT id, name, phone FROM people WHERE phone IS NOT NULL AND id = ANY($1::int[])', [personIds]);
                     targets = result.rows;
                 }
-                
+
                 if (targets.length === 0) {
                     await db.query('UPDATE scheduled_reminders SET status = $1, error_message = $2 WHERE id = $3', ['sent', 'Nenhum contato encontrado com telefone cadastrado.', reminder.id]);
                     continue;
                 }
-                
+
                 console.log(`[CRON-SCH] Processando lembrete ID ${reminder.id} para ${targets.length} contatos.`);
-                
+
                 // Enfileira as mensagens na tabela whatsapp_queue
                 for (const target of targets) {
                     const normalizedPhone = normalizePhoneNumber(target.phone);
@@ -3540,20 +3540,20 @@ cron.schedule('* * * * *', async () => {
                         );
                     }
                 }
-                
+
                 // Marca o agendamento como enviado (enfileirado com sucesso)
                 await db.query('UPDATE scheduled_reminders SET status = $1 WHERE id = $2', ['sent', reminder.id]);
                 console.log(`[CRON-SCH] Lembrete ID ${reminder.id} enfileirado com sucesso.`);
-                
+
                 // Acorda o worker da fila
                 processWhatsAppQueue().catch(err => console.error('[WA-WORKER] Erro ao acordar worker após agendamento:', err));
-                
+
             } catch (innerErr) {
                 console.error(`[CRON-SCH] Erro no processamento individual do lembrete ID ${reminder.id}:`, innerErr);
                 await db.query('UPDATE scheduled_reminders SET status = $1, error_message = $2 WHERE id = $3', ['error', innerErr.message, reminder.id]);
             }
         }
-        
+
     } catch (err) {
         console.error('[CRON-SCH] Erro geral no agendador:', err);
     }
@@ -3562,17 +3562,17 @@ cron.schedule('* * * * *', async () => {
 // Inicialização do Servidor HTTP
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
-    
+
     // Executa limpeza inicial de logs ao subir
     cleanupLogs();
-    
+
     // Registra a inicialização do sistema no log de auditoria
-    const mockReq = { 
+    const mockReq = {
         headers: { 'user-agent': 'Server System Process' },
         socket: { remoteAddress: '127.0.0.1' }
     };
-    logAction(mockReq, 'SYSTEM_STARTUP', { 
-        event: 'Server initialized', 
+    logAction(mockReq, 'SYSTEM_STARTUP', {
+        event: 'Server initialized',
         port: PORT,
         protocols: ['TCP', 'HTTP', 'JWT']
     });
