@@ -666,6 +666,7 @@ const initDB = async () => {
 
         // --- WhatsApp W-API Integration Database Schema ---
         await db.query('ALTER TABLE people ADD COLUMN IF NOT EXISTS phone VARCHAR(50)');
+        await db.query('ALTER TABLE people ADD COLUMN IF NOT EXISTS uniform_orders TEXT');
 
         await db.query(`
             CREATE TABLE IF NOT EXISTS whatsapp_settings (
@@ -1054,6 +1055,66 @@ app.patch('/api/notifications/read-all', authenticateToken, async (req, res) => 
 });
 
 // --- API de Membros (People) ---
+
+// --- API de Uniformes ---
+app.get('/api/uniforms', authenticateToken, async (req, res) => {
+    try {
+        if (!req.user.personId) return res.json({ orders: [] });
+        
+        const result = await db.query(
+            'SELECT uniform_orders FROM people WHERE id = $1',
+            [req.user.personId]
+        );
+        
+        if (result.rows.length === 0 || !result.rows[0].uniform_orders) {
+            return res.json({ orders: [] });
+        }
+        res.json({ orders: JSON.parse(result.rows[0].uniform_orders) });
+    } catch (err) {
+        console.error('[UNIFORMS] Error fetching uniform orders:', err);
+        res.status(500).json({ error: 'Erro ao buscar pedidos de uniformes' });
+    }
+});
+
+app.post('/api/uniforms', authenticateToken, async (req, res) => {
+    try {
+        if (!req.user.personId) return res.status(400).json({ error: 'Usuário não vinculado a um membro.' });
+        
+        const { orders } = req.body;
+        const ordersJson = JSON.stringify(orders || []);
+        
+        await db.query(
+            'UPDATE people SET uniform_orders = $1 WHERE id = $2',
+            [ordersJson, req.user.personId]
+        );
+        
+        res.json({ success: true, message: 'Pedido atualizado com sucesso!' });
+    } catch (err) {
+        console.error('[UNIFORMS] Error updating uniform orders:', err);
+        res.status(500).json({ error: 'Erro ao atualizar pedidos de uniformes' });
+    }
+});
+
+app.get('/api/uniforms/all', authenticateToken, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin' && req.user.role !== 'secretário') {
+            return res.status(403).json({ error: 'Acesso negado.' });
+        }
+        const result = await db.query(
+            "SELECT name, uniform_orders FROM people WHERE uniform_orders IS NOT NULL AND uniform_orders != '' AND uniform_orders != '[]'"
+        );
+        
+        const data = result.rows.map(row => ({
+            name: row.name,
+            orders: JSON.parse(row.uniform_orders)
+        }));
+        
+        res.json(data);
+    } catch (err) {
+        console.error('[UNIFORMS] Error fetching all uniform orders:', err);
+        res.status(500).json({ error: 'Erro ao buscar todos os pedidos.' });
+    }
+});
 
 // Lista todos os membros cadastrados
 app.get('/api/people', authenticateToken, async (req, res) => {
