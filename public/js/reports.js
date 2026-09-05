@@ -464,6 +464,11 @@ function toggleReportFields() {
     } else {
         if (eventMemberField) eventMemberField.style.display = 'none';
     }
+    
+    const confirmBtn = document.getElementById('confirm-generate-report-btn');
+    if (confirmBtn) {
+        confirmBtn.style.display = type ? 'block' : 'none';
+    }
 }
 window.toggleReportFields = toggleReportFields;
 

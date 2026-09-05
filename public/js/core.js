@@ -940,6 +940,7 @@ function switchTab(tabName, force = false) {
     if (tabName === 'profile') renderProfile();
     if (tabName === 'reports') {
         populateReportSelects();
+        if (typeof window.toggleReportFields === 'function') window.toggleReportFields();
     }
 
     // Inicializações de funcionalidades específicas

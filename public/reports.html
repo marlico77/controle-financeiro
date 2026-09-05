@@ -249,25 +249,63 @@
                         </div>
                     </div>
                 </header>
-<!-- Reports Page -->
-<div id="reports-page" class="tab-content" style="display: none;">
-    <div class="glass-card"
-        style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem; text-align: center;">
-        <div style="margin-bottom: 2rem;">
-            <h3 style="color: var(--accent-color); margin-bottom: 0.5rem; font-size: 1.8rem;">Central de
-                Relatórios</h3>
-            <p style="color: var(--text-dim);">Gere extratos detalhados de mensalidades, membros ou
-                eventos.</p>
-        </div>
+              <!-- Reports Page -->
+<div id="reports-page" class="tab-content" style="display: none; padding-top: 2rem;">
+    <div style="max-width: 600px; margin: 0 auto;">
+        <div class="glass-card" style="padding: 2.5rem;">
+            <div style="margin-bottom: 2rem; text-align: center;">
+                <h3 style="color: var(--accent-color); margin-bottom: 0.5rem; font-size: 1.8rem;">Central de Relatórios</h3>
+                <p style="color: var(--text-dim);">Selecione as opções abaixo para gerar o extrato desejado.</p>
+            </div>
 
-        <button id="open-report-selector-btn"
-            onclick="const m = document.getElementById('report-selector-modal'); if(m) m.style.display='flex'; window.toggleReportFields();"
-            class="btn-primary"
-            style="max-width: 300px; background: black; color: white; padding: 1.2rem 2rem; font-weight: 700;">Gerar
-            Novo Relatório</button>
+            <div class="input-group">
+                <label for="report-type-select">Tipo de Relatório</label>
+                <select id="report-type-select" class="form-control">
+                    <option value="" disabled selected>Selecione...</option>
+                    <option value="general">Mensalidades Geral (Ano)</option>
+                    <option value="member">Individual por Membro</option>
+                    <option value="event">Específico de Evento</option>
+                </select>
+            </div>
+
+            <!-- Field for Member -->
+            <div id="report-field-member" class="input-group" style="display: none;">
+                <label for="report-member-select">Selecione o Membro</label>
+                <select id="report-member-select" class="form-control">
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+
+            <!-- Fields for Event -->
+            <div id="report-fields-event" style="display: none;">
+                <div class="input-group">
+                    <label for="report-event-select">Selecione o Evento</label>
+                    <select id="report-event-select" class="form-control">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="report-event-filter">Agrupamento</label>
+                    <select id="report-event-filter" class="form-control">
+                        <option value="all">Lista Completa de Participantes</option>
+                        <option value="unit">Resumo por Unidade</option>
+                        <option value="individual">Lista Individual</option>
+                    </select>
+                </div>
+                <!-- Field for Event Participant (Shown when filter is individual) -->
+                <div id="report-field-event-member" class="input-group" style="display: none;">
+                    <label for="report-event-member-select">Selecione o Participante</label>
+                    <select id="report-event-member-select" class="form-control">
+                        <option value="">Selecione um Participante</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="confirm-generate-report-btn" onclick="window.confirmGenerateReport()" class="btn-primary"
+                style="width: 100%; background: var(--accent-color); color: white; padding: 1.2rem; font-weight: 700; margin-top: 1.5rem; display: none;">Gerar Relatório</button>
+        </div>
     </div>
 </div>
-
 
 <!-- MODALS INJECTED FOR MPA -->
 <!-- Custom Alert Modal -->
