@@ -81,7 +81,10 @@ app.use(cors({
         return callback(null, true);
     }
 })); // Habilita CORS com restrições de domínio
-app.use(express.json()); // Habilita parsing de JSON no corpo das requisições
+app.use(express.json());
+
+const planningsRouter = require('./routes/plannings');
+app.use('/api/plannings', planningsRouter); // Habilita parsing de JSON no corpo das requisições
 app.use(express.static('public', { index: 'clube.html' })); // Serve os arquivos estáticos da pasta 'public' (frontend), tendo clube.html como página inicial padrão
 
 // --- Configuração de Web Push (Notificações Push) ---

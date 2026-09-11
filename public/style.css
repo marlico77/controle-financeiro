@@ -1815,6 +1815,7 @@ tfoot td {
     
     /* Esconde TODO O CONTEÚDO principal da página (formulários, top-bar, etc) e todos os outros modais, EXCETO o modal de relatório! */
     .content > *:not(#report-modal) { display: none !important; }
+    .modal:not(#report-modal) { display: none !important; }
     
     /* Exibe APENAS o modal de relatório/impressão */
     #report-modal { display: block !important; }

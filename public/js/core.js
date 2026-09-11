@@ -1,4 +1,4 @@
-// --- Função Central de Requisições à API (Fetch Wrapper) ---
+﻿// --- Função Central de Requisições à API (Fetch Wrapper) ---
 // Adiciona o token de autorização e trata erros de sessão automaticamente
 async function apiFetch(url, options = {}) {
     const headers = {
@@ -918,6 +918,7 @@ function switchTab(tabName, force = false) {
         else if (tabName === 'people') title.textContent = 'Gerenciamento de Membros';
         else if (tabName === 'events') title.textContent = 'Gestão de Eventos';
         else if (tabName === 'reports') title.textContent = 'Relatórios do Sistema';
+        else if (tabName === 'planejamentos') title.textContent = 'Planejamentos';
         else if (tabName === 'mensalidade') title.textContent = 'Controle de Mensalidades';
         else if (tabName === 'authorizations') title.textContent = 'Autorizações de Saída';
         else if (tabName === 'outflows') title.textContent = 'Gestão de Despesas';
@@ -1119,6 +1120,39 @@ const handleNotificationClick = async (id, type) => {
     }
 };
 
+// Injeção Dinâmica do Menu de Planejamentos
+document.addEventListener('DOMContentLoaded', () => {
+    const navLinksList = document.querySelector('.nav-links');
+    if (navLinksList) {
+        const planejamentosLi = document.createElement('li');
+        planejamentosLi.setAttribute('data-target', 'planejamentos');
+        planejamentosLi.innerHTML = `
+            <span class="icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" style="width: 20px; height: 20px; fill: currentColor;">
+                    <path d="M128 64c-35.3 0-64 28.7-64 64v384c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64V128c0-35.3-28.7-64-64-64H128zm32 160h256c17.7 0 32 14.3 32 32s-14.3 32-32 32H160c-17.7 0-32-14.3-32-32s14.3-32 32-32zm0 128h256c17.7 0 32 14.3 32 32s-14.3 32-32 32H160c-17.7 0-32-14.3-32-32s14.3-32 32-32z"/>
+                </svg>
+            </span>Planejamentos
+        `;
+        
+        if (window.location.pathname.includes('planejamentos.html')) {
+            planejamentosLi.classList.add('active');
+            document.querySelectorAll('.nav-links li').forEach(li => {
+                if (li !== planejamentosLi) li.classList.remove('active');
+            });
+        }
+        
+        const installBtn = document.getElementById('menu-install-btn');
+        if (installBtn) {
+            navLinksList.insertBefore(planejamentosLi, installBtn);
+        } else {
+            navLinksList.appendChild(planejamentosLi);
+        }
+
+        planejamentosLi.onclick = () => {
+            if(typeof switchTab !== 'undefined') switchTab('planejamentos');
+        };
+    }
+});
 // Injeção Dinâmica do Menu de Uniformes
 document.addEventListener('DOMContentLoaded', () => {
     const navLinksList = document.querySelector('.nav-links');
