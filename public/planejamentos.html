@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-br">
 
 <head>
@@ -203,7 +203,7 @@
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <button id="sidebar-toggle" class="btn-text"
                             style="font-size: 1.5rem; color: var(--text-color);">☰</button>
-                        <h2 id="page-title">Dashboard de Mensalidades</h2>
+                        <h2 id="page-title">Planejamentos</h2>
                     </div>
                     <div class="header-actions">
                         <div class="notification-container" id="notification-trigger">
@@ -249,65 +249,58 @@
                         </div>
                     </div>
                 </header>
-              <!-- Reports Page -->
-<div id="reports-page" class="tab-content" style="display: none; padding-top: 2rem;">
-    <div style="max-width: 600px; margin: 0 auto;">
-        <div class="glass-card" style="padding: 2.5rem;">
-            <div style="margin-bottom: 2rem; text-align: center;">
-                <h3 style="color: var(--accent-color); margin-bottom: 0.5rem; font-size: 1.8rem;">Central de Relatórios</h3>
-                <p style="color: var(--text-dim);">Selecione as opções abaixo para gerar o extrato desejado.</p>
-            </div>
-
-            <div class="input-group">
-                <label for="report-type-select">Tipo de Relatório</label>
-                <select id="report-type-select" class="form-control">
-                    <option value="" disabled selected>Selecione...</option>
-                    <option value="general">Mensalidades Geral (Ano)</option>
-                    <option value="member">Individual por Membro</option>
-                    <option value="event">Específico de Evento</option>
-                </select>
-            </div>
-
-            <!-- Field for Member -->
-            <div id="report-field-member" class="input-group" style="display: none;">
-                <label for="report-member-select">Selecione o Membro</label>
-                <select id="report-member-select" class="form-control">
-                    <!-- Populated by JS -->
-                </select>
-            </div>
-
-            <!-- Fields for Event -->
-            <div id="report-fields-event" style="display: none;">
-                <div class="input-group">
-                    <label for="report-event-select">Selecione o Evento</label>
-                    <select id="report-event-select" class="form-control">
-                        <!-- Populated by JS -->
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label for="report-event-filter">Agrupamento</label>
-                    <select id="report-event-filter" class="form-control">
-                        <option value="all">Lista Completa de Participantes</option>
-                        <option value="unit">Resumo por Unidade</option>
-                        <option value="individual">Lista Individual</option>
-                    </select>
-                </div>
-                <!-- Field for Event Participant (Shown when filter is individual) -->
-                <div id="report-field-event-member" class="input-group" style="display: none;">
-                    <label for="report-event-member-select">Selecione o Participante</label>
-                    <select id="report-event-member-select" class="form-control">
-                        <option value="">Selecione um Participante</option>
-                    </select>
-                </div>
-            </div>
-
-            <button id="confirm-generate-report-btn" onclick="window.confirmGenerateReport()" class="btn-primary"
-                style="width: 100%; background: var(--accent-color); color: white; padding: 1.2rem; font-weight: 700; margin-top: 1.5rem; display: none;">Gerar Relatório</button>
-        </div>
+<!-- Events Page -->
+<div id="planejamentos-page" class="tab-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3>Planejamentos de Acampamento</h3>
+        <button id="add-planning-btn" class="btn-primary" style="width: max-content; padding: 0.5rem 1.5rem;">Novo Planejamento</button>
+    </div>
+    
+    <div id="plannings-list" class="grid-layout">
+        <!-- Planejamentos serão carregados aqui -->
     </div>
 </div>
 
 <!-- MODALS INJECTED FOR MPA -->
+
+<!-- Modal de Exportação -->
+<div id="export-modal" class="modal" style="z-index: 99999;">
+    <div class="glass-card modal-content" style="max-width: 400px;">
+        <span class="close-modal" onclick="document.getElementById('export-modal').style.display='none'">&times;</span>
+        <h3>Exportar Cronograma</h3>
+        
+        <div class="input-group">
+            <label>O que incluir?</label>
+            <select id="export-content">
+                <option value="all">Completo (Atividades + Cardápio)</option>
+                <option value="activities">Apenas Atividades</option>
+                <option value="menus">Apenas Cardápio</option>
+            </select>
+        </div>
+        <button type="button" class="btn-primary" id="btn-confirm-export" style="width: 100%; margin-top: 1rem;">Exibir</button>
+    </div>
+</div>
+
+
+<!-- Modal de Preview de Exportação -->
+<div id="report-modal" class="modal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 20000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div class="modal-content glass-card"
+        style="max-width: 1000px; width: 90%; max-height: 95vh; overflow-y: auto; background: var(--bg-color); padding: 2rem; position: relative;">
+        <span class="close-modal" style="position: absolute; top: 1rem; right: 1.5rem;" onclick="document.getElementById('report-modal').style.display='none'">&times;</span>
+        <div id="report-modal-header"
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 2rem; border-bottom: 1px solid var(--border-color); padding: 0 0.5rem 1.5rem 0.5rem;">
+            <h3 style="color: var(--accent-color); margin: 0; font-size: 1.6rem; font-weight: 700;">Visualização do Relatório</h3>
+            <button onclick="window.print()" class="btn-primary"
+                style="width: auto; background: black; color: white; padding: 0.7rem 2rem; font-size: 1rem; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">Imprimir / Salvar PDF</button>
+        </div>
+        <div id="report-printable" class="report-canvas"
+            style="background: white; padding: 4rem; border-radius: 4px; border: 1px solid #ddd; color: black; box-shadow: 0 10px 30px rgba(0,0,0,0.1); min-height: 1000px;">
+            <!-- O conteúdo será injetado aqui -->
+        </div>
+    </div>
+</div>
+
 <!-- Custom Alert Modal -->
 <div id="alert-modal" class="modal" style="z-index: 10003;">
     <div class="modal-content animate-fade-in dindin-modal">
@@ -933,35 +926,7 @@
     </div>
 </div>
 
-<div id="report-modal" class="modal"
-    style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 20000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-    <div class="modal-content glass-card"
-        style="max-width: 1000px; width: 90%; max-height: 95vh; overflow-y: auto; background: var(--bg-color); padding: 2rem;">
-        <span class="close-modal" style="top: 1rem; right: 1.5rem;">&times;</span>
-        <div id="report-modal-header"
-            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 2rem; border-bottom: 1px solid var(--border-color); padding: 0 0.5rem 1.5rem 0.5rem;">
-            <h3 style="color: var(--accent-color); margin: 0; font-size: 1.6rem; font-weight: 700;">Visualização do
-                Relatório</h3>
-            <div id="calendar-export-filters" style="display: none; gap: 0.8rem; align-items: center;">
-                <select id="calendar-export-period" style="padding: 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color);">
-                    <option value="1">1º Semestre</option>
-                    <option value="2">2º Semestre</option>
-                    <option value="all">Ano Completo</option>
-                </select>
-                <select id="calendar-export-year" style="padding: 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color);">
-                    <option value="2026">2026</option>
-                    <option value="2027">2027</option>
-                </select>
-            </div>
-            <button onclick="window.print()" class="btn-primary"
-                style="width: auto; background: black; color: white; padding: 0.7rem 2rem; font-size: 1rem; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">Imprimir
-                / Salvar PDF</button>
-        </div>
-        <div id="report-printable" class="report-canvas"
-            style="background: white; padding: 4rem; border-radius: 4px; border: 1px solid #ddd; color: black; box-shadow: 0 10px 30px rgba(0,0,0,0.1); min-height: 1000px;">
-            <!-- Generated Report HTML -->
-        </div>
-    </div>
+
 </div>
 
 <!-- Session Conflict Modal -->
@@ -1150,6 +1115,81 @@
 
     
 
+    <script src="js/planejamentos.js"></script>
+
+<!-- Planejamento Modal -->
+<div id="planning-modal" class="modal">
+    <div class="glass-card modal-content" style="max-width: 800px;">
+        <span class="close-modal">&times;</span>
+        <h3 id="planning-modal-title">Novo Planejamento</h3>
+        <form id="planning-form">
+            <div class="input-group">
+                <label>Nome do Acampamento</label>
+                <input type="text" id="planning-name" required>
+            </div>
+            <div class="input-group" style="display:flex; gap:1rem;">
+                <div style="flex:1;">
+                    <label>Data de Início</label>
+                    <input type="date" id="planning-start" required>
+                </div>
+                <div style="flex:1;">
+                    <label>Data de Término</label>
+                    <input type="date" id="planning-end" required>
+                </div>
+            </div>
+            <div style="display:flex; gap:1rem; margin-top:1rem;">
+        <button type="submit" class="btn-primary" style="flex:1;">Salvar Acampamento</button>
+        <button type="button" class="btn-secondary" id="btn-open-export" style="flex:1; display:none; background: #333; color: white;">Exportar</button>
+    </div>
+        </form>
+
+        <div id="planning-details" style="display:none; margin-top: 2rem; border-top: 1px solid #444; padding-top: 1rem;">
+            <!-- Abas para cronograma e cardápio -->
+            <div style="display:flex; gap:1rem; margin-bottom: 1rem;">
+                <button id="tab-activities" class="btn-primary" style="width: auto; padding: 0.5rem 1rem;">Cronograma</button>
+                <button id="tab-menus" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem;">Cardápio</button>
+            </div>
+
+            <div id="activities-section">
+                <div id="activities-days-container"></div>
+                <div style="margin-top: 2rem; padding: 1rem; border-top: 1px solid var(--border-color);">
+                    <h4>Adicionar Atividade Avulsa</h4>
+                    <form id="activity-form" style="display:flex; gap:1rem; align-items:flex-end; flex-wrap: wrap;">
+                        <div class="input-group" style="flex:1; min-width:120px;"><label>Data</label><input type="date" id="act-date" required></div>
+                        <div class="input-group" style="flex:1; min-width:100px;"><label>Hora</label><input type="time" id="act-time" required></div>
+                        <div class="input-group" style="flex:2; min-width:200px;"><label>O que será feito</label><input type="text" id="act-desc" required></div>
+                        <div class="input-group" style="flex:1; min-width:150px;"><label>Responsável</label><input type="text" id="act-resp" required></div>
+                        <div class="input-group" style="flex:0; margin-bottom: 1.5rem;"><button type="submit" class="btn-primary" style="width: max-content; padding: 0.8rem 1.5rem; height: 46px;">Adicionar</button></div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="menus-section" style="display:none;">
+                <div id="menus-days-container"></div>
+                <div style="margin-top: 2rem; padding: 1rem; border-top: 1px solid var(--border-color);">
+                    <h4>Adicionar Cardápio Avulso</h4>
+                    <form id="menu-form" style="display:flex; gap:1rem; align-items:flex-end; flex-wrap: wrap;">
+                        <div class="input-group" style="flex:1; min-width:120px;"><label>Data</label><input type="date" id="mnu-date" required></div>
+                        <div class="input-group" style="flex:1; min-width:150px;"><label>Refeição</label>
+                            <select id="mnu-meal" required>
+                                <option value="Café da Manhã">Café da Manhã</option>
+                                <option value="Almoço">Almoço</option>
+                                <option value="Jantar">Jantar</option>
+                                <option value="Lanche">Lanche</option>
+                            </select>
+                        </div>
+                        <div class="input-group" style="flex:2; min-width:200px;"><label>Cardápio</label><input type="text" id="mnu-desc" required></div>
+                        <div class="input-group" style="flex:0; margin-bottom: 1.5rem;"><button type="submit" class="btn-primary" style="width: max-content; padding: 0.8rem 1.5rem; height: 46px;">Adicionar</button></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </body>
 
 </html>
