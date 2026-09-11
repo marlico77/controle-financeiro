@@ -1120,70 +1120,39 @@ const handleNotificationClick = async (id, type) => {
     }
 };
 
-// Injeção Dinâmica do Menu de Planejamentos
+// Injeção Dinâmica do Menu de Planejamentos (Restrito)
 document.addEventListener('DOMContentLoaded', () => {
     const navLinksList = document.querySelector('.nav-links');
     if (navLinksList) {
-        const planejamentosLi = document.createElement('li');
-        planejamentosLi.setAttribute('data-target', 'planejamentos');
-        planejamentosLi.innerHTML = `
-            <span class="icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" style="width: 20px; height: 20px; fill: currentColor;">
-                    <path d="M128 64c-35.3 0-64 28.7-64 64v384c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64V128c0-35.3-28.7-64-64-64H128zm32 160h256c17.7 0 32 14.3 32 32s-14.3 32-32 32H160c-17.7 0-32-14.3-32-32s14.3-32 32-32zm0 128h256c17.7 0 32 14.3 32 32s-14.3 32-32 32H160c-17.7 0-32-14.3-32-32s14.3-32 32-32z"/>
-                </svg>
-            </span>Planejamentos
-        `;
-        
-        if (window.location.pathname.includes('planejamentos.html')) {
-            planejamentosLi.classList.add('active');
-            document.querySelectorAll('.nav-links li').forEach(li => {
-                if (li !== planejamentosLi) li.classList.remove('active');
-            });
-        }
-        
-        const installBtn = document.getElementById('menu-install-btn');
-        if (installBtn) {
-            navLinksList.insertBefore(planejamentosLi, installBtn);
-        } else {
-            navLinksList.appendChild(planejamentosLi);
-        }
-
-        planejamentosLi.onclick = () => {
-            if(typeof switchTab !== 'undefined') switchTab('planejamentos');
-        };
-    }
-});
-// Injeção Dinâmica do Menu de Uniformes
-document.addEventListener('DOMContentLoaded', () => {
-    const navLinksList = document.querySelector('.nav-links');
-    if (navLinksList) {
-        const uniformesLi = document.createElement('li');
-        uniformesLi.setAttribute('data-target', 'uniformes');
-        uniformesLi.innerHTML = `
-            <span class="icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" style="width: 20px; height: 20px; fill: currentColor;">
-                    <path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm89.6 32h-16.7c-22.2 10.2-46.9 16-72.9 16s-50.6-5.8-72.9-16h-16.7C60.2 288 0 348.2 0 422.4V464c0 26.5 21.5 48 48 48h352c26.5 0 48-21.5 48-48v-41.6c0-74.2-60.2-134.4-134.4-134.4z"/>
-                </svg>
-            </span>Uniformes
-        `;
-        
-        // Verifica se a página atual já é a de uniformes para marcar como ativa
-        if (window.location.pathname.includes('uniformes.html')) {
-            uniformesLi.classList.add('active');
+        const currentRole = getStorageItem('role');
+        if (currentRole === 'admin' || currentRole === 'secretário' || currentRole === 'secretario') {
+            const planejamentosLi = document.createElement('li');
+            planejamentosLi.setAttribute('data-target', 'planejamentos');
+            planejamentosLi.innerHTML = `
+                <span class="icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" style="width: 20px; height: 20px; fill: currentColor;">
+                        <path d="M128 64c-35.3 0-64 28.7-64 64v384c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64V128c0-35.3-28.7-64-64-64H128zm32 160h256c17.7 0 32 14.3 32 32s-14.3 32-32 32H160c-17.7 0-32-14.3-32-32s14.3-32 32-32zm0 128h256c17.7 0 32 14.3 32 32s-14.3 32-32 32H160c-17.7 0-32-14.3-32-32s14.3-32 32-32z"/>
+                    </svg>
+                </span>Planejamentos
+            `;
             
-            // Remove a classe 'active' das outras abas
-            document.querySelectorAll('.nav-links li').forEach(li => {
-                if (li !== uniformesLi) li.classList.remove('active');
-            });
+            if (window.location.pathname.includes('planejamentos.html')) {
+                planejamentosLi.classList.add('active');
+                document.querySelectorAll('.nav-links li').forEach(li => {
+                    if (li !== planejamentosLi) li.classList.remove('active');
+                });
+            }
+            
+            const installBtn = document.getElementById('menu-install-btn');
+            if (installBtn) {
+                navLinksList.insertBefore(planejamentosLi, installBtn);
+            } else {
+                navLinksList.appendChild(planejamentosLi);
+            }
+
+            planejamentosLi.onclick = () => {
+                if(typeof switchTab !== 'undefined') switchTab('planejamentos');
+            };
         }
-        
-        const installBtn = document.getElementById('menu-install-btn');
-        if (installBtn) {
-            navLinksList.insertBefore(uniformesLi, installBtn);
-        } else {
-            navLinksList.appendChild(uniformesLi);
-        }
-        
-        uniformesLi.addEventListener('click', () => switchTab('uniformes'));
     }
 });
