@@ -343,6 +343,7 @@ async function generateAuthDocument(type) {
         // Obtém os dados preenchidos no formulário de autorização
         const eventName = (document.getElementById('auth-event-name') || {}).value || '';
         const eventDate = (document.getElementById('auth-event-date') || {}).value || '';
+        const eventEndDate = (document.getElementById('auth-event-end-date') || {}).value || '';
         const eventLocation = (document.getElementById('auth-event-location') || {}).value || '';
         const departureLocation = (document.getElementById('auth-departure-location') || {}).value || '';
         const departureTime = (document.getElementById('auth-departure-time') || {}).value || '';
@@ -354,6 +355,11 @@ async function generateAuthDocument(type) {
         }
 
         const formattedDate = formatDate(eventDate); // Formata a data para padrão brasileiro
+        let dateText = `no dia <strong>${formattedDate}</strong>`;
+        if (eventEndDate) {
+            const formattedEndDate = formatDate(eventEndDate);
+            dateText = `nos dias <strong>${formattedDate} a ${formattedEndDate}</strong>`;
+        }
         const currentYear = new Date().getFullYear();
         // Função para converter a logo do clube para Base64 (necessário para impressão confiável em PDF)
         const getLogoBase64 = async () => {
@@ -383,7 +389,7 @@ async function generateAuthDocument(type) {
                 <div style="margin-top: 30px; text-align: justify; line-height: 2.4;">
                     Eu, <span style="border-bottom: 1px solid black; display: inline-block; min-width: 400px; margin: 0 5px;"></span>, 
                     responsável pelo(a) desbravador(a) <span style="border-bottom: 1px solid black; display: inline-block; min-width: 350px; margin: 0 5px;"></span>, 
-                    autorizo-o(a) a participar do evento <strong>${eventName}</strong>, que será realizado no dia <strong>${formattedDate}</strong>, no local <strong>${eventLocation}</strong>. Os desbravadores deverão se apresentar às <strong>${departureTime}</strong>h em <strong>${departureLocation}</strong> para a partida.
+                    autorizo-o(a) a participar do evento <strong>${eventName}</strong>, que será realizado ${dateText}, no local <strong>${eventLocation}</strong>. Os desbravadores deverão se apresentar às <strong>${departureTime}</strong>h em <strong>${departureLocation}</strong> para a partida.
                 </div>
                 <p style="text-align: justify; line-height: 2.2;">O evento tem término previsto para as <strong>${returnTime}</strong>h, momento em que o responsável deverá buscar a criança no mesmo local de partida indicado acima.</p>
                 <p style="margin-top: 25px; text-align: center; font-weight: bold; border: 1px solid #ddd; padding: 15px; border-radius: 8px;">Estou ciente de que estará acompanhado(a) pela direção do Clube TRIBO DE DAVI, permanecendo sob sua responsabilidade durante todo esse período.</p>
