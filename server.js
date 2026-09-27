@@ -31,15 +31,15 @@ const compressReceipt = async (file) => {
     if (file.mimetype.startsWith('image/')) {
         try {
             console.log(`[COMPRESS] Otimizando imagem: ${file.originalname} (${(file.size / 1024).toFixed(1)} KB)`);
-            // Redimensiona para max 1200px, converte para JPEG com 80% de qualidade
+            // Redimensiona para max 1200px, converte para WebP (preserva fundo transparente)
             const buffer = await sharp(file.buffer)
                 .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
-                .jpeg({ quality: 80, progressive: true })
+                .webp({ quality: 80 })
                 .toBuffer();
             console.log(`[COMPRESS] Sucesso: ${(buffer.length / 1024).toFixed(1)} KB`);
             return {
                 buffer,
-                mimetype: 'image/jpeg'
+                mimetype: 'image/webp'
             };
         } catch (err) {
             console.error('[COMPRESS] Erro ao comprimir imagem, usando original:', err);
@@ -591,6 +591,19 @@ const initDB = async () => {
     try {
         // Cria tabelas necessárias se elas ainda não existirem (Garante resiliência em deploys)
         await db.query(`
+            CREATE TABLE IF NOT EXISTS especialidades (
+                id SERIAL PRIMARY KEY,
+                nome VARCHAR(255) NOT NULL,
+                categoria VARCHAR(100) NOT NULL,
+                codigo VARCHAR(50),
+                nivel INT,
+                ano INT,
+                instituicao VARCHAR(255),
+                imagem_url TEXT,
+                requisitos JSONB,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE TABLE IF NOT EXISTS outflows (
                 id SERIAL PRIMARY KEY,
                 amount DECIMAL(10,2) NOT NULL,
@@ -3620,6 +3633,125 @@ cron.schedule('* * * * *', async () => {
 
     } catch (err) {
         console.error('[CRON-SCH] Erro geral no agendador:', err);
+    }
+});
+app.get('/api/public-images/:filename', async (req, res) => {
+    const { filename } = req.params;
+    try {
+        const { data } = await supabase.storage.from('receipts').download(filename);
+        if (data) {
+            const arrayBuffer = await data.arrayBuffer();
+            res.set('Content-Type', data.type || 'image/jpeg');
+            return res.send(Buffer.from(arrayBuffer));
+        }
+        res.status(404).send('Imagem não encontrada');
+    } catch(err) {
+        res.status(500).send('Erro');
+    }
+});
+
+// Busca todas as especialidades
+app.get('/api/especialidades', authenticateToken, async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM especialidades ORDER BY categoria, nome');
+        res.json(result.rows);
+    } catch (err) {
+        console.error('[API] Erro ao buscar especialidades:', err);
+        res.status(500).json({ error: 'Erro interno ao buscar especialidades.' });
+    }
+});
+
+app.post('/api/especialidades', authenticateToken, upload.single('imagem'), async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') return res.sendStatus(403);
+        
+        const { nome, categoria, codigo, nivel, ano, instituicao, requisitos } = req.body;
+        
+        let imagem_url = null;
+        if (req.file) {
+            const compressed = await compressReceipt(req.file);
+            const filename = `especialidade-${Date.now()}${path.extname(req.file.originalname)}`;
+            
+            const { error: uploadError } = await supabase.storage
+                .from('receipts')
+                .upload(filename, compressed.buffer, {
+                    contentType: compressed.mimetype,
+                    upsert: true
+                });
+                
+            if (uploadError) {
+                console.error('[STORAGE] Erro upload imagem especialidade:', uploadError);
+                return res.status(500).json({ error: 'Erro ao fazer upload da imagem.' });
+            }
+            imagem_url = `/api/public-images/${filename}`;
+        }
+
+        const result = await db.query(
+            `INSERT INTO especialidades (nome, categoria, codigo, nivel, ano, instituicao, imagem_url, requisitos) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [nome, categoria, codigo, nivel, ano, instituicao, imagem_url, requisitos]
+        );
+        
+        logAction(req, 'CREATE_ESPECIALIDADE', { especialidade_id: result.rows[0].id, nome });
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error('[API] Erro ao criar especialidade:', err);
+        res.status(500).json({ error: 'Erro interno.' });
+    }
+});
+
+app.put('/api/especialidades/:id', authenticateToken, upload.single('imagem'), async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') return res.sendStatus(403);
+        
+        const { id } = req.params;
+        const { nome, categoria, codigo, nivel, ano, instituicao, requisitos } = req.body;
+        let imagem_url = req.body.imagem_url_existente;
+
+        if (req.file) {
+            const compressed = await compressReceipt(req.file);
+            const filename = `especialidade-${Date.now()}${path.extname(req.file.originalname)}`;
+            
+            const { error: uploadError } = await supabase.storage
+                .from('receipts')
+                .upload(filename, compressed.buffer, {
+                    contentType: compressed.mimetype,
+                    upsert: true
+                });
+                
+            if (uploadError) {
+                console.error('[STORAGE] Erro upload imagem:', uploadError);
+                return res.status(500).json({ error: 'Erro ao upload' });
+            }
+            imagem_url = `/api/public-images/${filename}`;
+        }
+
+        const result = await db.query(
+            `UPDATE especialidades 
+             SET nome = $1, categoria = $2, codigo = $3, nivel = $4, ano = $5, instituicao = $6, imagem_url = $7, requisitos = $8 
+             WHERE id = $9 RETURNING *`,
+            [nome, categoria, codigo, nivel, ano, instituicao, imagem_url, requisitos, id]
+        );
+        
+        logAction(req, 'UPDATE_ESPECIALIDADE', { especialidade_id: id, nome });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error('[API] Erro ao atualizar especialidade:', err);
+        res.status(500).json({ error: 'Erro interno.' });
+    }
+});
+
+app.delete('/api/especialidades/:id', authenticateToken, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') return res.sendStatus(403);
+        const { id } = req.params;
+        
+        await db.query('DELETE FROM especialidades WHERE id = $1', [id]);
+        logAction(req, 'DELETE_ESPECIALIDADE', { especialidade_id: id });
+        res.sendStatus(204);
+    } catch (err) {
+        console.error('[API] Erro ao deletar especialidade:', err);
+        res.status(500).json({ error: 'Erro interno.' });
     }
 });
 

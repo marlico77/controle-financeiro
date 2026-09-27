@@ -2625,3 +2625,27 @@ input:checked + .slider:before {
 .dindin-footer .btn-secondary:hover {
     background: rgba(255,255,255,0.1) !important;
 }
+
+/* Especialidades Module */
+.especialidade-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.especialidade-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+}
+#especialidades-search, #especialidades-category-filter {
+    transition: border-color 0.2s;
+}
+#especialidades-search:focus, #especialidades-category-filter:focus {
+    border-color: var(--accent-color);
+    outline: none;
+}
+
+/* Hover effect for edit/delete icons in especialidades */
+.admin-actions .btn-icon, .btn-icon.del-req-btn, .btn-icon.del-sub-req-btn {
+    transition: color 0.2s;
+}
+.admin-actions .btn-icon:hover, .btn-icon.del-req-btn:hover, .btn-icon.del-sub-req-btn:hover {
+    color: var(--accent-color) !important;
+}

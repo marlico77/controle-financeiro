@@ -1,4 +1,4 @@
-﻿// --- Função Central de Requisições à API (Fetch Wrapper) ---
+// --- Função Central de Requisições à API (Fetch Wrapper) ---
 // Adiciona o token de autorização e trata erros de sessão automaticamente
 async function apiFetch(url, options = {}) {
     const headers = {
@@ -926,6 +926,7 @@ function switchTab(tabName, force = false) {
         else if (tabName === 'logs') title.textContent = 'Logs de Auditoria';
         else if (tabName === 'profile') title.textContent = 'Meu Perfil';
         else if (tabName === 'gallery') title.textContent = 'Galeria de Fotos';
+        else if (tabName === 'especialidades') title.textContent = 'Especialidades';
     }
 
     // Dispara o carregamento/renderização específico da aba que foi aberta
@@ -1156,3 +1157,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
+
