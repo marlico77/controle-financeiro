@@ -8,21 +8,7 @@
 }
 
 .story-heading {
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 1.5rem;
     margin-bottom: 2rem;
-}
-
-.story-kicker {
-    display: block;
-    margin-bottom: 0.65rem;
-    color: var(--presentation-accent);
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
 }
 
 .story-heading h2 {
@@ -39,24 +25,6 @@
     color: var(--presentation-dim);
     font-size: 1.05rem;
     line-height: 1.5;
-}
-
-.story-members {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    max-width: 220px;
-    color: var(--presentation-dim);
-    font-size: 0.85rem;
-    line-height: 1.3;
-}
-
-.story-members strong {
-    color: var(--presentation-accent);
-    font-size: 2.8rem;
-    letter-spacing: -0.08em;
-    line-height: 1;
 }
 
 .story-carousel:focus-visible {
@@ -180,9 +148,8 @@
 
 @media (max-width: 700px) {
     .section-padding.history-section { padding-top: 2.5rem; padding-bottom: 2.5rem; }
-    .story-heading { align-items: start; flex-direction: column; gap: 0.8rem; margin-bottom: 1.4rem; }
+    .story-heading { margin-bottom: 1.4rem; }
     .story-heading h2 { font-size: 2rem; }
-    .story-members strong { font-size: 2.1rem; }
     .story-slide { min-height: 220px; }
     .story-panel { padding: 1.5rem; }
 }
