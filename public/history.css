@@ -66,6 +66,7 @@
 }
 
 .story-slide {
+    position: relative;
     min-height: 238px;
     display: flex;
     align-items: center;
@@ -82,6 +83,25 @@
 }
 
 .story-panel[hidden] { display: none; }
+
+.story-panel.story-leaving {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    animation: story-out 320ms ease both;
+}
+
+.story-panel.story-entering { animation: story-in 320ms ease both; }
+
+@keyframes story-out {
+    to { opacity: 0; transform: translateX(-16px); }
+}
+
+@keyframes story-in {
+    from { opacity: 0; transform: translateX(16px); }
+    to { opacity: 1; transform: translateX(0); }
+}
 
 .story-year {
     display: block;
@@ -121,19 +141,12 @@
 .story-source:hover, .story-source:focus-visible { color: #fff; }
 .story-links { display: flex; flex-wrap: wrap; gap: 0.2rem 1.2rem; }
 
-.story-controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-top: 1.25rem;
-}
-
 .story-steps {
     display: flex;
     align-items: center;
     gap: 0.35rem;
     min-width: 0;
+    margin-top: 1.25rem;
     overflow-x: auto;
     scrollbar-width: thin;
     scrollbar-color: #555 transparent;
@@ -161,36 +174,8 @@
     color: #fff;
 }
 
-.story-arrows {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.story-position {
-    margin-right: 0.4rem;
-    color: var(--presentation-dim);
-    font-size: 0.82rem;
-    white-space: nowrap;
-}
-
-.story-arrow {
-    width: 40px;
-    height: 40px;
-    display: grid;
-    place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 50%;
-    background: var(--presentation-card);
-    color: #fff;
-    font-size: 1.2rem;
-    cursor: pointer;
-}
-
-.story-arrow:hover, .story-arrow:focus-visible {
-    border-color: var(--presentation-accent);
-    background: var(--presentation-accent);
+@media (prefers-reduced-motion: reduce) {
+    .story-panel.story-leaving, .story-panel.story-entering { animation: none; }
 }
 
 @media (max-width: 700px) {
@@ -200,6 +185,4 @@
     .story-members strong { font-size: 2.1rem; }
     .story-slide { min-height: 220px; }
     .story-panel { padding: 1.5rem; }
-    .story-controls { align-items: stretch; flex-direction: column; }
-    .story-arrows { justify-content: flex-end; }
 }

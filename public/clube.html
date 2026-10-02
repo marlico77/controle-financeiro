@@ -16,7 +16,7 @@
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css?v=215">
-    <link rel="stylesheet" href="history.css?v=3">
+    <link rel="stylesheet" href="history.css?v=4">
 
     <style>
         /* Estilos Exclusivos da Página de Apresentação */
@@ -1027,7 +1027,7 @@
             <span class="story-members"><strong>52</strong> desbravadores, incluindo a liderança</span>
         </div>
 
-        <div class="story-carousel" tabindex="0" aria-label="História do clube e programa dos Desbravadores; use as setas para navegar">
+        <div class="story-carousel" tabindex="0" aria-label="História do clube e programa dos Desbravadores; escolha um ano ou tema para navegar">
             <div class="story-slide" aria-live="polite" aria-atomic="true">
                 <article class="story-panel" data-story-label="1996">
                     <span class="story-year">1996</span><h3>O começo: Marechal Rondon</h3>
@@ -1068,14 +1068,7 @@
                 </article>
             </div>
 
-            <div class="story-controls">
-                <div class="story-steps" aria-label="Etapas da história"></div>
-                <div class="story-arrows">
-                    <span class="story-position" aria-live="off">01 / 08</span>
-                    <button type="button" class="story-arrow" id="story-prev" aria-label="Etapa anterior">←</button>
-                    <button type="button" class="story-arrow" id="story-next" aria-label="Próxima etapa">→</button>
-                </div>
-            </div>
+            <div class="story-steps" aria-label="Etapas da história"></div>
         </div>
     </section>
 
@@ -1340,19 +1333,39 @@
         if (storyCarousel) {
             const panels = [...storyCarousel.querySelectorAll('.story-panel')];
             const steps = storyCarousel.querySelector('.story-steps');
-            const position = storyCarousel.querySelector('.story-position');
-            let active = 0;
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+            let active = -1;
+            let transitionTimer;
 
             function showStory(index, scrollStep = false) {
-                active = (index + panels.length) % panels.length;
-                panels.forEach((panel, panelIndex) => {
-                    panel.hidden = panelIndex !== active;
+                const next = (index + panels.length) % panels.length;
+                if (next === active) return;
+                clearTimeout(transitionTimer);
+                panels.forEach(panel => {
+                    panel.hidden = true;
+                    panel.classList.remove('story-entering', 'story-leaving');
+                    panel.removeAttribute('aria-hidden');
                 });
+                const previous = panels[active];
+                const incoming = panels[next];
+                if (previous && !reduceMotion.matches) {
+                    previous.hidden = false;
+                    previous.classList.add('story-leaving');
+                    previous.setAttribute('aria-hidden', 'true');
+                    incoming.classList.add('story-entering');
+                    transitionTimer = setTimeout(() => {
+                        previous.hidden = true;
+                        previous.classList.remove('story-leaving');
+                        previous.removeAttribute('aria-hidden');
+                        incoming.classList.remove('story-entering');
+                    }, 320);
+                }
+                incoming.hidden = false;
+                active = next;
                 [...steps.children].forEach((button, buttonIndex) => {
                     if (buttonIndex === active) button.setAttribute('aria-current', 'step');
                     else button.removeAttribute('aria-current');
                 });
-                position.textContent = `${String(active + 1).padStart(2, '0')} / ${String(panels.length).padStart(2, '0')}`;
                 if (scrollStep) {
                     const selectedStep = steps.children[active];
                     steps.scrollTo({
@@ -1371,8 +1384,6 @@
                 button.addEventListener('click', () => showStory(index, true));
                 steps.appendChild(button);
             });
-            storyCarousel.querySelector('#story-prev').addEventListener('click', () => showStory(active - 1, true));
-            storyCarousel.querySelector('#story-next').addEventListener('click', () => showStory(active + 1, true));
             storyCarousel.addEventListener('keydown', event => {
                 if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
                 event.preventDefault();

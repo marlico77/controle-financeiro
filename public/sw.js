@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestao-fin-v26-history-carousel';
+const CACHE_NAME = 'gestao-fin-v27-history-tabs';
 const STATIC_ASSETS = [
   "/",
   "/style.css",
