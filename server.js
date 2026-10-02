@@ -50,6 +50,7 @@ app.use((req, res, next) => { res.set('X-Content-Type-Options', 'nosniff'); res.
 
 // Configurações de Middleware do Express
 const allowedOrigins = [
+    new URL(process.env.APP_URL).origin,
     'https://www.tribodedavi.net.br',
     'https://tribodedavi.net.br',
     'https://wwwtribodedavi.com.br',
