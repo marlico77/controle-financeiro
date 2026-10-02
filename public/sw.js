@@ -1,7 +1,8 @@
-const CACHE_NAME = 'gestao-fin-v23-security';
+const CACHE_NAME = 'gestao-fin-v24-history';
 const STATIC_ASSETS = [
   "/",
   "/style.css",
+  "/history.css",
   "/logo.png",
   "/ico_especialidade.svg",
   "/js/calendar.js",
