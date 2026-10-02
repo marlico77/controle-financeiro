@@ -353,3 +353,12 @@ module.exports = {
     getPaymentApprovedEmailHtml,
     getPaymentRejectedEmailHtml
 };
+
+// Every template parameter is text or an attribute value, never authored HTML.
+const escapeEmailText = value => String(value ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+}[c]));
+for (const [name, render] of Object.entries(module.exports)) {
+    module.exports[name] = (...args) => render(...args.map(value => Array.isArray(value)
+        ? value.map(escapeEmailText) : escapeEmailText(value)));
+}

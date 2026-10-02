@@ -1,6 +1,31 @@
 const express = require('express');
 const { query } = require('../database');
 const router = express.Router();
+const { isStaff } = require('../lib/security');
+const { HttpError, dateOnly, positiveId } = require('../lib/validation');
+router.use(async (req, res, next) => {
+    try {
+        if (!req.user) throw new HttpError(401, 'Faça login para acessar planejamentos.');
+        if (req.method !== 'GET' && !isStaff(req.user)) throw new HttpError(403, 'Apenas a administração pode alterar planejamentos.');
+        if (['POST', 'PUT'].includes(req.method)) {
+            const body = req.body || {};
+            if (req.path === '/' || /^\/\d+$/.test(req.path)) {
+                if (typeof body.name !== 'string' || !body.name.trim()) throw new HttpError(400, 'Informe o nome do planejamento.');
+                if (dateOnly(body.end_date) < dateOnly(body.start_date)) throw new HttpError(400, 'A data final deve ser igual ou posterior à inicial.');
+            } else {
+                if (typeof body.description !== 'string' || !body.description.trim()) throw new HttpError(400, 'Informe uma descrição.');
+                if (req.path.includes('activities') && !/^\d{2}:\d{2}(?::\d{2})?$/.test(body.time || '')) throw new HttpError(400, 'Informe um horário válido.');
+                if (req.method === 'POST') {
+                    const planningId = positiveId(req.path.split('/')[1]);
+                    const planning = (await query('SELECT start_date, end_date FROM plannings WHERE id=$1', [planningId])).rows[0];
+                    const date = dateOnly(body.date);
+                    if (!planning || date < planning.start_date || date > planning.end_date) throw new HttpError(400, 'A atividade deve estar dentro das datas do planejamento.');
+                }
+            }
+        }
+        next();
+    } catch (err) { next(err); }
+});
 
 // GET all plannings
 router.get('/', async (req, res) => {

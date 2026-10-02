@@ -130,10 +130,10 @@ function renderEspecialidades(list) {
         card.innerHTML = `
             ${adminBtns}
             <div style="margin-bottom: 0.8rem; display: flex; align-items: center; justify-content: center; width: 100px; height: 100px;">
-                <img src="${imgUrl}" alt="${esp.nome}" onerror="this.onerror=null; this.src='ico_especialidade.svg';" style="width: 100%; height: 100%; object-fit: contain;">
+                <img src="${escapeHTML(safeURL(imgUrl))}" alt="${escapeHTML(esp.nome)}" onerror="this.onerror=null; this.src='ico_especialidade.svg';" style="width: 100%; height: 100%; object-fit: contain;">
             </div>
-            <span style="color: var(--text-dim); font-size: 0.75rem; font-weight: 700; margin-bottom: 0.3rem;">${esp.codigo || 'S/N'}</span>
-            <span style="text-align: center; color: var(--text-color); font-size: 0.85rem; font-weight: 600; line-height: 1.2;">${esp.nome}</span>
+            <span style="color: var(--text-dim); font-size: 0.75rem; font-weight: 700; margin-bottom: 0.3rem;">${escapeHTML(esp.codigo || 'S/N')}</span>
+            <span style="text-align: center; color: var(--text-color); font-size: 0.85rem; font-weight: 600; line-height: 1.2;">${escapeHTML(esp.nome)}</span>
         `;
         
         // Abre os detalhes
@@ -163,18 +163,18 @@ function openEspecialidadeDetails(esp) {
     } catch(e) { reqs = []; }
     
     reqs.forEach(req => {
-        reqsHtml += `<li style="margin-bottom: 1rem;"><span class="texto" style="margin-bottom: 0.5rem; display: block;">${req.texto || ''}</span>`;
+        reqsHtml += `<li style="margin-bottom: 1rem;"><span class="texto" style="margin-bottom: 0.5rem; display: block;">${escapeHTML(req.texto || '')}</span>`;
         if (req.resposta) {
-            reqsHtml += `<div style="background: rgba(0,0,0,0.1); padding: 0.5rem 1rem; margin-bottom: 0.8rem; border-radius: 4px; font-size: 0.9rem; color: var(--text-dim);"><strong>Resposta:</strong> ${req.resposta}</div>`;
+            reqsHtml += `<div style="background: rgba(0,0,0,0.1); padding: 0.5rem 1rem; margin-bottom: 0.8rem; border-radius: 4px; font-size: 0.9rem; color: var(--text-dim);"><strong>Resposta:</strong> ${escapeHTML(req.resposta)}</div>`;
         }
         if (req.sub && Array.isArray(req.sub)) {
             reqsHtml += `<ol style="list-style-type: lower-alpha; padding-left: 1.5rem; margin-bottom: 1rem;">`;
             req.sub.forEach(subReq => {
                 const subTxt = typeof subReq === 'object' ? subReq.texto : subReq;
                 const subResp = typeof subReq === 'object' ? subReq.resposta : null;
-                reqsHtml += `<li style="margin-bottom: 0.8rem;"><span class="texto" style="margin-bottom: 0.3rem; display: block;">${subTxt || ''}</span>`;
+                reqsHtml += `<li style="margin-bottom: 0.8rem;"><span class="texto" style="margin-bottom: 0.3rem; display: block;">${escapeHTML(subTxt || '')}</span>`;
                 if (subResp) {
-                    reqsHtml += `<div style="background: rgba(0,0,0,0.1); padding: 0.4rem 0.8rem; margin-bottom: 0.5rem; border-radius: 4px; font-size: 0.85rem; color: var(--text-dim);"><strong>Resposta:</strong> ${subResp}</div>`;
+                    reqsHtml += `<div style="background: rgba(0,0,0,0.1); padding: 0.4rem 0.8rem; margin-bottom: 0.5rem; border-radius: 4px; font-size: 0.85rem; color: var(--text-dim);"><strong>Resposta:</strong> ${escapeHTML(subResp)}</div>`;
                 }
                 reqsHtml += `</li>`;
             });
@@ -196,11 +196,11 @@ function openEspecialidadeDetails(esp) {
     detailContent.innerHTML = `
         <div style="display: flex; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap;">
             <div style="flex: 0 0 auto; text-align: center;">
-                <img src="${imgUrl}" alt="${esp.nome}" onerror="this.onerror=null; this.src='ico_especialidade.svg';" style="width: 150px; height: 150px; object-fit: contain;">
+                <img src="${escapeHTML(safeURL(imgUrl))}" alt="${escapeHTML(esp.nome)}" onerror="this.onerror=null; this.src='ico_especialidade.svg';" style="width: 150px; height: 150px; object-fit: contain;">
             </div>
             <div style="flex: 1 1 300px;">
-                <h3 style="color: var(--text-color); margin-bottom: 0.5rem;">${esp.nome}</h3>
-                <p style="color: var(--text-dim); margin-bottom: 0.5rem;"><strong>Código:</strong> ${esp.codigo || 'N/A'}</p>
+                <h3 style="color: var(--text-color); margin-bottom: 0.5rem;">${escapeHTML(esp.nome)}</h3>
+                <p style="color: var(--text-dim); margin-bottom: 0.5rem;"><strong>Código:</strong> ${escapeHTML(esp.codigo || 'N/A')}</p>
             </div>
         </div>
         
@@ -217,11 +217,11 @@ function openEspecialidadeDetails(esp) {
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="padding: 12px;">${esp.categoria}</td>
-                        <td style="padding: 12px;">${esp.codigo || '-'}</td>
-                        <td style="padding: 12px;">${esp.nivel || '-'}</td>
-                        <td style="padding: 12px;">${esp.ano || '-'}</td>
-                        <td style="padding: 12px;">${esp.instituicao || '-'}</td>
+                        <td style="padding: 12px;">${escapeHTML(esp.categoria)}</td>
+                        <td style="padding: 12px;">${escapeHTML(esp.codigo || '-')}</td>
+                        <td style="padding: 12px;">${escapeHTML(esp.nivel || '-')}</td>
+                        <td style="padding: 12px;">${escapeHTML(esp.ano || '-')}</td>
+                        <td style="padding: 12px;">${escapeHTML(esp.instituicao || '-')}</td>
                     </tr>
                 </tbody>
             </table>

@@ -1,4 +1,4 @@
-// --- Lógica do botão "Voltar ao Topo" ---
+﻿// --- Lógica do botão "Voltar ao Topo" ---
 const backToTopBtn = document.getElementById('back-to-top');
 const scrollContainer = document.querySelector('.content');
 
@@ -29,7 +29,7 @@ backToTopBtn.onclick = () => {
 // --- Lógica de Segurança de Senhas ---
 
 // Regex para validar complexidade da senha: min 5 chars, 1 número, 1 símbolo especial
-const complexityRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{5,}$/;
+const complexityRegex = /^(?=.*[A-Za-z])(?=.*[0-9]).{10,72}$/;
 
 // Modal de Recuperação de Senha (Esqueci minha senha)
 const recoverModal = document.getElementById('recover-modal');
@@ -69,7 +69,7 @@ if (recoverForm) {
                 method: 'POST',
                 body: JSON.stringify({ email })
             });
-            showStatus('Um e-mail de recuperação foi enviado para ' + email, 'success');
+            showStatus('Se houver uma conta com este e-mail verificado, enviaremos as instruções.', 'success');
             recoverModal.style.display = 'none';
             recoverForm.reset();
         } catch (err) {
@@ -97,17 +97,19 @@ if (forceChangeForm) {
         }
 
         if (!complexityRegex.test(newPassword)) {
-            errorDiv.textContent = 'A senha deve ter no mínimo 5 caracteres, incluindo pelo menos 1 número e 1 caractere especial.';
+            errorDiv.textContent = 'Use pelo menos 10 caracteres, com letras e números.';
             return;
         }
 
         try {
             // Atualiza a senha e desbloqueia o acesso total ao sistema
-            await apiFetch('/api/auth/change-password', {
+            const changed = await apiFetch('/api/auth/change-password', {
                 method: 'POST',
                 body: JSON.stringify({ newPassword })
             });
 
+            state.token = changed.token;
+            setStorageItem('token', changed.token, !!localStorage.getItem('token'));
             document.getElementById('force-change-modal').style.display = 'none';
             checkAuth(); // Verifica novamente o status para carregar o dashboard
         } catch (err) {
@@ -130,6 +132,7 @@ document.getElementById('person-form').onsubmit = async (e) => {
     const formData = {
         name: document.getElementById('p-name').value.trim(),
         responsible: document.getElementById('p-responsible').value,
+        responsible_id: document.getElementById('p-responsible-id')?.value || null,
         unit: document.getElementById('p-unit').value,
         birth_date: document.getElementById('p-birth').value,
         cpf: document.getElementById('p-cpf').value,
@@ -138,7 +141,7 @@ document.getElementById('person-form').onsubmit = async (e) => {
         username: document.getElementById('u-username').value,
         password: document.getElementById('u-password').value,
         role: document.getElementById('u-role').value,
-        responsiblePassword: document.getElementById('u-resp-password') ? document.getElementById('u-resp-password').value : ''
+        responsiblePassword: ''
     };
 
     // Validação: Exige pelo menos nome e um sobrenome
@@ -302,6 +305,7 @@ document.getElementById('event-form').onsubmit = async (e) => {
     const formData = {
         name: document.getElementById('event-name').value,
         date: document.getElementById('event-date').value,
+        end_date: document.getElementById('event-end-date').value,
         description: document.getElementById('event-desc').value,
         payment_type: document.getElementById('event-payment-type').value,
         participant_ids: participantIds
@@ -321,8 +325,10 @@ document.getElementById('event-payment-form').onsubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData();
     formData.append('event_id', document.getElementById('ep-event-id').value);
-    formData.append('month', document.getElementById('ep-month').value);
-    formData.append('year', document.getElementById('ep-year').value);
+    if (state.currentEvent?.payment_type !== 'unico') {
+        formData.append('month', document.getElementById('ep-month').value);
+        formData.append('year', document.getElementById('ep-year').value);
+    }
     formData.append('amount', document.getElementById('ep-amount').value);
 
     // Se for Admin/Secretário/Responsável pagando por outro membro, injeta o ID correto da pessoa
@@ -412,7 +418,7 @@ if (pBirth) {
             if (age < 16) {
                 unitField.value = 'DESBRAVADOR';
             } else {
-                unitField.value = 'DIREÇÃO';
+                unitField.value = 'DIREÃ‡ÃƒO';
             }
         }
     });
@@ -432,10 +438,10 @@ if (toggleBtn) {
         const container = document.getElementById('event-details-table-container');
         if (container.style.display === 'none') {
             container.style.display = 'block';
-            toggleBtn.textContent = 'Ocultar Detalhamento ↑';
+            toggleBtn.textContent = 'Ocultar Detalhamento â†‘';
         } else {
             container.style.display = 'none';
-            toggleBtn.textContent = 'Ver Detalhamento Membro a Membro ↓';
+            toggleBtn.textContent = 'Ver Detalhamento Membro a Membro â†“';
         }
         initStickyScrollbars(); // Reinicializa barras de rolagem fixas se necessário
     };
@@ -449,10 +455,10 @@ if (toggleMensBtn) {
         const container = document.getElementById('mens-details-table-container');
         if (container.style.display === 'none') {
             container.style.display = 'block';
-            toggleMensBtn.textContent = 'Ocultar Detalhamento ↑';
+            toggleMensBtn.textContent = 'Ocultar Detalhamento â†‘';
         } else {
             container.style.display = 'none';
-            toggleMensBtn.textContent = 'Ver Detalhamento Membro a Membro ↓';
+            toggleMensBtn.textContent = 'Ver Detalhamento Membro a Membro â†“';
         }
         initStickyScrollbars(); // Reinicializa barras de rolagem fixas se necessário
     };
@@ -472,7 +478,7 @@ const initSearchListeners = () => {
             // Auto-exibe a tabela ao começar a buscar
             if (container.style.display === 'none') {
                 container.style.display = 'block';
-                document.getElementById('toggle-mens-details').textContent = 'Ocultar Detalhamento ↑';
+                document.getElementById('toggle-mens-details').textContent = 'Ocultar Detalhamento â†‘';
             }
             renderDashboard();
         });
@@ -485,7 +491,7 @@ const initSearchListeners = () => {
             // Auto-exibe a tabela de eventos ao buscar
             if (container.style.display === 'none') {
                 container.style.display = 'block';
-                document.getElementById('toggle-event-details').textContent = 'Ocultar Detalhamento ↑';
+                document.getElementById('toggle-event-details').textContent = 'Ocultar Detalhamento â†‘';
             }
             if (state.currentEventParticipants && state.currentEventPayments) {
                 renderEventDetailGrid(state.currentEventParticipants, state.currentEventPayments);
@@ -653,4 +659,3 @@ if (getStorageItem('token')) {
     if (loginSection) loginSection.style.display = 'flex';
     if (mainSection) mainSection.style.display = 'none';
 }
-

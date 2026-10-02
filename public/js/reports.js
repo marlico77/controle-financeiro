@@ -53,7 +53,7 @@ async function generateGeneralReport() {
                     <tbody>
                         ${Object.entries(byUnit).sort((a, b) => b[1] - a[1]).map(([unit, val]) => `
                             <tr>
-                                <td><strong>${unit}</strong></td>
+                                <td><strong>${escapeHTML(unit)}</strong></td>
                                 <td>R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                             </tr>
                         `).join('')}
@@ -104,7 +104,7 @@ async function generateMemberReport() {
             <div class="report-header">
                 <img src="logo.png">
                 <h1 style="margin: 0; font-size: 1.5rem;">Extrato de Pagamentos - Membro</h1>
-                <p style="margin: 5px 0 0 0;">Membro: <strong>${member.name}</strong> | Unidade: ${member.unit || 'N/A'}</p>
+                <p style="margin: 5px 0 0 0;">Membro: <strong>${escapeHTML(member.name)}</strong> | Unidade: ${escapeHTML(member.unit || 'N/A')}</p>
             </div>
             <div class="report-summary-box">
                 <div>
@@ -113,7 +113,7 @@ async function generateMemberReport() {
                 </div>
                 <div>
                     <span class="label">CPF</span>
-                    <span class="value">${member.cpf || 'Não informado'}</span>
+                    <span class="value">${escapeHTML(member.cpf || 'Não informado')}</span>
                 </div>
             </div>
             <h3>Histórico Mensal (${currentYear})</h3>
@@ -193,8 +193,8 @@ async function generateEventReport() {
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td><strong>${participant.name}</strong></td>
-                                    <td>${participant.unit || 'Sem Unidade'}</td>
+                                    <td><strong>${escapeHTML(participant.name)}</strong></td>
+                                    <td>${escapeHTML(participant.unit || 'Sem Unidade')}</td>
                                     <td><span class="grid-status-label status-${displayPayment ? displayPayment.status : 'none'}" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">${statusLabel}</span></td>
                                     <td>R$ ${totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                                     <td>${paymentDate}</td>
@@ -239,8 +239,8 @@ async function generateEventReport() {
                 <div class="report-header">
                     <img src="logo.png">
                     <h1 style="margin: 0; font-size: 1.5rem;">Extrato do Evento - Participante</h1>
-                    <p style="margin: 5px 0 0 0;">Evento: <strong>${event.name}</strong> | Data: ${event.date ? new Date(event.date + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}</p>
-                    <p style="margin: 5px 0 0 0;">Participante: <strong>${participant.name}</strong> | Unidade: ${participant.unit || 'N/A'}</p>
+                    <p style="margin: 5px 0 0 0;">Evento: <strong>${escapeHTML(event.name)}</strong> | Data: ${event.date ? (event.end_date ? new Date(event.date + 'T00:00:00').toLocaleDateString('pt-BR') + ' até ' + new Date(event.end_date + 'T00:00:00').toLocaleDateString('pt-BR') : new Date(event.date + 'T00:00:00').toLocaleDateString('pt-BR')) : 'N/A'}</p>
+                    <p style="margin: 5px 0 0 0;">Participante: <strong>${escapeHTML(participant.name)}</strong> | Unidade: ${escapeHTML(participant.unit || 'N/A')}</p>
                 </div>
                 <div class="report-summary-box">
                     <div><span class="label">Total Pago no Evento</span><span class="value">R$ ${totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
@@ -284,7 +284,7 @@ async function generateEventReport() {
                         </thead>
                         <tbody>
                             ${Object.entries(byUnit).map(([unit, stats]) => `
-                                <tr><td>${unit}</td><td>${stats.count}</td><td>R$ ${stats.paid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>
+                                <tr><td>${escapeHTML(unit)}</td><td>${stats.count}</td><td>R$ ${stats.paid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>
                             `).join('')}
                         </tbody>
                     </table>
@@ -303,7 +303,7 @@ async function generateEventReport() {
                             ${(participants || []).map(p => {
                 // Calcula quanto este membro específico já pagou para o evento
                 const amount = (payments || []).filter(pay => pay.person_id === p.id && pay.status === 'approved').reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
-                return `<tr><td>${p.name}</td><td>${p.unit || '-'}</td><td>${amount > 0 ? 'PARTICIPANDO' : 'PENDENTE'}</td><td>R$ ${amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`;
+                return `<tr><td>${escapeHTML(p.name)}</td><td>${escapeHTML(p.unit || '-')}</td><td>${amount > 0 ? 'PARTICIPANDO' : 'PENDENTE'}</td><td>R$ ${amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`;
             }).join('')}
                         </tbody>
                     </table>
@@ -316,7 +316,7 @@ async function generateEventReport() {
             <div class="report-header">
                 <img src="logo.png">
                 <h1 style="margin: 0; font-size: 1.5rem;">Relatório de Evento</h1>
-                <p style="margin: 5px 0 0 0;">Evento: <strong>${event.name}</strong> | Data: ${event.date ? new Date(event.date + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}</p>
+                <p style="margin: 5px 0 0 0;">Evento: <strong>${escapeHTML(event.name)}</strong> | Data: ${event.date ? (event.end_date ? new Date(event.date + 'T00:00:00').toLocaleDateString('pt-BR') + ' até ' + new Date(event.end_date + 'T00:00:00').toLocaleDateString('pt-BR') : new Date(event.date + 'T00:00:00').toLocaleDateString('pt-BR')) : 'N/A'}</p>
             </div>
             <div class="report-summary-box">
                 <div><span class="label">Total Arrecadado</span><span class="value">R$ ${totalArrecadado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
@@ -389,7 +389,7 @@ async function generateAuthDocument(type) {
                 <div style="margin-top: 30px; text-align: justify; line-height: 2.4;">
                     Eu, <span style="border-bottom: 1px solid black; display: inline-block; min-width: 400px; margin: 0 5px;"></span>, 
                     responsável pelo(a) desbravador(a) <span style="border-bottom: 1px solid black; display: inline-block; min-width: 350px; margin: 0 5px;"></span>, 
-                    autorizo-o(a) a participar do evento <strong>${eventName}</strong>, que será realizado ${dateText}, no local <strong>${eventLocation}</strong>. Os desbravadores deverão se apresentar às <strong>${departureTime}</strong>h em <strong>${departureLocation}</strong> para a partida.
+                    autorizo-o(a) a participar do evento <strong>${escapeHTML(eventName)}</strong>, que será realizado ${dateText}, no local <strong>${escapeHTML(eventLocation)}</strong>. Os desbravadores deverão se apresentar às <strong>${departureTime}</strong>h em <strong>${escapeHTML(departureLocation)}</strong> para a partida.
                 </div>
                 <p style="text-align: justify; line-height: 2.2;">O evento tem término previsto para as <strong>${returnTime}</strong>h, momento em que o responsável deverá buscar a criança no mesmo local de partida indicado acima.</p>
                 <p style="margin-top: 25px; text-align: center; font-weight: bold; border: 1px solid #ddd; padding: 15px; border-radius: 8px;">Estou ciente de que estará acompanhado(a) pela direção do Clube TRIBO DE DAVI, permanecendo sob sua responsabilidade durante todo esse período.</p>
@@ -566,5 +566,4 @@ if (document.readyState === 'loading') {
 // Executa novamente após alguns segundos para garantir funcionamento em renderizações dinâmicas
 setTimeout(initGeneratorListeners, 1000);
 setTimeout(initGeneratorListeners, 3000);
-
 

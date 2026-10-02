@@ -1,95 +1,76 @@
-const CACHE_NAME = 'gestao-fin-v22'; // Nome da versão do cache (deve ser atualizado para forçar refresh de arquivos)
-const STATIC_ASSETS = [ // Lista de arquivos estáticos que serão salvos no cache para funcionamento offline
-  '/', // Página inicial
-  '/login.html',
-  '/style.css', // Estilos CSS
-  '/logo.png', // Logotipo do sistema
-  '/js/state.js',
-  '/js/utils.js',
-  '/js/core.js',
-  '/js/logs.js',
-  '/js/calendar.js',
-  '/js/events.js',
-  '/js/dashboard.js',
-  '/js/financial.js',
-  '/js/ui.js',
-  '/js/pwa.js',
-  '/js/sales.js',
-  '/js/notifications.js',
-  '/js/profile.js',
-  '/js/whatsapp.js',
-  '/js/gallery.js',
-  '/js/chat.js',
-  '/js/reports.js',
-  '/dashboard.html',
-  '/mensalidade.html',
-  '/events.html',
-  '/people.html',
-  '/reports.html',
-  '/authorizations.html',
-  '/sales.html',
-  '/logs.html',
-  '/messages.html',
-  '/gallery.html',
-  '/profile.html',
-  '/pwa-install.html',
-  '/outflows.html',
-  'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap', // Fonte Google Fonts
-  'https://cdn.jsdelivr.net/npm/chart.js' // Biblioteca de gráficos
+const CACHE_NAME = 'gestao-fin-v23-security';
+const STATIC_ASSETS = [
+  "/",
+  "/style.css",
+  "/logo.png",
+  "/ico_especialidade.svg",
+  "/js/calendar.js",
+  "/js/chat.js",
+  "/js/core.js",
+  "/js/dashboard.js",
+  "/js/especialidades.js",
+  "/js/events.js",
+  "/js/financial.js",
+  "/js/gallery.js",
+  "/js/logs.js",
+  "/js/notifications.js",
+  "/js/planejamentos.js",
+  "/js/profile.js",
+  "/js/pwa.js",
+  "/js/reports.js",
+  "/js/sales.js",
+  "/js/state.js",
+  "/js/ui.js",
+  "/js/uniformes.js",
+  "/js/utils.js",
+  "/js/whatsapp.js",
+  "/authorizations.html",
+  "/clube.html",
+  "/dashboard.html",
+  "/especialidades.html",
+  "/events.html",
+  "/gallery.html",
+  "/login.html",
+  "/logs.html",
+  "/mensalidade.html",
+  "/messages.html",
+  "/outflows.html",
+  "/people.html",
+  "/planejamentos.html",
+  "/profile.html",
+  "/pwa-install.html",
+  "/reports.html",
+  "/sales.html",
+  "/uniformes.html"
 ];
-
-// Evento de instalação: ocorre quando o Service Worker é registrado pela primeira vez
 self.addEventListener('install', event => {
-  event.waitUntil(
-    // Abre o cache e adiciona todos os arquivos estáticos definidos acima
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
-  );
+    event.waitUntil(caches.open(CACHE_NAME).then(async cache => {
+        // An optional page must not abort installation of every other asset.
+        const results = await Promise.allSettled(STATIC_ASSETS.map(url => cache.add(url)));
+        results.forEach((result,i) => { if(result.status==='rejected') console.warn('Precache indisponível:',STATIC_ASSETS[i]); });
+        await self.skipWaiting();
+    }));
 });
-
-// Evento de ativação: ocorre quando o Service Worker começa a controlar a página
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    // Limpa versões antigas do cache para evitar conflitos de arquivos desatualizados
-    caches.keys().then(keys => Promise.all(
-      keys.map(key => {
-        if (key !== CACHE_NAME) return caches.delete(key);
-      })
-    ))
-  );
+self.addEventListener('activate',event => {
+    event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key=>key.startsWith('gestao-fin-')&&key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
 });
-
-// Evento de busca (fetch): intercepta todas as requisições de rede feitas pela aplicação
-self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-
-  // Tratamento para chamadas de API: Prioriza a rede, mas usa o cache se estiver offline
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(event.request)
-        .catch(() => caches.match(event.request))
-    );
-    return;
-  }
-
-  // Tratamento para arquivos estáticos: Estratégia "Stale While Revalidate"
-  // Mostra o que está no cache imediatamente, mas busca a versão mais nova na rede em segundo plano
-  event.respondWith(
-    caches.match(event.request).then(cachedResponse => {
-      const fetchedResponse = fetch(event.request).then(networkResponse => {
-        // Clona a resposta imediatamente antes do consumo pelo navegador
-        const responseToCache = networkResponse.clone();
-        // Atualiza o cache com a resposta mais recente da rede
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache)).catch(console.error);
-        return networkResponse;
-      }).catch(err => {
-          // Ignora falhas de fetch offline
-      });
-      // Retorna o cache se existir, senão retorna a requisição da rede
-      return cachedResponse || fetchedResponse;
-    })
-  );
+self.addEventListener('fetch',event => {
+    const url=new URL(event.request.url);
+    if(url.origin!==self.location.origin) return;
+    if(url.pathname.startsWith('/api/')) {
+        // Private data and mutations never use a shared cache.
+        event.respondWith(fetch(event.request).catch(()=>new Response(JSON.stringify({error:'Sem conexão. Reconecte para consultar ou salvar dados.'}),{status:503,headers:{'Content-Type':'application/json'}})));
+        return;
+    }
+    if(event.request.method!=='GET'||!STATIC_ASSETS.includes(url.pathname)) return;
+    const cacheKey=url.pathname;
+    const refresh=fetch(event.request).then(async response=>{
+        if(response.ok) { const cache=await caches.open(CACHE_NAME); await cache.put(cacheKey,response.clone()); }
+        return response;
+    });
+    event.waitUntil(refresh.catch(()=>{}));
+    event.respondWith(caches.match(cacheKey).then(cached=>cached||refresh).catch(()=>new Response('Página indisponível offline.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}})));
 });
-
 // --- Suporte a Notificações Push ---
 
 // Evento disparado quando o servidor envia uma notificação push

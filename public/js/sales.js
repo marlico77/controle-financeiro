@@ -3,7 +3,7 @@
 // Busca lista de vendas no servidor
 async function fetchSales() {
     try {
-        state.sales = await apiFetch('/api/sales');
+        state.sales = await apiFetch(`/api/sales?year=${state.currentYear}`);
         renderSales();
     } catch (err) {
         console.error('Error fetching sales:', err);

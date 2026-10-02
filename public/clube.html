@@ -2,6 +2,7 @@
 <html lang="pt-br">
 
 <head>
+    <script>const safeURL = value => { try { const url = new URL(value, location.origin); return ["http:", "https:"].includes(url.protocol) ? url.href : ""; } catch { return ""; } }; const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
@@ -1570,9 +1571,9 @@
                     for (let dayNum = 1; dayNum <= totalDays; dayNum++) {
                         const dayEvents = eventsByDay[dayNum] || [];
                         if (dayEvents.length > 0) {
-                            const tooltipContent = dayEvents.map(ev => `<strong>${ev.name}</strong>`).join('<hr>');
+                            const tooltipContent = dayEvents.map(ev => `<strong>${escapeHTML(ev.name)}</strong>`).join('<hr>');
                             daysHtml += `
-                                <div class="calendar-day has-event" title="${dayEvents.map(ev => ev.name).join(', ')}">
+                                <div class="calendar-day has-event" title="${escapeHTML(dayEvents.map(ev => ev.name).join(', '))}">
                                     ${dayNum}
                                     <div class="tooltip-box">${tooltipContent}</div>
                                 </div>
@@ -1595,10 +1596,10 @@
                         monthEvents.sort((a, b) => a.day - b.day);
 
                         bodyContainer.innerHTML = monthEvents.map(ev => `
-                            <div class="compact-event-item" title="${ev.description || ev.name}">
+                            <div class="compact-event-item" title="${escapeHTML(ev.description || ev.name)}">
                                 <div class="compact-day-badge">${ev.day}</div>
                                 <div class="compact-event-details">
-                                    <h4>${ev.name}</h4>
+                                    <h4>${escapeHTML(ev.name)}</h4>
                                 </div>
                             </div>
                         `).join('');
@@ -1690,11 +1691,11 @@
                     
                     const title = escape(album.title);
                     const desc = escape(album.description || '');
-                    const cover = album.cover_url.replace(/"/g, '&quot;');
-                    const url = album.album_url ? album.album_url.replace(/"/g, '&quot;') : '#';
+                    const cover = escapeHTML(safeURL(album.cover_url));
+                    const url = album.album_url ? escapeHTML(safeURL(album.album_url)) : '#';
                     
                     return `
-                        <a href="${url}" target="${album.album_url ? '_blank' : '_self'}" class="gallery-item">
+                        <a href="${url}" target="${album.album_url ? '_blank' : '_self'}" rel="noopener noreferrer" class="gallery-item">
                             <img src="${cover}" alt="${title}" class="album-cover" onerror="this.src='logo.png'">
                             <div class="album-overlay"></div>
                             <div style="position: relative; z-index: 2; width: 100%;">

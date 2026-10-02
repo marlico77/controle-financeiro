@@ -79,7 +79,7 @@ const updateDashboardStats = () => {
     }
 
     // Atualiza os elementos visuais do Dashboard (se for Admin)
-    if (state.role === 'admin') {
+    if (['admin', 'secretário'].includes(state.role)) {
         const totalCashElem = document.getElementById('stat-total-cash');
         if (totalCashElem) totalCashElem.textContent = `R$ ${totalCash.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
@@ -154,7 +154,7 @@ const renderEventDashboard = (participants, payments) => {
     participants.forEach(p => participantsMap.set(p.id, p));
 
     // Processa pagamentos apenas deste evento e para o usuário logado/família se não for Admin
-    const paymentsToProcess = state.role === 'admin'
+    const paymentsToProcess = ['admin', 'secretário'].includes(state.role)
         ? payments
         : (state.role === 'responsible'
             ? payments.filter(p => p.person_id != state.personId)
@@ -193,7 +193,7 @@ const renderEventDashboard = (participants, payments) => {
         const totalLabel = totalStat.previousElementSibling;
         const pieChartContainer = document.getElementById('evPieChart')?.closest('.chart-container');
         
-        if (state.role === 'admin') {
+        if (['admin', 'secretário'].includes(state.role)) {
             if (direcaoCard) direcaoCard.style.display = 'block';
             if (desbravaCard) desbravaCard.style.display = 'block';
             if (totalLabel) totalLabel.textContent = 'Arrecadação do Evento';
@@ -231,7 +231,7 @@ const renderMensalidadeDashboard = () => {
     const peopleMap = new Map();
     state.people.forEach(p => peopleMap.set(p.id, p));
 
-    const paymentsToProcess = state.role === 'admin'
+    const paymentsToProcess = ['admin', 'secretário'].includes(state.role)
         ? state.payments
         : (state.role === 'responsible'
             ? state.payments.filter(p => p.person_id != state.personId)
@@ -470,7 +470,7 @@ if (outflowForm) {
 // Busca a lista de despesas do backend
 async function fetchOutflows() {
     try {
-        state.outflows = await apiFetch('/api/outflows');
+        state.outflows = await apiFetch(`/api/outflows?year=${state.currentYear}`);
         renderOutflows();
     } catch (err) {
         console.error('Error fetching outflows:', err);
@@ -501,7 +501,7 @@ function renderDashboard() {
     });
 
     // Define quais pessoas renderizar: Admin vê todos (exceto responsáveis), responsável vê apenas os filhos, membro/secretário vê apenas a si mesmo
-    const peopleToRender = state.role === 'admin'
+    const peopleToRender = ['admin', 'secretário'].includes(state.role)
         ? state.people.filter(p => p.unit !== 'Responsável')
         : (state.role === 'responsible'
             ? state.people.filter(p => p.id != state.personId)
@@ -580,7 +580,7 @@ function renderDashboard() {
 
             // Ao clicar na célula, abre o modal de pagamento se tiver permissão
             td.onclick = () => {
-                const canEdit = state.role === 'admin' || state.role === 'responsible' || (state.personId && person.id == state.personId);
+                const canEdit = ['admin', 'secretário'].includes(state.role) || state.role === 'responsible' || (state.personId && person.id == state.personId);
                 if (canEdit) {
                     openPaymentModal(person, m, payment);
                 }
@@ -713,21 +713,22 @@ document.addEventListener('input', (e) => {
 });
 
 let serverTimeOffset = 0;
+let officialTimezone = 'America/Sao_Paulo';
 
 // Sincroniza o horário com o servidor para garantir que travas usem o Horário de Brasília
 fetch('/api/time')
     .then(res => res.json())
     .then(data => {
         serverTimeOffset = data.timestamp - Date.now();
+        officialTimezone = data.timezone || officialTimezone;
     })
     .catch(err => console.error('Erro ao sincronizar horário:', err));
 
 const isSabbathBlocked = () => {
-    if (state.role === 'admin') return false;
+    if (['admin', 'secretário'].includes(state.role)) return false;
     const now = new Date(Date.now() + serverTimeOffset);
-    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo';
     const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: userTimezone,
+        timeZone: officialTimezone,
         weekday: 'short',
         hour: 'numeric',
         hour12: false
@@ -746,4 +747,3 @@ const isSabbathBlocked = () => {
 };
 
 const sabbathIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="60" height="60" fill="var(--accent-color)"><path d="M320 32C328.4 32 336.3 36.4 340.6 43.7L396.1 136.3L500.9 110C509.1 108 517.8 110.4 523.7 116.3C529.6 122.2 532 131 530 139.1L503.7 243.8L596.4 299.3C603.6 303.6 608.1 311.5 608.1 319.9C608.1 328.3 603.7 336.2 596.4 340.5L503.7 396.1L530 500.8C532 509 529.6 517.7 523.7 523.6C517.8 529.5 509 532 500.9 530L396.2 503.7L340.7 596.4C336.4 603.6 328.5 608.1 320.1 608.1C311.7 608.1 303.8 603.7 299.5 596.4L243.9 503.7L139.2 530C131 532 122.4 529.6 116.4 523.7C110.4 517.8 108 509 110 500.8L136.2 396.1L43.6 340.6C36.4 336.2 32 328.4 32 320C32 311.6 36.4 303.7 43.7 299.4L136.3 243.9L110 139.1C108 130.9 110.3 122.3 116.3 116.3C122.3 110.3 131 108 139.2 110L243.9 136.2L299.4 43.6L301.2 41C305.7 35.3 312.6 31.9 320 31.9zM320 176C240.5 176 176 240.5 176 320C176 399.5 240.5 464 320 464C399.5 464 464 399.5 464 320C464 240.5 399.5 176 320 176zM320 416C267 416 224 373 224 320C224 267 267 224 320 224C373 224 416 267 416 320C416 373 373 416 320 416z"/></svg>`;
-
