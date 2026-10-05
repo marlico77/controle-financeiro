@@ -33,6 +33,12 @@ const escapeHTML = (str) => {
         .replace(/"/g, '&quot;')  // Substitui " por &quot;
         .replace(/'/g, '&#039;'); // Substitui ' por &#039;
 };
+const safeURL = value => {
+    try {
+        const url = new URL(String(value || ''), window.location.origin);
+        return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+    } catch { return ''; }
+};
 
 // Gerenciamento de Estado Global da Aplicação
 const state = {
@@ -42,6 +48,7 @@ const state = {
     currentYear: new Date().getFullYear(),  // Ano atual para filtragem de dados
     activeTab: getStorageItem('activeTab') || 'dashboard', // Aba ativa na interface
     role: getStorageItem('role') || null,   // Nível de acesso (admin, secretário, membro)
+    isMaster: false,
     username: getStorageItem('username') || null, // Nome de usuário (login)
     name: getStorageItem('name') || null,     // Nome real do usuário para exibição
     personId: getStorageItem('personId') || null, // ID do membro vinculado ao usuário

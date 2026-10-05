@@ -69,7 +69,7 @@ Uma solução robusta, moderna e multiplataforma para controle financeiro, gest�
 ## ⚙️ Instalação e Configuração
 
 ### Pré-requisitos
-- [Node.js](https://nodejs.org/) instalado (versão 14 ou superior).
+- [Node.js](https://nodejs.org/) instalado (versão 22 ou superior).
 - Instância do PostgreSQL configurada e rodando.
 
 ### Passo a Passo
@@ -85,11 +85,13 @@ Uma solução robusta, moderna e multiplataforma para controle financeiro, gest�
     ```
 
 3.  **Configuração de Ambiente:**
-    Crie um arquivo `.env` na raiz do projeto contendo as seguintes variáveis mínimas:
+    Copie `.env.example` para `.env`. Preencha `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_KEY`, `APP_URL` e um `JWT_SECRET` aleatório com pelo menos 32 caracteres. Configure e-mail e push para habilitar essas integrações:
     ```env
     PORT=3000
     DATABASE_URL=sua_url_de_conexao_com_postgresql
     JWT_SECRET=sua_chave_secreta_super_segura
+    APP_URL=http://localhost:3000
+    APP_TIMEZONE=America/Sao_Paulo
     VAPID_PUBLIC_KEY=sua_chave_publica_push
     VAPID_PRIVATE_KEY=sua_chave_privada_push
     ```
@@ -99,6 +101,18 @@ Uma solução robusta, moderna e multiplataforma para controle financeiro, gest�
     npm start
     ```
     O sistema estará disponível em `http://localhost:3000`.
+
+## Atualização de segurança de 01/10/2026
+
+Consulte `audit/CORRECOES-2026-10-01.md` e `audit/IMPLANTACAO.md` antes de atualizar um ambiente existente. `npm start` aplica migrações versionadas antes de abrir a porta HTTP. Faça backup e valide primeiro em uma cópia do banco: índices únicos recusam duplicidades existentes, sem apagar registros automaticamente.
+
+Execute `npm test` para rodar os testes isolados. Eles não usam o banco de produção nem enviam mensagens. O cache offline atende páginas e arquivos estáticos; dados privados exigem conexão. Os indicadores financeiros usam o ano selecionado, sem saldo inicial de anos anteriores.
+
+Contas novas precisam de convite por e-mail ou senha temporária individual definida pela administração. Contas antigas com troca obrigatória precisam ser reativadas. Relações familiares são atribuídas por IDs pela administração; nomes não concedem acesso. Alterações de senha ou papel revogam sessões antigas.
+
+Sem administrador principal, configure as variáveis `BOOTSTRAP_ADMIN_*` e execute `npm run bootstrap:admin`. Para recuperar uma única conta principal existente, o operador autorizado do ambiente pode executar `npm run bootstrap:admin -- --reset-primary`. Esse comando altera credenciais e revoga sessões; remova a senha temporária do ambiente após o uso.
+
+WhatsApp fica desabilitado por padrão. Configure a integração e `WHATSAPP_WORKER_ENABLED=true` somente no ambiente destinado a efetuar envios. O horário oficial vem de `APP_TIMEZONE`; lembretes automáticos ocorrem no quinto dia útil e no dia 20, às 19h quando o dia 20 é sábado. Agendamentos usam esse mesmo fuso.
 
 ---
 

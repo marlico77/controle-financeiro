@@ -25,6 +25,7 @@
     const activitiesDaysContainer = document.getElementById('activities-days-container');
     const menusDaysContainer = document.getElementById('menus-days-container');
 
+    if (!['admin', 'secretário'].includes(state.role || getStorageItem('role'))) document.getElementById('add-planning-btn').style.display='none';
     // Load initial data
     loadPlannings();
 
@@ -103,6 +104,12 @@
             modal.style.display = 'flex';
             
             renderDaysUI();
+            if (!['admin', 'secretário'].includes(state.role)) {
+                modal.querySelectorAll('form, .btn-text').forEach(el => el.style.display='none');
+                document.getElementById('planning-name').readOnly=true;
+                document.getElementById('planning-start').readOnly=true;
+                document.getElementById('planning-end').readOnly=true;
+            }
             
             // Focus on activities by default
             tabActivities.click();

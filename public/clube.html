@@ -2,6 +2,7 @@
 <html lang="pt-br">
 
 <head>
+    <script>const safeURL = value => { try { const url = new URL(value, location.origin); return ["http:", "https:"].includes(url.protocol) ? url.href : ""; } catch { return ""; } }; const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
@@ -15,6 +16,7 @@
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css?v=215">
+    <link rel="stylesheet" href="history.css?v=5">
 
     <style>
         /* Estilos Exclusivos da Página de Apresentação */
@@ -217,61 +219,6 @@
             font-size: 1.1rem;
             max-width: 600px;
             margin: 0 auto;
-        }
-
-        .history-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 2rem;
-        }
-
-        .presentation-card {
-            background: rgba(28, 28, 28, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            padding: 3.5rem 2.5rem;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-
-        .presentation-card:hover {
-            transform: translateY(-10px);
-            border-color: var(--presentation-accent);
-            background: rgba(35, 35, 35, 0.8);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-        }
-
-        .card-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 14px;
-            background: rgba(229, 9, 20, 0.15);
-            color: var(--presentation-accent);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            margin-bottom: 2rem;
-            border: 1px solid rgba(229, 9, 20, 0.2);
-        }
-
-        .presentation-card h3 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            color: var(--presentation-text);
-        }
-
-        .presentation-card p {
-            color: var(--presentation-dim);
-            line-height: 1.7;
-            font-size: 1rem;
-            margin: 0;
         }
 
         /* Liderança / Diretoria */
@@ -1069,37 +1016,57 @@
         </div>
     </header>
 
-    <!-- Seção História & Identidade -->
-    <section id="historia" class="section-padding">
-        <div class="section-header">
-            <h2>Quem Somos</h2>
-            <p>Conheça os pilares que sustentam nosso clube e o propósito que nos move a cada reunião e acampamento.</p>
+    <!-- História do clube e programa dos Desbravadores -->
+    <section id="historia" class="section-padding history-section" aria-labelledby="historia-title">
+        <div class="story-heading">
+            <div>
+                <h2 id="historia-title">Quem Somos</h2>
+                <p>Do Marechal Rondon à Tribo de Davi: os momentos que marcaram nossa história.</p>
+            </div>
         </div>
 
-        <div class="history-grid">
-            <div class="presentation-card">
-                <div class="card-icon">
-                    <i class="fa-solid fa-hands-holding-child"></i>
-                </div>
-                <h3>Nossa Missão</h3>
-                <p>Salvar do pecado e guiar no serviço. Trabalhamos para desenvolver o caráter de juvenis e adolescentes através de atividades práticas, civismo e amor ao próximo.</p>
+        <div class="story-carousel" tabindex="0" aria-label="História do clube e programa dos Desbravadores; escolha um ano ou tema para navegar">
+            <div class="story-slide" aria-live="polite" aria-atomic="true">
+                <article class="story-panel" data-story-label="1996">
+                    <span class="story-year">1996</span><h3>O começo: Marechal Rondon</h3>
+                    <p>O clube de Desbravadores da Igreja Adventista do Jardim Boa Vista foi fundado por José Lopes, Valdemir, Elci e Franklin, com o nome Marechal Rondon.</p>
+                </article>
+                <article class="story-panel" data-story-label="2000" hidden>
+                    <span class="story-year">2000</span><h3>Uma pausa nas atividades</h3>
+                    <p>Sem uma equipe de liderança naquele período, o clube foi desativado.</p>
+                </article>
+                <article class="story-panel" data-story-label="2005" hidden>
+                    <span class="story-year">2005</span><h3>O retorno como Tribo de Davi</h3>
+                    <p>O clube voltou com o nome Tribo de Davi. Nessa fase, participava de atividades internas e se reunia aos domingos para trabalhar classes e especialidades.</p>
+                </article>
+                <article class="story-panel" data-story-label="2010" hidden>
+                    <span class="story-year">2010</span><h3>Reorganização da liderança</h3>
+                    <p>Com a reestruturação da equipe, Jason Oliveira Costa assumiu a direção do Tribo de Davi, escolhido pela comissão de nomeação da igreja. As reuniões regulares continuaram aos domingos, das 9h às 11h30, com atividades de classes e especialidades.</p>
+                </article>
+                <article class="story-panel" data-story-label="2016" hidden>
+                    <span class="story-year">2016</span><h3>Reuniões aos sábados</h3>
+                    <p>As reuniões regulares passaram para os sábados, das 14h30 às 17h, começando com a classe bíblica.</p>
+                </article>
+                <article class="story-panel" data-story-label="Hoje" hidden>
+                    <span class="story-year">Hoje</span><h3>52 pessoas no clube</h3>
+                    <p>Atualmente, o Tribo de Davi reúne 52 desbravadores, incluindo sua liderança.</p>
+                </article>
+                <article class="story-panel" data-story-label="Desbravadores" hidden>
+                    <span class="story-year">O movimento</span><h3>Quem são os Desbravadores?</h3>
+                    <p>Meninos e meninas de 10 a 15 anos, de diferentes origens e religiões, que se encontram para aprender, fazer amigos e desenvolver habilidades. O programa é ligado à Igreja Adventista do Sétimo Dia e combina fé, convivência, serviço e vida ao ar livre.</p>
+                    <a class="story-source" href="https://www.adventistas.org/pt/desbravadores/quem-somos/" target="_blank" rel="noopener noreferrer">Conheça os Desbravadores ↗</a>
+                </article>
+                <article class="story-panel" data-story-label="Atividades" hidden>
+                    <span class="story-year">Na prática</span><h3>O que se aprende no clube</h3>
+                    <p>Classes e especialidades, estudo da natureza, acampamentos, caminhadas, nós e amarras, classe bíblica, trabalho em equipe e serviço à comunidade fazem parte do programa dos Desbravadores.</p>
+                    <div class="story-links">
+                        <a class="story-source" href="https://www.adventistas.org/pt/desbravadores/classes/" target="_blank" rel="noopener noreferrer">Programa de classes ↗</a>
+                        <a class="story-source" href="https://www.adventistas.org/pt/desbravadores/especialidades/" target="_blank" rel="noopener noreferrer">Especialidades ↗</a>
+                    </div>
+                </article>
             </div>
 
-            <div class="presentation-card">
-                <div class="card-icon">
-                    <i class="fa-solid fa-shield-heart"></i>
-                </div>
-                <h3>Tribo de Davi</h3>
-                <p>Inspirados pela coragem e fidelidade do rei Davi, buscamos ser jovens segundo o coração de Deus, prontos para enfrentar os gigantes modernos com fé e determinação.</p>
-            </div>
-
-            <div class="presentation-card">
-                <div class="card-icon">
-                    <i class="fa-solid fa-campground"></i>
-                </div>
-                <h3>Nossas Atividades</h3>
-                <p>Acampamentos, especialidades práticas, nós e amarras, primeiros socorros, estudo da natureza e projetos comunitários que preparam o jovem para a vida.</p>
-            </div>
+            <div class="story-steps" aria-label="Etapas da história"></div>
         </div>
     </section>
 
@@ -1359,6 +1326,78 @@
             localStorage.setItem('lgpd_cookies_accepted', 'true');
             cookieBanner.style.bottom = '-300px'; // Some completamente
         });
+
+        const storyCarousel = document.querySelector('.story-carousel');
+        if (storyCarousel) {
+            const panels = [...storyCarousel.querySelectorAll('.story-panel')];
+            const steps = storyCarousel.querySelector('.story-steps');
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+            let active = -1;
+            let transitionTimer;
+
+            function showStory(index, scrollStep = false) {
+                const next = (index + panels.length) % panels.length;
+                if (next === active) return;
+                clearTimeout(transitionTimer);
+                panels.forEach(panel => {
+                    panel.hidden = true;
+                    panel.classList.remove('story-entering', 'story-leaving');
+                    panel.removeAttribute('aria-hidden');
+                });
+                const previous = panels[active];
+                const incoming = panels[next];
+                if (previous && !reduceMotion.matches) {
+                    previous.hidden = false;
+                    previous.classList.add('story-leaving');
+                    previous.setAttribute('aria-hidden', 'true');
+                    incoming.classList.add('story-entering');
+                    transitionTimer = setTimeout(() => {
+                        previous.hidden = true;
+                        previous.classList.remove('story-leaving');
+                        previous.removeAttribute('aria-hidden');
+                        incoming.classList.remove('story-entering');
+                    }, 320);
+                }
+                incoming.hidden = false;
+                active = next;
+                [...steps.children].forEach((button, buttonIndex) => {
+                    if (buttonIndex === active) button.setAttribute('aria-current', 'step');
+                    else button.removeAttribute('aria-current');
+                });
+                if (scrollStep) {
+                    const selectedStep = steps.children[active];
+                    steps.scrollTo({
+                        left: selectedStep.offsetLeft - steps.offsetLeft - (steps.clientWidth - selectedStep.offsetWidth) / 2,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+
+            panels.forEach((panel, index) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'story-step';
+                button.textContent = panel.dataset.storyLabel;
+                button.setAttribute('aria-label', `Mostrar etapa ${index + 1}: ${panel.dataset.storyLabel}`);
+                button.addEventListener('click', () => showStory(index, true));
+                steps.appendChild(button);
+            });
+            storyCarousel.addEventListener('keydown', event => {
+                if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+                event.preventDefault();
+                showStory(active + (event.key === 'ArrowRight' ? 1 : -1), true);
+            });
+            let touchStart = 0;
+            storyCarousel.addEventListener('touchstart', event => {
+                touchStart = event.changedTouches[0].clientX;
+            }, { passive: true });
+            storyCarousel.addEventListener('touchend', event => {
+                const distance = event.changedTouches[0].clientX - touchStart;
+                if (Math.abs(distance) > 50) showStory(active + (distance < 0 ? 1 : -1), true);
+            }, { passive: true });
+            showStory(0);
+        }
+
         // Mostrar botão Back to Top ao rolar a página
         const backToTopBtn = document.getElementById('back-to-top');
         window.addEventListener('scroll', () => {
@@ -1570,9 +1609,9 @@
                     for (let dayNum = 1; dayNum <= totalDays; dayNum++) {
                         const dayEvents = eventsByDay[dayNum] || [];
                         if (dayEvents.length > 0) {
-                            const tooltipContent = dayEvents.map(ev => `<strong>${ev.name}</strong>`).join('<hr>');
+                            const tooltipContent = dayEvents.map(ev => `<strong>${escapeHTML(ev.name)}</strong>`).join('<hr>');
                             daysHtml += `
-                                <div class="calendar-day has-event" title="${dayEvents.map(ev => ev.name).join(', ')}">
+                                <div class="calendar-day has-event" title="${escapeHTML(dayEvents.map(ev => ev.name).join(', '))}">
                                     ${dayNum}
                                     <div class="tooltip-box">${tooltipContent}</div>
                                 </div>
@@ -1595,10 +1634,10 @@
                         monthEvents.sort((a, b) => a.day - b.day);
 
                         bodyContainer.innerHTML = monthEvents.map(ev => `
-                            <div class="compact-event-item" title="${ev.description || ev.name}">
+                            <div class="compact-event-item" title="${escapeHTML(ev.description || ev.name)}">
                                 <div class="compact-day-badge">${ev.day}</div>
                                 <div class="compact-event-details">
-                                    <h4>${ev.name}</h4>
+                                    <h4>${escapeHTML(ev.name)}</h4>
                                 </div>
                             </div>
                         `).join('');
@@ -1690,11 +1729,11 @@
                     
                     const title = escape(album.title);
                     const desc = escape(album.description || '');
-                    const cover = album.cover_url.replace(/"/g, '&quot;');
-                    const url = album.album_url ? album.album_url.replace(/"/g, '&quot;') : '#';
+                    const cover = escapeHTML(safeURL(album.cover_url));
+                    const url = album.album_url ? escapeHTML(safeURL(album.album_url)) : '#';
                     
                     return `
-                        <a href="${url}" target="${album.album_url ? '_blank' : '_self'}" class="gallery-item">
+                        <a href="${url}" target="${album.album_url ? '_blank' : '_self'}" rel="noopener noreferrer" class="gallery-item">
                             <img src="${cover}" alt="${title}" class="album-cover" onerror="this.src='logo.png'">
                             <div class="album-overlay"></div>
                             <div style="position: relative; z-index: 2; width: 100%;">

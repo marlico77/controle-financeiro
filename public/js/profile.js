@@ -19,7 +19,7 @@ const renderProfile = async () => {
         // Preenche o formulário
         if (document.getElementById('profile-name')) document.getElementById('profile-name').value = userProfile.name || '';
         if (document.getElementById('profile-email')) document.getElementById('profile-email').value = state.email || '';
-        if (document.getElementById('profile-responsible')) document.getElementById('profile-responsible').value = userProfile.responsible || '';
+        if (document.getElementById('profile-responsible')) { document.getElementById('profile-responsible').value = userProfile.responsible || ''; document.getElementById('profile-responsible').readOnly = true; }
         if (document.getElementById('profile-cpf')) document.getElementById('profile-cpf').value = userProfile.cpf || '';
         if (document.getElementById('profile-unit')) document.getElementById('profile-unit').value = userProfile.unit || 'Sem Unidade';
         
@@ -55,7 +55,6 @@ const renderProfile = async () => {
                 
                 const payload = {
                     name: document.getElementById('profile-name').value,
-                    responsible: document.getElementById('profile-responsible').value,
                     cpf: document.getElementById('profile-cpf').value,
                     birth_date: document.getElementById('profile-birth-date').value
                     // Unidade e idade não são enviados para evitar alteração
@@ -71,7 +70,7 @@ const renderProfile = async () => {
                         showStatus('Perfil atualizado com sucesso!', 'success');
                         // Atualiza o nome no estado e na UI (sidebar)
                         state.name = payload.name;
-                        setStorageItem('name', payload.name);
+                        setStorageItem('name', payload.name, !!localStorage.getItem('token'));
                         const userNameDisplay = document.querySelector('.user-info p');
                         if (userNameDisplay) userNameDisplay.textContent = payload.name.toUpperCase();
                     }
@@ -91,7 +90,7 @@ const renderProfile = async () => {
 function calculateProfileAge(birthDate) {
     if (!birthDate) return 'Não informada';
     const today = new Date();
-    const birth = new Date(birthDate);
+    const birth = new Date(String(birthDate).split('T')[0] + 'T12:00:00');
     if (isNaN(birth)) return 'Data inválida';
     
     let age = today.getFullYear() - birth.getFullYear();
@@ -101,4 +100,3 @@ function calculateProfileAge(birthDate) {
     }
     return age + (age === 1 ? ' ano' : ' anos');
 }
-

@@ -1,0 +1,58 @@
+[
+  {
+    "check": "Sintaxe e referências",
+    "scripts": 26,
+    "inline": 19,
+    "missing": [],
+    "duplicates": [
+      "reports.html:report-type-select",
+      "reports.html:report-field-member",
+      "reports.html:report-member-select",
+      "reports.html:report-fields-event",
+      "reports.html:report-event-select",
+      "reports.html:report-event-filter",
+      "reports.html:report-field-event-member",
+      "reports.html:report-event-member-select",
+      "reports.html:confirm-generate-report-btn"
+    ]
+  },
+  {
+    "check": "Comprovante de terceiro via nuvem",
+    "result": "200 sem consulta de autorização"
+  },
+  {
+    "check": "Mesmo bucket por rota pública",
+    "result": "200 sem usuário/token"
+  },
+  {
+    "check": "Salvar perfil sem unidade/telefone",
+    "result": "UPDATE recebe null para ambos"
+  },
+  {
+    "check": "Reenvio sobre aprovado com valor negativo",
+    "result": "200; valor -10.00 e status pending gravados"
+  },
+  {
+    "check": "Nome de membro em relatório",
+    "result": "HTML com onerror preservado no innerHTML (não executado)"
+  },
+  {
+    "check": "Selecionar todos com busca ativa",
+    "result": "Payload userIds=null: transmissão global"
+  },
+  {
+    "check": "Contrato de DATE com pg instalado",
+    "result": {
+      "isDate": true,
+      "serialized": "2026-10-01T03:00:00.000Z",
+      "reportConcatenationValid": false
+    }
+  },
+  {
+    "check": "Codificação do papel secretário no front",
+    "result": {
+      "correct": false,
+      "corrupted": true
+    }
+  }
+]

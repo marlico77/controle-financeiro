@@ -82,7 +82,7 @@ const isValidCPF = (cpf) => {
 // Calcula a idade de uma pessoa baseada na data de nascimento
 const calculateAge = (birthDate) => {
     if (!birthDate) return ''; // Retorna vazio se não houver data
-    const birth = new Date(birthDate); // Converte string para objeto Date
+    const birth = new Date(String(birthDate).split('T')[0] + 'T12:00:00');
     const today = new Date(); // Data atual
     let age = today.getFullYear() - birth.getFullYear(); // Diferença de anos
     const m = today.getMonth() - birth.getMonth(); // Diferença de meses
@@ -110,9 +110,10 @@ const showStatus = (msg, type = 'info') => {
     const container = document.getElementById('toast-container'); // Container fixo na tela
     const toast = document.createElement('div'); // Cria o elemento da notificação
     toast.className = `toast ${type}`; // Define a classe (info, success, error)
-    toast.innerHTML = `
-        <span class="toast-msg">${msg}</span>
-    `; // Define o texto da mensagem
+    const text = document.createElement('span');
+    text.className = 'toast-msg';
+    text.textContent = msg;
+    toast.appendChild(text);
     container.appendChild(toast); // Adiciona ao container
 
     // Remove a notificação após 4 segundos com efeito de fade
@@ -161,7 +162,15 @@ async function showAlert(message, title = 'Aviso', icon = '⚠️') {
         const successSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="60" height="60" fill="var(--accent-color)"><path d="M320 576C178.6 576 64 461.4 64 320C64 178.6 178.6 64 320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576zM438 209.7C427.3 201.9 412.3 204.3 404.5 215L285.1 379.2L233 327.1C223.6 317.7 208.4 317.7 199.1 327.1C189.8 336.5 189.7 351.7 199.1 361L271.1 433C276.1 438 282.9 440.5 289.9 440C296.9 439.5 303.3 435.9 307.4 430.2L443.3 243.2C451.1 232.5 448.7 217.5 438 209.7z"/></svg>`;
 
         titleEl.textContent = title; // Define título
-        messageEl.innerHTML = message; // Define mensagem (suporta HTML)
+        // Allow the small formatting vocabulary used by authored alerts; user data cannot add handlers/URLs.
+        const template = document.createElement('template');
+        template.innerHTML = message;
+        const allowed = new Set(['DIV', 'SPAN', 'P', 'STRONG', 'B', 'BR', 'PRE', 'EM', 'SMALL']);
+        template.content.querySelectorAll('*').forEach(element => {
+            if (!allowed.has(element.tagName)) { element.replaceWith(document.createTextNode(element.textContent)); return; }
+            [...element.attributes].forEach(attribute => element.removeAttribute(attribute.name));
+        });
+        messageEl.replaceChildren(template.content);
 
         // Ajusta cores e ícones conforme o tipo (Sucesso, Erro ou Geral)
         if (title === 'Sucesso') {

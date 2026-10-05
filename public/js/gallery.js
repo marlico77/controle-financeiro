@@ -23,11 +23,11 @@ function renderGallery(albums) {
         return;
     }
     
-    tbody.innerHTML = albums.map(album => `
+    tbody.innerHTML = albums.map((album, index) => `
         <tr>
             <td>
                 <div style="width: 60px; height: 60px; border-radius: 8px; overflow: hidden; background: #222;">
-                    <img src="${escapeHTML(album.cover_url)}" style="width: 100%; height: 100%; object-fit: cover;" referrerpolicy="no-referrer" onerror="this.src='logo.png'">
+                    <img src="${escapeHTML(safeURL(album.cover_url))}" style="width: 100%; height: 100%; object-fit: cover;" referrerpolicy="no-referrer" onerror="this.src='logo.png'">
                 </div>
             </td>
             <td>
@@ -38,12 +38,14 @@ function renderGallery(albums) {
             </td>
             <td>
                 <div style="display: flex; gap: 0.5rem;">
-                    <button class="btn-primary btn-sm" onclick='editAlbum(${JSON.stringify(album).replace(/'/g, "&apos;")})'>Editar</button>
-                    <button class="btn-text btn-sm" style="color: var(--error-color);" onclick="deleteAlbum(${album.id})">Excluir</button>
+                    <button class="btn-primary btn-sm" data-edit-album="${index}">Editar</button>
+                    <button class="btn-text btn-sm" style="color: var(--error-color);" data-delete-album="${index}">Excluir</button>
                 </div>
             </td>
         </tr>
     `).join('');
+    tbody.querySelectorAll('[data-edit-album]').forEach(button => button.addEventListener('click', () => editAlbum(albums[Number(button.dataset.editAlbum)])));
+    tbody.querySelectorAll('[data-delete-album]').forEach(button => button.addEventListener('click', () => deleteAlbum(albums[Number(button.dataset.deleteAlbum)].id)));
 }
 
 // Formulário de Cadastro/Edição de Álbum
@@ -142,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const updatePreview = () => {
             const url = coverInput.value.trim();
             if (url) {
-                previewImg.src = url;
+                previewImg.src = safeURL(url);
                 previewContainer.style.display = 'block';
             } else {
                 previewContainer.style.display = 'none';

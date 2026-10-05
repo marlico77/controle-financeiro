@@ -3,7 +3,7 @@
 async function apiFetch(url, options = {}) {
     const headers = {
         // Injeta o token JWT no cabeçalho Authorization
-        'Authorization': `Bearer ${state.token || localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${getToken()}`,
         'X-Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
         ...options.headers
     };
@@ -136,21 +136,8 @@ const initMessageForm = () => {
         e.preventDefault(); // Impede o recarregamento da página
         e.stopPropagation();
 
-        const selectAllChecked = document.getElementById('msg-select-all').checked;
-        let selectedIds = [];
-
-        if (selectAllChecked) {
-            selectedIds = null; // Se marcado "Todos", o backend entende o valor null como destino global
-        } else {
-            // Coleta os IDs apenas dos membros que foram marcados manualmente
-            const checkboxes = document.querySelectorAll('#members-checkbox-container input[type="checkbox"]:checked');
-            selectedIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-
-            if (selectedIds.length === 0) {
-                showAlert('Por favor, selecione pelo menos um membro ou marque "Todos os Membros".', 'Aviso');
-                return;
-            }
-        }
+        const selectedIds = Array.from(document.querySelectorAll('#members-checkbox-container input[type="checkbox"]:checked')).map(cb => Number(cb.value));
+        if (!selectedIds.length) { showAlert('Selecione ao menos um destinatário.', 'Aviso'); return; }
 
         const title = document.getElementById('msg-title').value; // Título da notificação
         const content = document.getElementById('msg-content').value; // Conteúdo da mensagem
@@ -326,6 +313,8 @@ async function checkAuth() {
 
             // Atualiza o estado global com os dados confirmados pelo servidor
             state.role = status.role;
+            state.isMaster = !!status.isMaster;
+            state.personId = status.personId;
             state.username = status.username;
             state.name = status.name;
             state.email = status.email;
@@ -465,7 +454,7 @@ async function checkAuth() {
             const isAdmin = state.role === 'admin';
             const isSecretary = state.role === 'secretário';
             const isSocialMedia = state.role === 'social_midia';
-            const isMaster = isAdmin && (state.username || '').toUpperCase() === 'ADMINISTRADOR';
+            const isMaster = isAdmin && state.isMaster;
 
             // Mapeamento dos elementos de navegação
             const navItems = {
@@ -482,7 +471,7 @@ async function checkAuth() {
             };
 
             // Restrição de Abas e Ajustes Visuais por Perfil
-            if (!isAdmin) {
+            if (!isAdmin && !isSecretary) {
                 // Usuários Comuns e Secretários não veem abas de gestão administrativa geral
                 if (navItems.people) navItems.people.style.display = 'none';
                 if (navItems.outflows) navItems.outflows.style.display = 'none';
@@ -551,7 +540,7 @@ async function checkAuth() {
             }
 
             // Bloqueia abas administrativas gerais para não-admins
-            if (!isAdmin && (state.activeTab === 'people' || state.activeTab === 'outflows' || state.activeTab === 'sales' || (state.activeTab === 'messages' && !isSecretary))) {
+            if (!isAdmin && !isSecretary && (state.activeTab === 'people' || state.activeTab === 'outflows' || state.activeTab === 'sales' || (state.activeTab === 'messages' && !isSecretary))) {
                 window.location.href = '/dashboard.html';
             }
 
@@ -589,7 +578,8 @@ async function checkAuth() {
             }, 2000);
         } catch (err) {
             console.error('Auth verification failed:', err);
-            handleUnauthorized('checkAuth'); // Se a verificação falhar, desloga por segurança
+            if (/Sessão|Token/.test(err.message)) handleUnauthorized('checkAuth');
+            else showStatus('Não foi possível carregar os dados. Recarregue a página.', 'error');
         }
     } else {
         // Se não houver token, mostra a tela de login
@@ -619,28 +609,30 @@ async function loadInitialData() {
         ];
 
         // Adiciona requisições extras apenas se for admin
-        if (state.role === 'admin') {
-            promises.push(apiFetch('/api/event-payments')); // Pagamentos de eventos
-            promises.push(apiFetch('/api/outflows')); // Saídas de caixa
-            promises.push(apiFetch('/api/sales')); // Vendas (Cantina/Uniformes)
+        if (['admin', 'secretário'].includes(state.role)) {
+            promises.push(apiFetch(`/api/event-payments?year=${state.currentYear}`)); // Pagamentos de eventos
+            promises.push(apiFetch(`/api/outflows?year=${state.currentYear}`)); // Saídas de caixa
+            promises.push(apiFetch(`/api/sales?year=${state.currentYear}`)); // Vendas (Cantina/Uniformes)
         } else {
             // Membro comum e secretário veem apenas seus próprios pagamentos de eventos
-            promises.push(apiFetch(`/api/event-payments?person_id=${state.personId}`));
+            promises.push(apiFetch(`/api/event-payments?year=${state.currentYear}`));
         }
 
         // Aguarda todas as requisições terminarem. Se uma falhar, retorna lista vazia (catch interno)
         const results = await Promise.all(promises.map(p => p.catch(err => {
             console.error('[API ERROR] Falha ao carregar recurso:', err);
-            return []; // Retorna lista vazia para não travar o carregamento do restante
+            showStatus('Não foi possível atualizar os dados. Os totais não devem ser usados até recarregar.', 'error');
+            throw err;
         })));
 
         // Distribui os resultados nos estados globais
         state.people = results[0];
+        if (typeof populateGuardianOptions === 'function') populateGuardianOptions();
         state.payments = results[1];
         state.events = results[2];
         state.eventPayments = results[3] || [];
 
-        if (state.role === 'admin') {
+        if (['admin', 'secretário'].includes(state.role)) {
             state.outflows = results[4] || [];
             state.sales = results[5] || [];
         } else {
@@ -904,7 +896,7 @@ function switchTab(tabName, force = false) {
     const siteCalendarActions = document.getElementById('site-calendar-actions');
     if (tabName === 'events') {
         const isSite = state.activeEventsSubmenu === 'site';
-        if (eventsActions) eventsActions.style.display = (!isSite && state.role === 'admin') ? 'flex' : 'none';
+        if (eventsActions) eventsActions.style.display = (!isSite && ['admin', 'secretário'].includes(state.role)) ? 'flex' : 'none';
         if (siteCalendarActions) siteCalendarActions.style.display = (isSite && (state.role === 'admin' || state.role === 'secretário')) ? 'flex' : 'none';
     } else {
         if (eventsActions) eventsActions.style.display = 'none';
@@ -914,7 +906,7 @@ function switchTab(tabName, force = false) {
     // Atualiza o título dinâmico da página no topo
     const title = document.getElementById('page-title');
     if (title) {
-        if (tabName === 'dashboard') title.textContent = state.role === 'admin' ? 'Dashboard de Mensalidades' : 'Meu Status de Mensalidade';
+        if (tabName === 'dashboard') title.textContent = ['admin', 'secretário'].includes(state.role) ? 'Dashboard de Mensalidades' : 'Meu Status de Mensalidade';
         else if (tabName === 'people') title.textContent = 'Gerenciamento de Membros';
         else if (tabName === 'events') title.textContent = 'Gestão de Eventos';
         else if (tabName === 'reports') title.textContent = 'Relatórios do Sistema';
@@ -1003,7 +995,7 @@ if (backToEventsBtn) {
     if (detailView) detailView.style.display = 'none';
 
     // Ajusta visibilidade de botões administrativos
-    const isAdmin = state.role === 'admin';
+    const isAdmin = ['admin', 'secretário'].includes(state.role);
     if (isAdmin) {
         const addEventBtn = document.getElementById('add-event-btn');
         const addPartBtn = document.getElementById('add-participants-btn');
@@ -1157,5 +1149,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
-
 

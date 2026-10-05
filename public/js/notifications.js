@@ -40,6 +40,7 @@ async function subscribeToPush() {
         const registration = await navigator.serviceWorker.ready;
         const response = await apiFetch('/api/notifications/vapid-public-key');
         const vapidPublicKey = response.publicKey;
+        if (!vapidPublicKey) return;
 
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,

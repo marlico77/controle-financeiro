@@ -504,6 +504,7 @@ window.sendWaTextMessage = async function() {
 
 window.sendWaMediaMessage = async function(file) {
     if (!window.activeChatId) return;
+    if (file.size > 10 * 1024 * 1024) { showStatus('O anexo deve ter no máximo 10 MB.', 'error'); return; }
 
     const msgInput = document.getElementById('wa-message-input');
     const originalPlaceholder = msgInput ? msgInput.placeholder : '';

@@ -484,6 +484,12 @@ const initWhatsAppForm = () => {
                 } else if (r.status === 'sent') {
                     badgeStyle = 'background: #d4edda; color: #155724;';
                     statusText = 'Enviado';
+                } else if (r.status === 'queued') {
+                    badgeStyle = 'background: #cce5ff; color: #004085;';
+                    statusText = 'Na fila';
+                } else if (r.status === 'skipped') {
+                    badgeStyle = 'background: #fff3cd; color: #856404;';
+                    statusText = 'Sem destinatários';
                 } else if (r.status === 'processing') {
                     badgeStyle = 'background: #cce5ff; color: #004085;';
                     statusText = 'Processando';

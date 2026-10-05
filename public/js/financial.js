@@ -1,4 +1,24 @@
 // --- Lógica de Modais de Pagamento ---
+function populateGuardianOptions() {
+    const field = document.getElementById('p-responsible');
+    if (!field || !['admin', 'secretário'].includes(state.role)) return;
+    let select = document.getElementById('p-responsible-id');
+    if (!select) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'input-group';
+        const label = document.createElement('label');
+        label.textContent = 'Conta do responsável autorizado';
+        label.htmlFor = 'p-responsible-id';
+        select = document.createElement('select');
+        select.id = 'p-responsible-id';
+        wrapper.append(label, select);
+        field.parentElement.after(wrapper);
+    }
+    const previous = select.value;
+    select.replaceChildren(new Option('Sem vínculo de acesso', ''));
+    state.people.filter(p => p.role === 'responsible').forEach(p => select.add(new Option(`${p.name} (${p.username})`, p.id)));
+    select.value = previous;
+}
 
 // Abre o modal para registro de mensalidades individuais
 const openPaymentModal = (person, month, payment = null) => {
@@ -202,6 +222,7 @@ const editPerson = (id) => {
     document.getElementById('p-id').value = person.id;
     document.getElementById('p-name').value = person.name;
     document.getElementById('p-responsible').value = person.responsible || '';
+    if (document.getElementById('p-responsible-id')) document.getElementById('p-responsible-id').value = person.responsible_id || '';
     document.getElementById('p-unit').value = person.unit || '';
     document.getElementById('p-birth').value = person.birth_date || '';
     document.getElementById('p-cpf').value = formatCPF(person.cpf || '');
@@ -219,7 +240,7 @@ const editPerson = (id) => {
         if (roleSelect) {
             roleSelect.value = person.role || 'member';
             // Apenas o Admin Master (super usuário) pode mudar o nível de permissão (role)
-            const isMaster = state.username && state.username.toUpperCase() === 'ADMINISTRADOR';
+            const isMaster = state.isMaster;
             roleSelect.disabled = !isMaster;
         }
     }
@@ -232,7 +253,7 @@ const editPerson = (id) => {
             : null;
 
         if (respPerson && respPerson.username) {
-            respCredentialsSection.style.display = 'block';
+            respCredentialsSection.style.display = 'none';
             document.getElementById('u-resp-username').value = respPerson.username;
             document.getElementById('u-resp-password').value = '';
         } else {
@@ -251,4 +272,3 @@ const editPerson = (id) => {
     personModal.style.display = 'flex';
 };
 window.editPerson = editPerson;
-

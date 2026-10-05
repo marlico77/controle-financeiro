@@ -1,0 +1,155 @@
+/* Carrossel da história: cores, formas e tipografia da página institucional. */
+.section-padding.history-section {
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+    background: rgba(20, 20, 20, 0.4);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.story-heading {
+    margin-bottom: 2rem;
+}
+
+.story-heading h2 {
+    margin: 0 0 0.45rem;
+    color: var(--presentation-text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.story-heading p {
+    margin: 0;
+    color: var(--presentation-dim);
+    font-size: 1.05rem;
+    line-height: 1.5;
+}
+
+.story-carousel:focus-visible {
+    outline: 2px solid var(--presentation-accent);
+    outline-offset: 6px;
+    border-radius: 12px;
+}
+
+.story-slide {
+    position: relative;
+    min-height: 238px;
+    display: flex;
+    align-items: center;
+    background: rgba(28, 28, 28, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.story-panel {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 2rem clamp(1.5rem, 4vw, 3rem);
+}
+
+.story-panel[hidden] { display: none; }
+
+.story-panel.story-leaving {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    animation: story-out 320ms ease both;
+}
+
+.story-panel.story-entering { animation: story-in 320ms ease both; }
+
+@keyframes story-out {
+    to { opacity: 0; transform: translateX(-16px); }
+}
+
+@keyframes story-in {
+    from { opacity: 0; transform: translateX(16px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.story-year {
+    display: block;
+    margin-bottom: 0.65rem;
+    color: var(--presentation-accent);
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.story-panel h3 {
+    margin: 0 0 0.65rem;
+    color: var(--presentation-text);
+    font-size: clamp(1.4rem, 2.4vw, 1.8rem);
+    line-height: 1.25;
+}
+
+.story-panel p {
+    max-width: 820px;
+    margin: 0;
+    color: #bcbcbc;
+    font-size: 1rem;
+    line-height: 1.7;
+}
+
+.story-source {
+    display: inline-block;
+    margin-top: 0.8rem;
+    color: var(--presentation-accent);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.story-source:hover, .story-source:focus-visible { color: #fff; }
+.story-links { display: flex; flex-wrap: wrap; gap: 0.2rem 1.2rem; }
+
+.story-steps {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+    margin-top: 1.25rem;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #555 transparent;
+}
+
+.story-step {
+    flex: 0 0 auto;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    padding: 0.42rem 0.72rem;
+    background: transparent;
+    color: var(--presentation-dim);
+    font: 600 0.78rem 'Outfit', sans-serif;
+    cursor: pointer;
+}
+
+.story-step:hover, .story-step:focus-visible {
+    border-color: var(--presentation-accent);
+    color: #fff;
+}
+
+.story-step[aria-current="step"] {
+    border-color: var(--presentation-accent);
+    background: var(--presentation-accent);
+    color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .story-panel.story-leaving, .story-panel.story-entering { animation: none; }
+}
+
+@media (max-width: 700px) {
+    .section-padding.history-section { padding-top: 2.5rem; padding-bottom: 2.5rem; }
+    .story-heading { margin-bottom: 1.4rem; }
+    .story-heading h2 { font-size: 2rem; }
+    .story-slide { min-height: 220px; }
+    .story-panel { padding: 1.5rem; }
+}
