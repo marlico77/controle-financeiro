@@ -3,6 +3,8 @@ npm-debug.log
 database.sqlite
 uploads
 .env
+.env.*
+!.env.example
 .git
 .gitignore
 public/images/

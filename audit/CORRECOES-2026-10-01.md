@@ -48,3 +48,7 @@ Os números correspondem ao relatório original `RELATORIO-REVISAO-2026-10-01.md
 `npm test`: **43 testes passaram, zero falhas**. Inclui sintaxe do código e scripts HTML, IDs/arquivos locais, HTTP real em loopback, autorização, revogação JWT, validação monetária, rollback, comprovantes, XSS, seleção de destinatários, conversão de fuso e configuração TLS.
 
 Banco/storage são simulados nos testes. Não houve teste em PostgreSQL real nem teste completo das telas em navegador. Nenhuma execução real de Resend, Supabase, W-API ou push foi feita. Migrações, políticas de storage, entrega de mensagens, concorrência entre instâncias e atualização do PWA precisam de homologação antes do deploy. A lista de preparação está em `IMPLANTACAO.md`.
+
+## Limpeza do ambiente de teste local (05/10/2026)
+
+A instância PostgreSQL temporária usada para testar a aplicação, seus dados, credenciais geradas, logs, binários e scripts auxiliares não referenciados foram removidos do computador. Esses arquivos estavam fora do controle de versão. O `.env` local aponta para um banco remoto e foi preservado; ele continua ignorado pelo Git e pelo Docker. Arquivos `.env.*` futuros também ficam excluídos, exceto o modelo sem segredos `.env.example`.
