@@ -16,7 +16,7 @@ function response() {
 }
 function harness(register, deps) {
     const routes=new Map();
-    const app=Object.fromEntries(['get','post','put','delete'].map(method=>[method,(url,...handlers)=>routes.set(method+' '+url,handlers.at(-1))]));
+    const app=Object.fromEntries(['get','post','put','patch','delete'].map(method=>[method,(url,...handlers)=>routes.set(method+' '+url,handlers.at(-1))]));
     register(app,deps);
     return async (method,url,req) => {
         const res=response(); let error;
@@ -97,6 +97,36 @@ test('password reset revokes old JWT version',async()=>{
     const req={headers:{authorization:'Bearer '+jwt.sign({id:1,sessionVersion:1},secret)},query:{},method:'GET',path:'/api/people'};
     const res=response();let proceeded=false;await middleware(req,res,()=>proceeded=true);
     assert.equal(res.code,401);assert.equal(proceeded,false);
+});
+test('account status endpoint deactivates the users row and preserves the member row',async()=>{
+    const statements=[];let audit;
+    const client={query:async(sql,params=[])=>{
+        statements.push({sql:sql.trim(),params});
+        if(sql.includes('SELECT id, role, is_master, account_status FROM users'))return {rows:[{id:42,role:'member',is_master:false,account_status:'active'}],rowCount:1};
+        if(sql.includes('UPDATE users SET account_status'))return {rows:[],rowCount:1};
+        return {rows:[{count:1}],rowCount:1};
+    },release(){statements.push({sql:'RELEASE'});}};
+    const db={pool:{connect:async()=>client},query:async()=>({rows:[],rowCount:1})};
+    const registerPeople=require('../routes/securePeople');
+    const run=harness(registerPeople,{db,bcrypt:{},authenticateToken(){},logAction:async(_req,action,details)=>{audit={action,details};}});
+    const {res,error}=await run('patch','/api/admin/accounts/:userId/status',{params:{userId:'42'},body:{status:'disabled'},user:{id:7,role:'admin',isMaster:false}});
+    assert.equal(error,undefined);
+    assert.deepEqual(res.body,{success:true,userId:42,status:'disabled'});
+    const update=statements.find(s=>s.sql.includes('UPDATE users SET account_status'));
+    assert.ok(update);
+    assert.deepEqual(update.params,['disabled',7,42]);
+    assert.ok(statements.some(s=>s.sql==='COMMIT'));
+    assert.deepEqual(audit,{action:'DEACTIVATE',details:{userId:42}});
+    assert.equal(statements.some(s=>s.sql.includes('DELETE FROM people')),false);
+});
+test('deactivated account rejects an already issued JWT',async()=>{
+    const middleware=authenticate({query:async()=>({rows:[{id:1,session_version:1,role:'member',account_status:'disabled'}]})},secret);
+    const req={headers:{authorization:'Bearer '+jwt.sign({id:1,sessionVersion:1},secret)},query:{},method:'GET',path:'/api/people'};
+    const res=response();let proceeded=false;
+    await middleware(req,res,()=>{proceeded=true;});
+    assert.equal(res.code,401);
+    assert.match(res.body.error,/Conta desativada/);
+    assert.equal(proceeded,false);
 });
 test('current database role overrides stale JWT role',async()=>{
     const middleware=authenticate({query:async()=>({rows:[{id:1,session_version:1,role:'member',person_id:5}]})},secret);

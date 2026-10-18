@@ -9,6 +9,7 @@ module.exports = function registerAuth(app, { db, bcrypt, secret, authenticateTo
             const { username, password, rememberMe } = req.body || {};
             if (typeof username !== 'string' || typeof password !== 'string' || username.length > 255 || Buffer.byteLength(password) > 72) throw new HttpError(400, 'Credenciais inválidas.');
             const user = (await db.query('SELECT u.*, p.name FROM users u LEFT JOIN people p ON p.id = u.person_id WHERE LOWER(u.username) = LOWER($1)', [username.trim()])).rows[0];
+            if (user?.account_status === 'disabled') throw new HttpError(401, 'Conta desativada. Procure um administrador.');
             if (user?.must_change_password && !user.activation_ready) throw new HttpError(401, 'Solicite à administração um convite ou uma senha temporária individual.');
             if (!user || !await bcrypt.compare(password, user.password_hash)) {
                 await logAction(req, 'LOGIN_FAILED', { username }); throw new HttpError(401, 'Credenciais inválidas.');

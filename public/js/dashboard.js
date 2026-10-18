@@ -640,12 +640,21 @@ window.setSort = setSort;
 function renderPeople() {
     if (peopleBody) peopleBody.innerHTML = '';
 
-    // Filtro de busca global (Nome, Usuário, Unidade, CPF, Responsável)
+    const isAdmin = state.role === 'admin';
+    const statusHeader = document.getElementById('people-status-header');
+    if (statusHeader) {
+        statusHeader.style.display = isAdmin ? '' : 'none';
+    }
+
+    // Filtro de busca global (Nome, Usuário, Unidade, CPF, Responsável, Status)
     const searchQuery = document.getElementById('global-search')?.value.toLowerCase() || '';
 
     let processedPeople = state.people.filter(p => {
         if (p.unit === 'Responsável') return false; // Oculta responsáveis da aba de membros
-        const text = `${p.name} ${p.username || ''} ${p.unit || ''} ${p.responsible || ''} ${p.cpf || ''}`.toLowerCase();
+        const statusKeywords = !p.u_id
+            ? 'sem conta'
+            : (p.account_status === 'disabled' ? 'desativada inativa disabled' : 'ativa active');
+        const text = `${p.name} ${p.username || ''} ${p.unit || ''} ${p.responsible || ''} ${p.cpf || ''} ${statusKeywords}`.toLowerCase();
         return text.includes(searchQuery);
     });
 
@@ -680,16 +689,43 @@ function renderPeople() {
     // Cria as linhas para cada membro filtrado
     processedPeople.forEach(person => {
         const tr = document.createElement('tr');
+        const hasAccount = Number.isInteger(Number(person.u_id)) && Number(person.u_id) > 0;
+        const isDisabled = hasAccount && person.account_status === 'disabled';
+
+        if (isAdmin && isDisabled) {
+            tr.style.opacity = '0.72';
+        }
+
+        const statusCellHtml = isAdmin
+            ? `<td>${typeof window.getAccountStatusBadgeHTML === 'function'
+                ? window.getAccountStatusBadgeHTML(person)
+                : (!hasAccount
+                    ? '<span class="grid-status-label status-none">SEM CONTA</span>'
+                    : (isDisabled
+                        ? '<span class="grid-status-label status-rejected">DESATIVADA</span>'
+                        : '<span class="grid-status-label status-approved">ATIVA</span>'))}</td>`
+            : '<td style="display: none;"></td>';
+
+        const adminActionHtml = isAdmin
+            ? (typeof window.getAccountActionButtonHTML === 'function'
+                ? window.getAccountActionButtonHTML(person)
+                : '')
+            : '';
+
         tr.innerHTML = `
             <td><strong>${escapeHTML(person.name.toUpperCase())}</strong></td>
             <td><span class="badge-user">${escapeHTML(person.username) || '-'}</span></td>
             <td><span class="unit-tag">${escapeHTML(person.unit) || 'S/U'}</span></td>
             <td>${escapeHTML(person.responsible) || '-'}</td>
             <td></td> <!-- Coluna de CPF limpa por questões de privacidade -->
+            ${statusCellHtml}
             <td>
-                <button class="btn-text" onclick="editPerson(${person.id})">
-                    Editar
-                </button>
+                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                    <button type="button" class="btn-text" onclick="editPerson(${person.id})">
+                        Editar
+                    </button>
+                    ${adminActionHtml}
+                </div>
             </td>
         `;
         if (peopleBody) peopleBody.appendChild(tr);
