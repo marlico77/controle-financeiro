@@ -288,6 +288,8 @@
                     <th onclick="setSort('responsible')" class="sortable">Responsável <span
                             class="sort-icon"></span></th>
                     <th class="cpf-header">CPF</th>
+                    <th id="people-status-header" onclick="setSort('account_status')" class="sortable" style="display: none;">Status <span
+                            class="sort-icon"></span></th>
                     <th>Ações</th>
                 </tr>
             </thead>
@@ -800,6 +802,14 @@
                             </svg>
                         </button>
                     </div>
+                </div>
+                <div id="account-lifecycle-section"
+                    style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-color); display: none; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span style="font-size: 0.9rem; color: var(--text-dim); font-weight: 600;">Status da Conta:</span>
+                        <span id="u-account-status-badge"></span>
+                    </div>
+                    <button type="button" id="u-account-toggle-btn" class="btn-secondary btn-small" style="margin: 0;"></button>
                 </div>
             </div>
             <div class="credentials-section" id="responsible-credentials-section"

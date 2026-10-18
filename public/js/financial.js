@@ -188,6 +188,160 @@ const deletePayment = async (id) => {
     }
 };
 
+// --- Ciclo de Vida de Contas (Desativar / Reativar - Admin Only) ---
+const hasValidUserAccount = (person) => {
+    const uid = Number(person?.u_id);
+    return Number.isInteger(uid) && uid > 0;
+};
+
+const normalizeAccountStatus = (person) => {
+    if (!hasValidUserAccount(person)) return 'none';
+    return person.account_status === 'disabled' ? 'disabled' : 'active';
+};
+
+const getAccountStatusBadgeHTML = (person) => {
+    const status = normalizeAccountStatus(person);
+    if (status === 'none') {
+        return '<span class="grid-status-label status-none" title="Membro sem conta vinculada (u_id ausente)">SEM CONTA</span>';
+    }
+    if (status === 'disabled') {
+        return '<span class="grid-status-label status-rejected" title="Conta desativada">DESATIVADA</span>';
+    }
+    return '<span class="grid-status-label status-approved" title="Conta ativa">ATIVA</span>';
+};
+window.getAccountStatusBadgeHTML = getAccountStatusBadgeHTML;
+
+const getAccountActionButtonHTML = (person) => {
+    if (state.role !== 'admin') return '';
+    if (!hasValidUserAccount(person)) {
+        return '<button type="button" class="btn-text" disabled title="Membro sem conta de usuário vinculada (u_id ausente)" style="opacity: 0.45; cursor: not-allowed;">Sem conta</button>';
+    }
+    const userId = Number(person.u_id);
+    const personId = Number(person.id);
+    const isDisabled = normalizeAccountStatus(person) === 'disabled';
+    const nextStatus = isDisabled ? 'active' : 'disabled';
+    const label = isDisabled ? 'Reativar' : 'Desativar';
+    const color = isDisabled ? '#4caf50' : 'var(--error-color, #e50914)';
+
+    return `<button type="button" class="btn-text account-status-action-btn" data-user-id="${userId}" data-person-id="${personId}" data-next-status="${nextStatus}" style="color: ${color}; font-weight: 600;" onclick="toggleAccountStatus(${userId}, '${nextStatus}', ${personId})">${label}</button>`;
+};
+window.getAccountActionButtonHTML = getAccountActionButtonHTML;
+
+// Altera o status da conta (active | disabled) usando obrigatoriamente users.id (u_id)
+const toggleAccountStatus = async (userId, targetStatus, personId = null) => {
+    if (state.role !== 'admin') {
+        showStatus('Apenas administradores podem gerenciar o status de contas.', 'error');
+        return;
+    }
+
+    // Localiza o membro garantindo distinção estrita entre person.id e users.id (u_id)
+    const person = state.people.find(p =>
+        (personId !== null && personId !== undefined && Number(p.id) === Number(personId)) ||
+        (hasValidUserAccount(p) && Number(p.u_id) === Number(userId))
+    );
+
+    const resolvedUserId = Number(person ? person.u_id : userId);
+    if (!person || !Number.isInteger(resolvedUserId) || resolvedUserId <= 0) {
+        showStatus('Não é permitido alterar o status: conta de usuário (u_id) ausente.', 'error');
+        return;
+    }
+
+    const currentStatus = normalizeAccountStatus(person);
+    const nextStatus = (targetStatus === 'active' || targetStatus === 'disabled')
+        ? targetStatus
+        : (currentStatus === 'disabled' ? 'active' : 'disabled');
+
+    const isDeactivating = nextStatus === 'disabled';
+    const actionTitle = isDeactivating ? 'Desativar Conta' : 'Reativar Conta';
+    const confirmMessage = isDeactivating
+        ? `Tem certeza que deseja desativar a conta de acesso de ${person.name} (${person.username || 'ID #' + resolvedUserId})? O histórico financeiro será preservado, mas o login ficará bloqueado.`
+        : `Deseja reativar a conta de acesso de ${person.name} (${person.username || 'ID #' + resolvedUserId})?`;
+
+    const confirmed = await showConfirm(confirmMessage, actionTitle);
+    if (!confirmed) return;
+
+    try {
+        await apiFetch(`/api/admin/accounts/${resolvedUserId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: nextStatus })
+        });
+
+        showStatus(
+            isDeactivating ? 'Conta desativada com sucesso!' : 'Conta reativada com sucesso!',
+            'success'
+        );
+
+        await loadInitialData();
+        if (typeof renderPeople === 'function') renderPeople();
+
+        // Se o modal de edição deste membro estiver aberto, sincroniza seu estado visual
+        const openPersonId = document.getElementById('p-id')?.value;
+        if (personModal && personModal.style.display === 'flex' && Number(openPersonId) === Number(person.id)) {
+            const updatedPerson = state.people.find(p => Number(p.id) === Number(person.id));
+            if (updatedPerson) syncModalAccountLifecycleUI(updatedPerson);
+        }
+    } catch (err) {
+        showStatus(err.message || 'Erro ao atualizar status da conta.', 'error');
+    }
+};
+window.toggleAccountStatus = toggleAccountStatus;
+
+const syncModalAccountLifecycleUI = (person) => {
+    const credentialsSection = document.getElementById('admin-only-credentials');
+    if (!credentialsSection) return;
+
+    let lifecycleBox = document.getElementById('account-lifecycle-section');
+    if (!lifecycleBox) {
+        lifecycleBox = document.createElement('div');
+        lifecycleBox.id = 'account-lifecycle-section';
+        lifecycleBox.style.cssText = 'margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-color); display: none; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;';
+        lifecycleBox.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 0.9rem; color: var(--text-dim); font-weight: 600;">Status da Conta:</span>
+                <span id="u-account-status-badge"></span>
+            </div>
+            <button type="button" id="u-account-toggle-btn" class="btn-secondary btn-small" style="margin: 0;"></button>
+        `;
+        credentialsSection.appendChild(lifecycleBox);
+    }
+
+    if (state.role !== 'admin' || !person) {
+        lifecycleBox.style.display = 'none';
+        return;
+    }
+
+    lifecycleBox.style.display = 'flex';
+    const badgeContainer = document.getElementById('u-account-status-badge');
+    const toggleBtn = document.getElementById('u-account-toggle-btn');
+
+    if (badgeContainer) {
+        badgeContainer.innerHTML = getAccountStatusBadgeHTML(person);
+    }
+
+    if (toggleBtn) {
+        if (!hasValidUserAccount(person)) {
+            toggleBtn.disabled = true;
+            toggleBtn.textContent = 'Conta sem u_id';
+            toggleBtn.style.opacity = '0.5';
+            toggleBtn.style.cursor = 'not-allowed';
+            toggleBtn.onclick = null;
+        } else {
+            const isDisabled = normalizeAccountStatus(person) === 'disabled';
+            const nextStatus = isDisabled ? 'active' : 'disabled';
+            const userId = Number(person.u_id);
+            toggleBtn.disabled = false;
+            toggleBtn.style.opacity = '1';
+            toggleBtn.style.cursor = 'pointer';
+            toggleBtn.textContent = isDisabled ? 'Reativar Conta' : 'Desativar Conta';
+            toggleBtn.style.background = isDisabled ? 'rgba(76, 175, 80, 0.15)' : 'rgba(229, 9, 20, 0.15)';
+            toggleBtn.style.color = isDisabled ? '#4caf50' : 'var(--error-color, #e50914)';
+            toggleBtn.style.border = isDisabled ? '1px solid rgba(76, 175, 80, 0.4)' : '1px solid rgba(229, 9, 20, 0.4)';
+            toggleBtn.onclick = () => toggleAccountStatus(userId, nextStatus, Number(person.id));
+        }
+    }
+};
+
 // Configura o modal de membros para a criação de um novo registro
 document.getElementById('add-person-btn').onclick = () => {
     document.getElementById('person-modal-title').textContent = 'Novo Membro';
@@ -202,6 +356,7 @@ document.getElementById('add-person-btn').onclick = () => {
         document.getElementById('u-username').value = '';
         document.getElementById('u-password').value = '';
     }
+    syncModalAccountLifecycleUI(null);
 
     const respCredentialsSection = document.getElementById('responsible-credentials-section');
     if (respCredentialsSection) {
@@ -244,6 +399,7 @@ const editPerson = (id) => {
             roleSelect.disabled = !isMaster;
         }
     }
+    syncModalAccountLifecycleUI(person);
 
     // Configura seção de credenciais do responsável
     const respCredentialsSection = document.getElementById('responsible-credentials-section');

@@ -1485,8 +1485,13 @@ app.post('/api/event-payments/:id/approve', authenticateToken, async (req, res) 
         const payment = paymentResult.rows[0];
         if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
 
-        const transition = await db.query('UPDATE event_payments SET status = \'approved\', updated_at = NOW(), rejection_reason = NULL WHERE id = $1 AND status = \'pending\' RETURNING id', [req.params.id]);
-        if (!transition.rowCount) return res.status(409).json({ error: 'Pagamento já foi conferido. Atualize a tela.' });
+        const transition = await db.query(`UPDATE event_payments ep
+            SET status = 'approved', updated_at = NOW(), rejection_reason = NULL
+            WHERE ep.id = $1 AND ep.status = 'pending'
+              AND EXISTS (SELECT 1 FROM event_participants participant
+                          WHERE participant.event_id = ep.event_id AND participant.person_id = ep.person_id)
+            RETURNING ep.id`, [req.params.id]);
+        if (!transition.rowCount) return res.status(409).json({ error: 'Pagamento já conferido ou membro não inscrito no evento. Atualize a tela.' });
 
         // Notifica o membro
         const userResult = await db.query('SELECT id, email FROM users WHERE person_id = $1', [payment.person_id]);

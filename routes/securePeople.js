@@ -22,13 +22,64 @@ module.exports = function registerPeople(app, { db, bcrypt, authenticateToken, l
     }
     app.get('/api/people', authenticateToken, async (req, res, next) => {
         try {
-            const result = await db.query(`SELECT p.*, u.username, u.role, u.id AS u_id, u.email,
+            const result = await db.query(`SELECT p.*, u.username, u.role, u.id AS u_id, u.email, u.account_status,
                 (SELECT guardian_person_id FROM person_guardians WHERE child_person_id = p.id ORDER BY guardian_person_id LIMIT 1) AS responsible_id
                 FROM people p LEFT JOIN users u ON u.person_id = p.id
                 WHERE $1::boolean OR p.id = $2 OR ($3::boolean AND p.id IN (SELECT child_person_id FROM person_guardians WHERE guardian_person_id = $2)) ORDER BY p.name`,
             [isStaff(req.user), req.user.personId, req.user.role === 'responsible']);
             res.json(result.rows);
         } catch (err) { next(err); }
+    });
+    app.patch('/api/admin/accounts/:userId/status', authenticateToken, async (req, res, next) => {
+        let client;
+        try {
+            if (req.user.role !== 'admin') throw new HttpError(403, 'Apenas administradores podem alterar o estado de contas.');
+            const userId = positiveId(req.params.userId);
+            const status = req.body?.status;
+            if (!['active', 'disabled'].includes(status)) throw new HttpError(400, 'Estado inválido. Use active ou disabled.');
+            if (status === 'disabled' && Number(req.user.id) === userId) throw new HttpError(409, 'Não é permitido desativar a própria conta.');
+
+            client = await db.pool.connect();
+            await client.query('BEGIN');
+            // Serialize transitions affecting the set of active master administrators.
+            await client.query("SELECT pg_advisory_xact_lock(hashtext('admin-account-status'))");
+            const account = (await client.query('SELECT id, role, is_master, account_status FROM users WHERE id = $1 FOR UPDATE', [userId])).rows[0];
+            if (!account) throw new HttpError(404, 'Conta não encontrada.');
+            if (account.is_master && !req.user.isMaster) throw new HttpError(403, 'Apenas o administrador master pode alterar esta conta.');
+            if (status === 'active' && account.is_master && account.role !== 'admin') throw new HttpError(409, 'Conta master precisa ter papel admin para ser ativada.');
+
+            if (status === 'disabled' && account.role === 'admin' && account.is_master && account.account_status !== 'disabled') {
+                const others = await client.query("SELECT COUNT(*)::int AS count FROM users WHERE role = 'admin' AND is_master = TRUE AND account_status = 'active' AND id <> $1", [userId]);
+                if (others.rows[0].count === 0) throw new HttpError(409, 'Não é possível desativar o último administrador master ativo.');
+            }
+
+            const changed = account.account_status !== status;
+            if (changed) {
+                await client.query(`UPDATE users SET account_status = $1,
+                    deactivated_at = CASE WHEN $1 = 'disabled' THEN NOW() ELSE NULL END,
+                    deactivated_by = CASE WHEN $1 = 'disabled' THEN $2 ELSE NULL END,
+                    session_version = session_version + 1,
+                    reset_password_token = NULL, reset_password_expires = NULL,
+                    email_verification_code = NULL, email_verification_expires = NULL,
+                    pending_email = NULL
+                    WHERE id = $3`, [status, req.user.id, userId]);
+            }
+            if (changed) {
+                let ip = req.ip || req.socket?.remoteAddress || '';
+                if (ip === '::1') ip = '127.0.0.1';
+                if (ip.startsWith('::ffff:')) ip = ip.slice(7);
+                const action = status === 'disabled' ? 'DEACTIVATE' : 'REACTIVATE';
+                await client.query(`INSERT INTO system_logs
+                    (user_id, username, action, details, ip_address, user_agent)
+                    VALUES ($1, $2, $3, $4, $5, $6)`,
+                [req.user.id, req.user.username || null, action, JSON.stringify({ userId }), ip, req.headers?.['user-agent'] || '']);
+            }
+            await client.query('COMMIT');
+            res.json({ success: true, userId, status });
+        } catch (err) {
+            if (client) await client.query('ROLLBACK');
+            next(err);
+        } finally { client?.release(); }
     });
     app.post('/api/people', authenticateToken, async (req, res, next) => {
         let client;
@@ -79,6 +130,7 @@ module.exports = function registerPeople(app, { db, bcrypt, authenticateToken, l
             if (req.user.role === 'admin' && account && b.username) {
                 const role = req.user.isMaster && b.role ? b.role : account.role;
                 if (!allowedRoles.includes(role)) throw new HttpError(400, 'Papel inválido.');
+                if (account.is_master && account.account_status === 'active' && role !== 'admin') throw new HttpError(409, 'Conta master ativa precisa manter papel admin.');
                 if (b.password && !validPassword(b.password)) throw new HttpError(400, 'Use de 10 a 72 bytes, com letras e números.');
                 const username = String(b.username).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
                 const email = Object.hasOwn(b, 'email') ? (b.email ? normalizeEmail(b.email) : null) : account.email;

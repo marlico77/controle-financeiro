@@ -9,10 +9,13 @@ module.exports = function registerAuth(app, { db, bcrypt, secret, authenticateTo
             const { username, password, rememberMe } = req.body || {};
             if (typeof username !== 'string' || typeof password !== 'string' || username.length > 255 || Buffer.byteLength(password) > 72) throw new HttpError(400, 'Credenciais inválidas.');
             const user = (await db.query('SELECT u.*, p.name FROM users u LEFT JOIN people p ON p.id = u.person_id WHERE LOWER(u.username) = LOWER($1)', [username.trim()])).rows[0];
-            if (user?.must_change_password && !user.activation_ready) throw new HttpError(401, 'Solicite à administração um convite ou uma senha temporária individual.');
             if (!user || !await bcrypt.compare(password, user.password_hash)) {
                 await logAction(req, 'LOGIN_FAILED', { username }); throw new HttpError(401, 'Credenciais inválidas.');
             }
+            if (user.account_status === 'disabled') {
+                await logAction(req, 'LOGIN_FAILED', { username }); throw new HttpError(401, 'Credenciais inválidas.');
+            }
+            if (user.must_change_password && !user.activation_ready) throw new HttpError(401, 'Solicite à administração um convite ou uma senha temporária individual.');
             await logAction(req, 'LOGIN_SUCCESS', { username: user.username, userId: user.id });
             res.json({ token: sign(user, !!rememberMe), role: user.role, username: user.username, name: user.name || user.username,
                 personId: user.person_id, mustChangePassword: user.must_change_password, lgpdAccepted: user.lgpd_accepted, hasEmail: !!user.email, isMaster: user.is_master });

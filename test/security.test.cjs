@@ -16,7 +16,7 @@ function response() {
 }
 function harness(register, deps) {
     const routes=new Map();
-    const app=Object.fromEntries(['get','post','put','delete'].map(method=>[method,(url,...handlers)=>routes.set(method+' '+url,handlers.at(-1))]));
+    const app=Object.fromEntries(['get','post','put','patch','delete'].map(method=>[method,(url,...handlers)=>routes.set(method+' '+url,handlers.at(-1))]));
     register(app,deps);
     return async (method,url,req) => {
         const res=response(); let error;
@@ -98,6 +98,99 @@ test('password reset revokes old JWT version',async()=>{
     const res=response();let proceeded=false;await middleware(req,res,()=>proceeded=true);
     assert.equal(res.code,401);assert.equal(proceeded,false);
 });
+test('account status endpoint deactivates the users row and preserves the member row',async()=>{
+    const statements=[];let audit;
+    const client={query:async(sql,params=[])=>{
+        statements.push({sql:sql.trim(),params});
+        if(sql.includes('SELECT id, role, is_master, account_status FROM users'))return {rows:[{id:42,role:'member',is_master:false,account_status:'active'}],rowCount:1};
+        if(sql.includes('UPDATE users SET account_status'))return {rows:[],rowCount:1};
+        if(sql.includes('INSERT INTO system_logs')){audit={action:params[2],details:JSON.parse(params[3])};return {rows:[],rowCount:1};}
+        return {rows:[{count:1}],rowCount:1};
+    },release(){statements.push({sql:'RELEASE'});}};
+    const db={pool:{connect:async()=>client},query:async()=>({rows:[],rowCount:1})};
+    const registerPeople=require('../routes/securePeople');
+    const run=harness(registerPeople,{db,bcrypt:{},authenticateToken(){},logAction:async()=>{}});
+    const {res,error}=await run('patch','/api/admin/accounts/:userId/status',{params:{userId:'42'},body:{status:'disabled'},user:{id:7,username:'admin',role:'admin',isMaster:false},headers:{'user-agent':'test'}});
+    assert.equal(error,undefined);
+    assert.deepEqual(res.body,{success:true,userId:42,status:'disabled'});
+    const update=statements.find(s=>s.sql.includes('UPDATE users SET account_status'));
+    assert.ok(update);
+    assert.deepEqual(update.params,['disabled',7,42]);
+    assert.ok(statements.some(s=>s.sql==='COMMIT'));
+    assert.deepEqual(audit,{action:'DEACTIVATE',details:{userId:42}});
+    assert.equal(statements.some(s=>s.sql.includes('DELETE FROM people')),false);
+});
+test('login validates credentials before returning a generic rejection for disabled accounts',async()=>{
+    for (const passwordMatches of [false,true]) {
+        let checked=0, audit;
+        const user={id:42,username:'disabled',password_hash:'hash',account_status:'disabled',must_change_password:false};
+        const run=harness(require('../routes/secureAuth'),{
+            db:{query:async()=>({rows:[user]})}, bcrypt:{compare:async()=>{checked++;return passwordMatches;}},
+            secret, authenticateToken(){}, sendResendEmail:async()=>({success:true}),
+            logAction:async(_req,action,details)=>{audit={action,details};}
+        });
+        const {error}=await run('post','/api/login',{body:{username:'disabled',password:'provided'}});
+        assert.equal(checked,1);
+        assert.equal(error.status,401);
+        assert.equal(error.message,'Credenciais inválidas.');
+        assert.deepEqual(audit,{action:'LOGIN_FAILED',details:{username:'disabled'}});
+    }
+});
+test('active master account cannot be demoted away from admin by profile update',async()=>{
+    const statements=[];
+    const account={id:42,username:'master',role:'admin',is_master:true,account_status:'active',email:null,password_hash:'hash'};
+    const client={query:async(sql)=>{
+        statements.push(sql.trim());
+        if(sql.startsWith('SELECT * FROM people'))return {rows:[{id:5,name:'Master User',unit:'A'}],rowCount:1};
+        if(sql.startsWith('SELECT * FROM users'))return {rows:[account],rowCount:1};
+        return {rows:[],rowCount:1};
+    },release(){statements.push('RELEASE');}};
+    const run=harness(require('../routes/securePeople'),{
+        db:{query:async()=>({rows:[]}),pool:{connect:async()=>client}},bcrypt:{},authenticateToken(){},
+        logAction:async()=>{},sendResendEmail:async()=>({success:true}),syncMemberUsers:async()=>{}
+    });
+    const {error}=await run('put','/api/people/:id',{params:{id:'5'},body:{name:'Master User',username:'master',role:'member'},user:{id:7,role:'admin',isMaster:true}});
+    assert.equal(error.status,409);
+    assert.match(error.message,/papel admin/);
+    assert.ok(statements.includes('ROLLBACK'));
+    assert.ok(!statements.some(sql=>sql.startsWith('UPDATE users')));
+});
+test('only an active master admin can be deactivated when another active master admin remains',async()=>{
+    async function attempt(otherMasters) {
+        const statements=[];let audit;
+        const account={id:42,role:'admin',is_master:true,account_status:'active'};
+        const client={query:async(sql,params=[])=>{
+            statements.push(sql.trim());
+            if(sql.includes('SELECT id, role, is_master, account_status FROM users'))return {rows:[account],rowCount:1};
+            if(sql.includes('SELECT COUNT(*)::int AS count'))return {rows:[{count:otherMasters}],rowCount:1};
+            if(sql.includes('INSERT INTO system_logs')){audit={action:params[2],details:JSON.parse(params[3])};return {rows:[],rowCount:1};}
+            return {rows:[],rowCount:1};
+        },release(){statements.push('RELEASE');}};
+        const run=harness(require('../routes/securePeople'),{
+            db:{query:async()=>({rows:[]}),pool:{connect:async()=>client}},bcrypt:{},authenticateToken(){},
+            logAction:async()=>{},sendResendEmail:async()=>({success:true}),syncMemberUsers:async()=>{}
+        });
+        const result=await run('patch','/api/admin/accounts/:userId/status',{params:{userId:'42'},body:{status:'disabled'},user:{id:7,role:'admin',isMaster:true}});
+        return {result,statements,audit};
+    }
+    const last=await attempt(0);
+    assert.equal(last.result.error.status,409);
+    assert.ok(last.statements.includes('ROLLBACK'));
+    assert.ok(!last.statements.some(sql=>sql.startsWith('UPDATE users')));
+    const withAnother=await attempt(1);
+    assert.equal(withAnother.result.error,undefined);
+    assert.ok(withAnother.statements.includes('COMMIT'));
+    assert.deepEqual(withAnother.audit,{action:'DEACTIVATE',details:{userId:42}});
+});
+test('deactivated account rejects an already issued JWT',async()=>{
+    const middleware=authenticate({query:async()=>({rows:[{id:1,session_version:1,role:'member',account_status:'disabled'}]})},secret);
+    const req={headers:{authorization:'Bearer '+jwt.sign({id:1,sessionVersion:1},secret)},query:{},method:'GET',path:'/api/people'};
+    const res=response();let proceeded=false;
+    await middleware(req,res,()=>{proceeded=true;});
+    assert.equal(res.code,401);
+    assert.match(res.body.error,/Conta desativada/);
+    assert.equal(proceeded,false);
+});
 test('current database role overrides stale JWT role',async()=>{
     const middleware=authenticate({query:async()=>({rows:[{id:1,session_version:1,role:'member',person_id:5}]})},secret);
     const req={headers:{authorization:'Bearer '+jwt.sign({id:1,sessionVersion:1,role:'admin'},secret)},query:{},method:'GET',path:'/api/people'};
@@ -167,6 +260,24 @@ test('single event does not accept installment dates',async()=>{
     const run=harness(require('../routes/securePayments'),deps);
     const {error}=await run('post','/api/event-payments',{body:{person_id:1,event_id:2,amount:'20.00',month:1,year:2026},user:{role:'admin'}});
     assert.equal(error.status,400);
+});
+test('event payment reports a concurrent loss of registration as a conflict',async()=>{
+    const statements=[];
+    const client={query:async(sql)=>{
+        statements.push(sql.trim());
+        if(sql.includes('SELECT id, status FROM'))return {rows:[]};
+        if(sql.startsWith('INSERT INTO event_payments'))throw Object.assign(new Error('foreign key violation'),{code:'23503',constraint:'event_payments_participant_fk'});
+        return {rows:[],rowCount:1};
+    },release(){statements.push('RELEASE');}};
+    const {deps}=paymentDeps();
+    deps.db.pool.connect=async()=>client;
+    deps.db.query=async()=>({rows:[{id:2,payment_type:'unico'}]});
+    const run=harness(require('../routes/securePayments'),deps);
+    const {error}=await run('post','/api/event-payments',{body:{person_id:1,event_id:2,amount:'20.00'},user:{role:'admin'}});
+    assert.equal(error.status,409);
+    assert.match(error.message,/inscrição/);
+    assert.ok(statements.includes('ROLLBACK'));
+    assert.equal(statements.at(-1),'RELEASE');
 });
 test('report renders malicious member names as text',async()=>{
     const elements=new Map();const document={getElementById(id){if(!elements.has(id))elements.set(id,{value:'1',style:{},remove(){}});return elements.get(id);}};

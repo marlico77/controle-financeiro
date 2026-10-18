@@ -76,6 +76,11 @@ module.exports = function registerPayments(app, deps) {
             const receipt = await storeReceipt(req.file, sharp, supabase);
             const saved = await persist(req, 'event_payments', event, batch, receipt);
             res.json({ ...saved, id: saved.results[0].id });
-        } catch (err) { next(err); }
+        } catch (err) {
+            if (err.code === '23503' && err.constraint === 'event_payments_participant_fk') {
+                return next(new HttpError(409, 'A inscrição neste evento mudou. Atualize a página e confira os participantes.'));
+            }
+            next(err);
+        }
     });
 };
