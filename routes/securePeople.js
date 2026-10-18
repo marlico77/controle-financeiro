@@ -46,6 +46,7 @@ module.exports = function registerPeople(app, { db, bcrypt, authenticateToken, l
             const account = (await client.query('SELECT id, role, is_master, account_status FROM users WHERE id = $1 FOR UPDATE', [userId])).rows[0];
             if (!account) throw new HttpError(404, 'Conta não encontrada.');
             if (account.is_master && !req.user.isMaster) throw new HttpError(403, 'Apenas o administrador master pode alterar esta conta.');
+            if (status === 'active' && account.is_master && account.role !== 'admin') throw new HttpError(409, 'Conta master precisa ter papel admin para ser ativada.');
 
             if (status === 'disabled' && account.role === 'admin' && account.is_master && account.account_status !== 'disabled') {
                 const others = await client.query("SELECT COUNT(*)::int AS count FROM users WHERE role = 'admin' AND is_master = TRUE AND account_status = 'active' AND id <> $1", [userId]);
@@ -63,8 +64,17 @@ module.exports = function registerPeople(app, { db, bcrypt, authenticateToken, l
                     pending_email = NULL
                     WHERE id = $3`, [status, req.user.id, userId]);
             }
+            if (changed) {
+                let ip = req.ip || req.socket?.remoteAddress || '';
+                if (ip === '::1') ip = '127.0.0.1';
+                if (ip.startsWith('::ffff:')) ip = ip.slice(7);
+                const action = status === 'disabled' ? 'DEACTIVATE' : 'REACTIVATE';
+                await client.query(`INSERT INTO system_logs
+                    (user_id, username, action, details, ip_address, user_agent)
+                    VALUES ($1, $2, $3, $4, $5, $6)`,
+                [req.user.id, req.user.username || null, action, JSON.stringify({ userId }), ip, req.headers?.['user-agent'] || '']);
+            }
             await client.query('COMMIT');
-            if (changed) await logAction(req, status === 'disabled' ? 'DEACTIVATE' : 'REACTIVATE', { userId });
             res.json({ success: true, userId, status });
         } catch (err) {
             if (client) await client.query('ROLLBACK');
@@ -120,6 +130,7 @@ module.exports = function registerPeople(app, { db, bcrypt, authenticateToken, l
             if (req.user.role === 'admin' && account && b.username) {
                 const role = req.user.isMaster && b.role ? b.role : account.role;
                 if (!allowedRoles.includes(role)) throw new HttpError(400, 'Papel inválido.');
+                if (account.is_master && account.account_status === 'active' && role !== 'admin') throw new HttpError(409, 'Conta master ativa precisa manter papel admin.');
                 if (b.password && !validPassword(b.password)) throw new HttpError(400, 'Use de 10 a 72 bytes, com letras e números.');
                 const username = String(b.username).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
                 const email = Object.hasOwn(b, 'email') ? (b.email ? normalizeEmail(b.email) : null) : account.email;

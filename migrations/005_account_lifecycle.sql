@@ -1,5 +1,5 @@
-﻿-- Account lifecycle metadata and restrictive RLS for tables used only by the Express API.
--- Express uses pg with a privileged server-side database role; this migration does not grant API roles access.
+-- Account lifecycle metadata and restrictive RLS for tables used only by the Express API.
+-- Express uses pg with a privileged server-side database role; this migration does not expose API roles.
 
 ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS account_status TEXT NOT NULL DEFAULT 'active';
@@ -50,12 +50,13 @@ CREATE TABLE IF NOT EXISTS public.especialidades (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- A restrictive false policy composes with permissive policies already present.
--- The deny applies only to Supabase's direct API roles, not to a separate backend role.
+-- Restrictive false policies compose with permissive policies and deny direct API roles.
+-- The role checks keep this migration usable on plain PostgreSQL where Supabase roles are absent.
 -- Express must connect as table owner/BYPASSRLS or an explicitly privileged backend role.
 DO $$
 DECLARE
   tbl TEXT;
+  api_role TEXT;
 BEGIN
   FOREACH tbl IN ARRAY ARRAY[
     'plannings',
@@ -64,15 +65,23 @@ BEGIN
     'especialidades'
   ] LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', tbl);
-    EXECUTE format('REVOKE ALL PRIVILEGES ON TABLE public.%I FROM anon, authenticated', tbl);
-    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', 'deny_direct_api_roles', tbl);
-    EXECUTE format(
-      'CREATE POLICY %I ON public.%I AS RESTRICTIVE FOR ALL TO anon, authenticated USING (false) WITH CHECK (false)',
-      'deny_direct_api_roles', tbl
-    );
 
-    -- Preserve a canonical Supabase backend role when it exists; do not assume
-    -- that every deployment defines this role or uses it for Express/pg.
+    -- Remove the earlier combined policy name to make reruns and upgrades safe.
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', 'deny_direct_api_roles', tbl);
+
+    FOREACH api_role IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+      IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = api_role) THEN
+        EXECUTE format('REVOKE ALL PRIVILEGES ON TABLE public.%I FROM %I', tbl, api_role);
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', 'deny_direct_api_' || api_role, tbl);
+        EXECUTE format(
+          'CREATE POLICY %I ON public.%I AS RESTRICTIVE FOR ALL TO %I USING (false) WITH CHECK (false)',
+          'deny_direct_api_' || api_role, tbl, api_role
+        );
+      END IF;
+    END LOOP;
+
+    -- This policy grants no SQL privileges; it only permits row access for a
+    -- service_role that already has table privileges (or bypasses RLS).
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
       EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', 'allow_privileged_service_role', tbl);
       EXECUTE format(

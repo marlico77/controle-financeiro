@@ -50,6 +50,25 @@ test('HTTP payment approval returns conflict when another reviewer already proce
         assert.ok(queries.find(q=>q.sql.startsWith('UPDATE payments')&&q.sql.includes("status = 'pending'")));
     } finally { await new Promise(resolve=>server.close(resolve));role='member'; }
 });
+test('HTTP event approval requires the payer to remain registered',async()=>{
+    role='admin';
+    const originalQuery=db.query;
+    let approvalSql;
+    db.query=async(sql,params)=>{
+        if(sql.includes('FROM event_payments ep JOIN events'))return {rows:[{id:108,person_id:1,event_name:'Camp',person_name:'Member'}],rowCount:1};
+        if(sql.startsWith('UPDATE event_payments ep')){approvalSql=sql;return {rows:[],rowCount:0};}
+        return originalQuery(sql,params);
+    };
+    const server=app.listen(0,'127.0.0.1');
+    await new Promise(resolve=>server.once('listening',resolve));
+    try {
+        const token=jwt.sign({id:1,sessionVersion:1},process.env.JWT_SECRET);
+        const res=await fetch('http://127.0.0.1:'+server.address().port+'/api/event-payments/108/approve',{method:'POST',headers:{Authorization:'Bearer '+token}});
+        assert.equal(res.status,409);
+        assert.match((await res.json()).error,/não inscrito/);
+        assert.match(approvalSql,/EXISTS \(SELECT 1 FROM event_participants/);
+    } finally { await new Promise(resolve=>server.close(resolve));db.query=originalQuery;role='member'; }
+});
 test('HTTP family payment query uses immutable guardian IDs and includes single events in annual filter',async()=>{
     role='responsible';
     const server=app.listen(0,'127.0.0.1');
