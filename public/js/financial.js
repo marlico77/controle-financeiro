@@ -211,22 +211,6 @@ const getAccountStatusBadgeHTML = (person) => {
 };
 window.getAccountStatusBadgeHTML = getAccountStatusBadgeHTML;
 
-const getAccountActionButtonHTML = (person) => {
-    if (state.role !== 'admin') return '';
-    if (!hasValidUserAccount(person)) {
-        return '<button type="button" class="btn-text" disabled title="Membro sem conta de usuário vinculada (u_id ausente)" style="opacity: 0.45; cursor: not-allowed;">Sem conta</button>';
-    }
-    const userId = Number(person.u_id);
-    const personId = Number(person.id);
-    const isDisabled = normalizeAccountStatus(person) === 'disabled';
-    const nextStatus = isDisabled ? 'active' : 'disabled';
-    const label = isDisabled ? 'Reativar' : 'Desativar';
-    const color = isDisabled ? '#4caf50' : 'var(--error-color, #e50914)';
-
-    return `<button type="button" class="btn-text account-status-action-btn" data-user-id="${userId}" data-person-id="${personId}" data-next-status="${nextStatus}" style="color: ${color}; font-weight: 600;" onclick="toggleAccountStatus(${userId}, '${nextStatus}', ${personId})">${label}</button>`;
-};
-window.getAccountActionButtonHTML = getAccountActionButtonHTML;
-
 // Altera o status da conta (active | disabled) usando obrigatoriamente users.id (u_id)
 const toggleAccountStatus = async (userId, targetStatus, personId = null) => {
     if (state.role !== 'admin') {

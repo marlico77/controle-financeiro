@@ -20,6 +20,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 
 const { HttpError, moneyCents, moneyString, dateOnly, yearNumber, monthNumber, positiveId } = require('./lib/validation');
 const { authenticate, rateLimit, canAccessPerson, isStaff, newAccountHash } = require('./lib/security');
+const { findAvailableUsername } = require('./lib/usernames');
 const { prepareReceipt, registerReceiptRoutes } = require('./lib/receipts');
 const { migrate } = require('./lib/migrations');
 const { civilParts, scheduledInstant } = require('./lib/time');
@@ -423,8 +424,11 @@ const syncMemberUsers = async () => {
         await client.query("SELECT pg_advisory_xact_lock(hashtext('sync-member-users'))");
         const people = await client.query('SELECT p.id, p.name FROM people p WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.person_id=p.id)');
         for (const person of people.rows) {
-            const parts = person.name.trim().split(/\s+/);
-            const username = (parts[0] + '.' + parts.at(-1) + '.' + person.id).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            const username = await findAvailableUsername(client, person.name);
+            if (!username) {
+                console.warn(`[ACCOUNT-SYNC] Nenhum nome de usuário legível disponível para a pessoa ${person.id}.`);
+                continue;
+            }
             await client.query("INSERT INTO users (username, password_hash, role, person_id, must_change_password) VALUES ($1,$2,'member',$3,TRUE) ON CONFLICT DO NOTHING", [username, await newAccountHash(bcrypt), person.id]);
         }
         await client.query('COMMIT');

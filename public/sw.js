@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestao-fin-v28-history-heading';
+const CACHE_NAME = 'gestao-fin-v29-account-controls';
 const STATIC_ASSETS = [
   "/",
   "/style.css",

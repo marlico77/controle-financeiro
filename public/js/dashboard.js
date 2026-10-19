@@ -706,12 +706,6 @@ function renderPeople() {
                         : '<span class="grid-status-label status-approved">ATIVA</span>'))}</td>`
             : '<td style="display: none;"></td>';
 
-        const adminActionHtml = isAdmin
-            ? (typeof window.getAccountActionButtonHTML === 'function'
-                ? window.getAccountActionButtonHTML(person)
-                : '')
-            : '';
-
         tr.innerHTML = `
             <td><strong>${escapeHTML(person.name.toUpperCase())}</strong></td>
             <td><span class="badge-user">${escapeHTML(person.username) || '-'}</span></td>
@@ -724,7 +718,6 @@ function renderPeople() {
                     <button type="button" class="btn-text" onclick="editPerson(${person.id})">
                         Editar
                     </button>
-                    ${adminActionHtml}
                 </div>
             </td>
         `;

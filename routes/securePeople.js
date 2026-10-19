@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const { isStaff, canAccessPerson, newAccountHash } = require('../lib/security');
 const { HttpError, positiveId, normalizeEmail, validPassword, dateOnly, tokenHash } = require('../lib/validation');
+const { normalizeUsername, findAvailableUsername } = require('../lib/usernames');
 module.exports = function registerPeople(app, { db, bcrypt, authenticateToken, logAction, sendResendEmail, syncMemberUsers }) {
     const allowedRoles = ['admin', 'secretário', 'member', 'responsible', 'social_midia'];
     async function guardian(client, childId, guardianId) {
@@ -89,12 +90,15 @@ module.exports = function registerPeople(app, { db, bcrypt, authenticateToken, l
             if (typeof b.name !== 'string' || b.name.trim().split(/\s+/).length < 2 || !b.unit) throw new HttpError(400, 'Informe nome, sobrenome e unidade.');
             const email = b.email ? normalizeEmail(b.email) : null;
             if (b.password && !validPassword(b.password)) throw new HttpError(400, 'Use pelo menos 10 caracteres com letras e números, até 72 bytes.');
-            const parts = b.name.trim().split(/\s+/);
-            const username = String(b.username || `${parts[0]}.${parts.at(-1)}.${crypto.randomBytes(3).toString('hex')}`).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            const requestedUsername = b.username ? normalizeUsername(b.username) : null;
             const role = req.user.isMaster ? (b.role || 'member') : 'member';
             if (!allowedRoles.includes(role)) throw new HttpError(400, 'Papel inválido.');
             client = await db.pool.connect();
             await client.query('BEGIN');
+            const username = requestedUsername || await findAvailableUsername(client, b.name);
+            if (!username) throw new HttpError(409, 'Não foi possível gerar um nome de usuário disponível. Informe outro no campo Usuário de Acesso.');
+            const existingUsername = await client.query('SELECT id FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username]);
+            if (existingUsername.rows[0]) throw new HttpError(409, `O nome de usuário "${username}" já está em uso. Informe outro no campo Usuário de Acesso.`);
             const personId = (await client.query('INSERT INTO people (name, responsible, birth_date, cpf, unit, phone) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
                 [b.name.trim(), b.responsible || null, b.birth_date ? dateOnly(b.birth_date) : null, b.cpf || null, b.unit, b.phone || null])).rows[0].id;
             const userId = (await client.query('INSERT INTO users (username, password_hash, role, person_id, must_change_password, email, activation_ready) VALUES ($1,$2,$3,$4,TRUE,$5,$6) RETURNING id',
@@ -105,7 +109,13 @@ module.exports = function registerPeople(app, { db, bcrypt, authenticateToken, l
             let invitationSent = false;
             try { invitationSent = !!await invite(userId, email); } catch { /* Account remains available for an administrator to issue activation. */ }
             res.json({ id: personId, username, invitationSent, message: invitationSent ? 'Cadastro criado e convite enviado.' : 'Cadastro criado. Defina uma senha temporária individual ou envie convite por e-mail.' });
-        } catch (err) { if (client) await client.query('ROLLBACK'); next(err); }
+        } catch (err) {
+            if (client) await client.query('ROLLBACK');
+            if (err.code === '23505' && err.constraint === 'users_username_lower_unique') {
+                return next(new HttpError(409, 'O nome de usuário já está em uso. Informe outro no campo Usuário de Acesso.'));
+            }
+            next(err);
+        }
         finally { client?.release(); }
     });
     app.put('/api/people/:id', authenticateToken, async (req, res, next) => {
