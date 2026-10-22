@@ -347,7 +347,7 @@ async function checkAuth() {
             }
             
             // Verifica E-mail
-            if (!status.hasEmail) {
+            if (!status.hasEmail && status.role !== 'admin') {
                 let emailModal = document.getElementById('email-capture-modal');
                 if (!emailModal) {
                     emailModal = document.createElement('div');
