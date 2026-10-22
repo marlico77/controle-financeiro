@@ -28,8 +28,12 @@ backToTopBtn.onclick = () => {
 
 // --- Lógica de Segurança de Senhas ---
 
-// Regex para validar complexidade da senha: min 5 chars, 1 número, 1 símbolo especial
-const complexityRegex = /^(?=.*[A-Za-z])(?=.*[0-9]).{10,72}$/;
+// Mantém a validação da interface igual à regra do servidor (limite em bytes para bcrypt).
+const isValidPassword = value => typeof value === 'string'
+    && value.length >= 10
+    && new TextEncoder().encode(value).length <= 72
+    && /[A-Za-z]/.test(value)
+    && /\d/.test(value);
 
 // Modal de Recuperação de Senha (Esqueci minha senha)
 const recoverModal = document.getElementById('recover-modal');
@@ -96,8 +100,8 @@ if (forceChangeForm) {
             return;
         }
 
-        if (!complexityRegex.test(newPassword)) {
-            errorDiv.textContent = 'Use pelo menos 10 caracteres, com letras e números.';
+        if (!isValidPassword(newPassword)) {
+            errorDiv.textContent = 'Use pelo menos 10 caracteres, com letras e números, até 72 bytes.';
             return;
         }
 
@@ -153,6 +157,11 @@ document.getElementById('person-form').onsubmit = async (e) => {
     // Unidade é campo obrigatório para a gestão financeira
     if (!formData.unit) {
         showStatus('A unidade é obrigatória.', 'error');
+        return;
+    }
+
+    if (formData.password && !isValidPassword(formData.password)) {
+        showStatus('A senha deve ter pelo menos 10 caracteres, letras e números, até 72 bytes.', 'error');
         return;
     }
 
