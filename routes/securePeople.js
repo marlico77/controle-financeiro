@@ -144,12 +144,14 @@ module.exports = function registerPeople(app, { db, bcrypt, authenticateToken, l
                 if (b.password && !validPassword(b.password)) throw new HttpError(400, 'Use de 10 a 72 bytes, com letras e números.');
                 const username = String(b.username).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
                 const email = Object.hasOwn(b, 'email') ? (b.email ? normalizeEmail(b.email) : null) : account.email;
+                const accountChanged = account.role !== role || account.username !== username || !!b.password;
+                const emailChanged = (account.email ?? null) !== (email ?? null);
                 await client.query(`UPDATE users SET username=$1, role=$2, email=$3,
-                    password_hash=$4, session_version=session_version + CASE WHEN role IS DISTINCT FROM $2 OR username IS DISTINCT FROM $1 OR password_hash IS DISTINCT FROM $4 THEN 1 ELSE 0 END,
+                    password_hash=$4, session_version=session_version + CASE WHEN $7 THEN 1 ELSE 0 END,
                     must_change_password=CASE WHEN $5 THEN TRUE ELSE must_change_password END,
                     activation_ready=CASE WHEN $5 THEN TRUE ELSE activation_ready END,
-                    email_verified=CASE WHEN email IS DISTINCT FROM $3 THEN FALSE ELSE email_verified END WHERE id=$6`,
-                    [username, role, email, b.password ? await bcrypt.hash(b.password, 12) : account.password_hash, !!b.password, account.id]);
+                    email_verified=CASE WHEN $8 THEN FALSE ELSE email_verified END WHERE id=$6`,
+                    [username, role, email, b.password ? await bcrypt.hash(b.password, 12) : account.password_hash, !!b.password, account.id, accountChanged, emailChanged]);
             }
             if (b.responsiblePassword) throw new HttpError(400, 'Altere a senha na conta do responsável cadastrado, selecionando seu registro.');
             await client.query('COMMIT');
