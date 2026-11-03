@@ -57,6 +57,7 @@ const state = {
     eventPayments: [],                      // Lista de pagamentos vinculados a eventos
     outflows: [],                           // Lista de despesas (saídas)
     sales: [],                              // Lista de vendas (entradas)
+    financialSummary: null,                 // Caixa apurado pela data da transação
     currentEvent: null,                     // Evento que está sendo visualizado no momento
     eventDetailYear: new Date().getFullYear(), // Ano de filtro nos detalhes do evento
     charts: {                               // Objetos das instâncias dos gráficos (Chart.js)

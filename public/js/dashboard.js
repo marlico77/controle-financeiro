@@ -78,10 +78,24 @@ const updateDashboardStats = () => {
         });
     }
 
+    // Os demais painéis usam o ano de referência. O resumo financeiro usa a data
+    // em que o pagamento foi aprovado, inclusive para eventos de anos futuros.
+    if (['admin', 'secretário'].includes(state.role) && state.financialSummary) {
+        const cash = state.financialSummary;
+        totalCash = cash.balanceCents / 100;
+        direcaoTotal = cash.directionCents / 100;
+        desbravadoresTotal = cash.desbravadoresCents / 100;
+        eventosTotal = cash.eventsCents / 100;
+        totalSales = cash.salesCents / 100;
+        totalOutflows = cash.outflowsCents / 100;
+        cash.monthlyCents.forEach((amount, index) => { monthlyData[index] = amount / 100; });
+    }
+
     // Atualiza os elementos visuais do Dashboard (se for Admin)
     if (['admin', 'secretário'].includes(state.role)) {
         const totalCashElem = document.getElementById('stat-total-cash');
         if (totalCashElem) totalCashElem.textContent = `R$ ${totalCash.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        if (totalCashElem?.previousElementSibling) totalCashElem.previousElementSibling.textContent = 'Saldo em Caixa (geral)';
 
         const direcaoStat = document.getElementById('stat-direcao');
         const desbravaStat = document.getElementById('stat-desbravadores');
@@ -91,10 +105,14 @@ const updateDashboardStats = () => {
 
         // Exibe os valores formatados nos respectivos cards
         if (direcaoStat) direcaoStat.textContent = `R$ ${direcaoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        if (direcaoStat?.previousElementSibling) direcaoStat.previousElementSibling.textContent = 'Direção recebida no ano';
         if (desbravaStat) desbravaStat.textContent = `R$ ${desbravadoresTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        if (desbravaStat?.previousElementSibling) desbravaStat.previousElementSibling.textContent = 'Desbravadores recebidos no ano';
         if (eventosStat) eventosStat.textContent = `R$ ${eventosTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        if (eventosStat?.previousElementSibling) eventosStat.previousElementSibling.textContent = 'Eventos recebidos no ano';
 
         if (outflowsStat) outflowsStat.textContent = `R$ ${totalOutflows.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        if (outflowsStat?.previousElementSibling) outflowsStat.previousElementSibling.textContent = 'Despesas do ano';
         if (outflowsCard) outflowsCard.style.display = 'block';
 
         // Preparação para gráficos: Categorização de fontes de renda
@@ -102,6 +120,7 @@ const updateDashboardStats = () => {
         state.payments.forEach(p => {
             if (p.status === 'approved') mensalidadesPuro += parseFloat(p.amount);
         });
+        if (state.financialSummary) mensalidadesPuro = state.financialSummary.duesCents / 100;
 
         // Renderiza o gráfico de pizza principal comparando fontes de renda e despesas
         renderPieChart(

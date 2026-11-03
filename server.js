@@ -24,6 +24,7 @@ const { findAvailableUsername } = require('./lib/usernames');
 const { prepareReceipt, registerReceiptRoutes } = require('./lib/receipts');
 const { migrate } = require('./lib/migrations');
 const { civilParts, scheduledInstant } = require('./lib/time');
+const { ledgerQuery, summarizeLedgerRows } = require('./lib/financialSummary');
 const app = express(); // Instancia a aplicação Express
 const scheduledTasks = [];
 const schedule = (...args) => scheduledTasks.push(cron.createTask(...args));
@@ -1569,6 +1570,19 @@ app.delete('/api/event-payments/:id', authenticateToken, async (req, res) => {
 // --- API de Saídas (Despesas) ---
 
 // Lista todas as despesas (Apenas Admin/Secretário)
+app.get('/api/financial-summary', authenticateToken, async (req, res) => {
+    if (!isStaff(req.user)) return res.sendStatus(403);
+    try {
+        const year = req.query.year ? yearNumber(req.query.year) : new Date().getFullYear();
+        const result = await db.query(ledgerQuery);
+        res.set('Cache-Control', 'no-store');
+        res.json(summarizeLedgerRows(result.rows, year));
+    } catch (err) {
+        const status = err instanceof HttpError ? err.status : 500;
+        res.status(status).json({ error: status === 500 ? 'Erro ao calcular o caixa.' : err.message });
+    }
+});
+
 app.get('/api/outflows', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     try {

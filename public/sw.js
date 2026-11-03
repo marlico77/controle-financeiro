@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestao-fin-v30-admin-email-exemption';
+const CACHE_NAME = 'gestao-fin-v31-financial-summary';
 const STATIC_ASSETS = [
   "/",
   "/style.css",

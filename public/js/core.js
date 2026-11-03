@@ -613,6 +613,7 @@ async function loadInitialData() {
             promises.push(apiFetch(`/api/event-payments?year=${state.currentYear}`)); // Pagamentos de eventos
             promises.push(apiFetch(`/api/outflows?year=${state.currentYear}`)); // Saídas de caixa
             promises.push(apiFetch(`/api/sales?year=${state.currentYear}`)); // Vendas (Cantina/Uniformes)
+            promises.push(apiFetch(`/api/financial-summary?year=${state.currentYear}`)); // Caixa por data de aprovação/lançamento
         } else {
             // Membro comum e secretário veem apenas seus próprios pagamentos de eventos
             promises.push(apiFetch(`/api/event-payments?year=${state.currentYear}`));
@@ -635,9 +636,11 @@ async function loadInitialData() {
         if (['admin', 'secretário'].includes(state.role)) {
             state.outflows = results[4] || [];
             state.sales = results[5] || [];
+            state.financialSummary = results[6];
         } else {
             state.outflows = [];
             state.sales = [];
+            state.financialSummary = null;
         }
 
         // Atualiza o nome exibido no topo para contas de membros comuns e secretários

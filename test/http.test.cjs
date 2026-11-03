@@ -33,7 +33,9 @@ test('HTTP access controls and static pages are wired correctly',async()=>{
         const image=await fetch(base+'/api/public-images/private.pdf');assert.equal(image.status,404);
         const write=await fetch(base+'/api/plannings',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({name:'Test',start_date:'2026-10-01',end_date:'2026-10-02'})});
         assert.equal(write.status,403);assert.ok((await write.json()).error);
-        const outflows=await fetch(base+'/api/outflows',{headers:{Authorization:'Bearer '+token}});assert.equal(outflows.status,403);
+        for (const url of ['/api/outflows', '/api/financial-summary?year=2026']) {
+            const res=await fetch(base+url,{headers:{Authorization:'Bearer '+token}});assert.equal(res.status,403,url);
+        }
         for(const url of ['/reports.html','/login.html','/js/state.js?v=mpa','/sw.js']) {
             const res=await fetch(base+url);assert.equal(res.status,200,url);assert.ok((await res.text()).length>0);
         }
@@ -80,4 +82,26 @@ test('HTTP family payment query uses immutable guardian IDs and includes single 
         const q=queries.find(q=>q.sql.startsWith('SELECT ep.id')&&q.sql.includes('COALESCE(ep.year'));
         assert.ok(q.sql.includes('person_guardians'));assert.deepEqual(q.params,[1,2026]);
     } finally { await new Promise(resolve=>server.close(resolve));role='member'; }
+});
+test('staff financial summary includes approved receipts regardless of reference year',async()=>{
+    role='admin';
+    const originalQuery=db.query;
+    db.query=async(sql,params)=>sql.includes('WITH ledger AS')
+        ? {rows:[
+            {source:'dues',unit:'DIREÇÃO',year:2026,month:4,amount:'100.00'},
+            {source:'events',unit:'DESBRAVADOR',year:2026,month:5,amount:'250.00'},
+            {source:'outflows',unit:null,year:2026,month:4,amount:'-300.00'}
+        ],rowCount:3}
+        : originalQuery(sql,params);
+    const server=app.listen(0,'127.0.0.1');
+    await new Promise(resolve=>server.once('listening',resolve));
+    try {
+        const token=jwt.sign({id:1,sessionVersion:1},process.env.JWT_SECRET);
+        const res=await fetch('http://127.0.0.1:'+server.address().port+'/api/financial-summary?year=2026',{headers:{Authorization:'Bearer '+token}});
+        assert.equal(res.status,200);
+        const summary=await res.json();
+        assert.equal(summary.balanceCents,5000);
+        assert.equal(summary.eventsCents,25000);
+        assert.equal(summary.outflowsCents,30000);
+    } finally { await new Promise(resolve=>server.close(resolve));db.query=originalQuery;role='member'; }
 });
