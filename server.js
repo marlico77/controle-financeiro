@@ -2850,5 +2850,7 @@ async function start() {
     setInterval(() => { cleanupLogs(); db.query('DELETE FROM request_limits WHERE expires_at<NOW()').catch(console.error); }, 3600000).unref();
     return app.listen(PORT, () => console.log('Servidor pronto na porta '+PORT));
 }
-if (require.main === module) start().catch(err => { console.error('[STARTUP]',err.message); process.exitCode=1; db.pool.end(); });
+// LiteSpeed's lsnode may load the startup file as a module rather than the main script.
+// In production it must still start the HTTP listener. Imports in non-production stay inert.
+if (require.main === module || process.env.NODE_ENV === 'production') start().catch(err => { console.error('[STARTUP]',err.message); process.exitCode=1; db.pool.end(); });
 module.exports = { app, start };
