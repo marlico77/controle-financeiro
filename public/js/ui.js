@@ -427,7 +427,7 @@ if (pBirth) {
             if (age < 16) {
                 unitField.value = 'DESBRAVADOR';
             } else {
-                unitField.value = 'DIREÃ‡ÃƒO';
+                unitField.value = 'DIREÇÃO';
             }
         }
     });
@@ -447,10 +447,10 @@ if (toggleBtn) {
         const container = document.getElementById('event-details-table-container');
         if (container.style.display === 'none') {
             container.style.display = 'block';
-            toggleBtn.textContent = 'Ocultar Detalhamento â†‘';
+            toggleBtn.textContent = 'Ocultar Detalhamento ↑';
         } else {
             container.style.display = 'none';
-            toggleBtn.textContent = 'Ver Detalhamento Membro a Membro â†“';
+            toggleBtn.textContent = 'Ver Detalhamento Membro a Membro ↓';
         }
         initStickyScrollbars(); // Reinicializa barras de rolagem fixas se necessário
     };
@@ -464,10 +464,10 @@ if (toggleMensBtn) {
         const container = document.getElementById('mens-details-table-container');
         if (container.style.display === 'none') {
             container.style.display = 'block';
-            toggleMensBtn.textContent = 'Ocultar Detalhamento â†‘';
+            toggleMensBtn.textContent = 'Ocultar Detalhamento ↑';
         } else {
             container.style.display = 'none';
-            toggleMensBtn.textContent = 'Ver Detalhamento Membro a Membro â†“';
+            toggleMensBtn.textContent = 'Ver Detalhamento Membro a Membro ↓';
         }
         initStickyScrollbars(); // Reinicializa barras de rolagem fixas se necessário
     };
@@ -487,7 +487,7 @@ const initSearchListeners = () => {
             // Auto-exibe a tabela ao começar a buscar
             if (container.style.display === 'none') {
                 container.style.display = 'block';
-                document.getElementById('toggle-mens-details').textContent = 'Ocultar Detalhamento â†‘';
+                document.getElementById('toggle-mens-details').textContent = 'Ocultar Detalhamento ↑';
             }
             renderDashboard();
         });
@@ -500,7 +500,7 @@ const initSearchListeners = () => {
             // Auto-exibe a tabela de eventos ao buscar
             if (container.style.display === 'none') {
                 container.style.display = 'block';
-                document.getElementById('toggle-event-details').textContent = 'Ocultar Detalhamento â†‘';
+                document.getElementById('toggle-event-details').textContent = 'Ocultar Detalhamento ↑';
             }
             if (state.currentEventParticipants && state.currentEventPayments) {
                 renderEventDetailGrid(state.currentEventParticipants, state.currentEventPayments);
