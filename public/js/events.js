@@ -432,7 +432,7 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
 
     // Se houver um pagamento existente sendo visualizado
     if (payment) {
-        deleteBtn.style.display = 'block';
+        deleteBtn.style.display = state.role === 'admin' ? 'block' : 'none';
         deleteBtn.onclick = () => deleteEventPayment(payment.id);
 
         // Se o pagamento tiver um arquivo de comprovante vinculado
@@ -447,6 +447,7 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
         if (payment.status === 'approved') {
             // Se já aprovado, permite apenas atualizar o valor (por um Admin)
             saveBtn.textContent = 'Atualizar Valor';
+            if (state.role !== 'admin') saveBtn.style.display = 'none';
             document.getElementById('ep-modal-title').textContent = 'Editar Pagamento';
         } else if (payment.status === 'rejected') {
             // Se foi recusado, mostra o motivo e permite novo envio
@@ -461,6 +462,7 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
             if (['admin', 'secretário'].includes(state.role)) {
                 saveBtn.style.display = 'none'; // Esconde botão padrão de salvar do usuário
                 adminActions.style.display = 'flex'; // Mostra Aprovar/Reprovar
+                document.getElementById('ep-approve-btn').style.display = state.role === 'admin' ? '' : 'none';
 
                 document.getElementById('ep-approve-btn').onclick = () => approveEventPayment(payment.id);
                 document.getElementById('ep-reject-trigger-btn').onclick = () => {

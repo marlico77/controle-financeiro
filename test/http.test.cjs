@@ -52,6 +52,23 @@ test('HTTP payment approval returns conflict when another reviewer already proce
         assert.ok(queries.find(q=>q.sql.startsWith('UPDATE payments')&&q.sql.includes("status = 'pending'")));
     } finally { await new Promise(resolve=>server.close(resolve));role='member'; }
 });
+test('secretary cannot approve or delete payments',async()=>{
+    role='secretário';
+    const server=app.listen(0,'127.0.0.1');
+    await new Promise(resolve=>server.once('listening',resolve));
+    try {
+        const token=jwt.sign({id:1,sessionVersion:1},process.env.JWT_SECRET);
+        const headers={Authorization:'Bearer '+token};
+        for(const url of ['/api/payments/1/approve','/api/event-payments/1/approve']){
+            const res=await fetch('http://127.0.0.1:'+server.address().port+url,{method:'POST',headers});
+            assert.equal(res.status,403,url);
+        }
+        for(const url of ['/api/payments/1','/api/event-payments/1']){
+            const res=await fetch('http://127.0.0.1:'+server.address().port+url,{method:'DELETE',headers});
+            assert.equal(res.status,403,url);
+        }
+    } finally { await new Promise(resolve=>server.close(resolve));role='member'; }
+});
 test('HTTP event approval requires the payer to remain registered',async()=>{
     role='admin';
     const originalQuery=db.query;

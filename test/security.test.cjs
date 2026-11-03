@@ -232,7 +232,7 @@ function paymentDeps(status='pending',failSecond=false) {
     const client={query:async(sql,args)=>{
         statements.push(sql.trim());
         if(sql.includes('SELECT id, status FROM'))return {rows:[{id:1,status}]};
-        if(sql.startsWith('UPDATE payments')){updated++;writes.push(args);if(failSecond&&updated===2)throw new Error('database unavailable');}
+        if(sql.startsWith('UPDATE payments') || sql.startsWith('UPDATE event_payments')){updated++;writes.push(args);if(failSecond&&updated===2)throw new Error('database unavailable');}
         return {rows:[],rowCount:1};
     },release(){statements.push('RELEASE');}};
     return {statements,writes,deps:{db:{pool:{connect:async()=>client},query:async()=>({rows:[]})},sharp,supabase:emptyStorage,upload:{single(){return ()=>{};}},logAction:async()=>{},createNotification:async()=>{}}};
@@ -242,6 +242,27 @@ test('member cannot overwrite an approved payment',async()=>{
     const run=harness(require('../routes/securePayments'),deps);
     const {error}=await run('post','/api/payments',{body:{person_id:1,year:2026,month:1,amount:'20.00'},file:{buffer:Buffer.from('%PDF-1.7')},user:{role:'member',personId:1}});
     assert.equal(error.status,409);assert.equal(writes.length,0);assert.ok(statements.includes('ROLLBACK'));assert.equal(statements.at(-1),'RELEASE');
+});
+test('secretary payment stays pending and cannot overwrite an approved payment',async()=>{
+    const {deps,writes}=paymentDeps('pending');
+    let recipientQuery='';
+    deps.db.query=async sql=>{recipientQuery=sql;return {rows:[]};};
+    const run=harness(require('../routes/securePayments'),deps);
+    const user={role:'secretário',personId:1};
+    const {res,error}=await run('post','/api/payments',{body:{person_id:1,year:2026,month:1,amount:'20.00'},user});
+    assert.equal(error,undefined);assert.equal(res.body.status,'pending');assert.equal(writes[0][1],'pending');
+    assert.match(recipientQuery,/role = 'admin'/);
+    const approved=paymentDeps('approved');
+    const blocked=await harness(require('../routes/securePayments'),approved.deps)('post','/api/payments',{body:{person_id:1,year:2026,month:1,amount:'20.00'},user});
+    assert.equal(blocked.error.status,409);assert.equal(approved.writes.length,0);
+});
+test('secretary event payment stays pending; administrator payment is approved',async()=>{
+    for(const [role,expected] of [['secretário','pending'],['admin','approved']]){
+        const {deps,writes}=paymentDeps('pending');
+        deps.db.query=async()=>({rows:[{id:2,payment_type:'unico'}]});
+        const result=await harness(require('../routes/securePayments'),deps)('post','/api/event-payments',{body:{person_id:1,event_id:2,amount:'200.00'},user:{role,personId:1}});
+        assert.equal(result.error,undefined);assert.equal(result.res.body.status,expected);assert.equal(writes[0][1],expected);
+    }
 });
 test('batch failure rolls back and releases the reserved client',async()=>{
     const {deps,statements}=paymentDeps('pending',true);

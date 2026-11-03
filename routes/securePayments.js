@@ -15,8 +15,8 @@ module.exports = function registerPayments(app, deps) {
                 const parameters = event ? [batch.personId, event.id, month, batch.year] : [batch.personId, month, batch.year];
                 const where = event ? 'person_id = $1 AND event_id = $2 AND month IS NOT DISTINCT FROM $3::integer AND year IS NOT DISTINCT FROM $4::integer' : 'person_id = $1 AND month = $2 AND year = $3';
                 const current = (await client.query(`SELECT id, status FROM ${table} WHERE ${where} FOR UPDATE`, parameters)).rows[0];
-                if (current?.status === 'approved' && !isStaff(req.user)) throw new HttpError(409, 'Pagamento aprovado só pode ser ajustado pela administração.');
-                const status = isStaff(req.user) ? 'approved' : 'pending';
+                if (current?.status === 'approved' && req.user.role !== 'admin') throw new HttpError(409, 'Pagamento aprovado só pode ser ajustado pela administração.');
+                const status = req.user.role === 'admin' ? 'approved' : 'pending';
                 let id;
                 if (current) {
                     id = current.id;
@@ -37,9 +37,9 @@ module.exports = function registerPayments(app, deps) {
         finally { client.release(); }
         await logAction(req, 'SAVE_PAYMENT', { source: table, person_id: batch.personId, event_id: event?.id, months: batch.months, year: batch.year, amounts: batch.amounts, ids: results.map(r => r.id) });
         // Delivery is a secondary effect: a notification failure must not report a committed payment as failed.
-        if (!isStaff(req.user)) {
+        if (req.user.role !== 'admin') {
             try {
-                const admins = await db.query("SELECT id, email FROM users WHERE role IN ('admin', 'secretário')");
+                const admins = await db.query("SELECT id, email FROM users WHERE role = 'admin'");
                 for (const admin of admins.rows) {
                     await createNotification(admin.id, 'Novo Comprovante', 'Há um pagamento aguardando conferência.', 'info', results[0].id, event ? 'event' : 'monthly');
                     if (admin.email && sendResendEmail) await sendResendEmail({
@@ -49,7 +49,7 @@ module.exports = function registerPayments(app, deps) {
                 }
             } catch (err) { console.error('[NOTIFICATION] Pagamento salvo; aviso pendente:', err.message); }
         }
-        return { results, status: isStaff(req.user) ? 'approved' : 'pending' };
+        return { results, status: req.user.role === 'admin' ? 'approved' : 'pending' };
     }
     app.post('/api/payments', authenticateToken, blockSabbathUploads, upload.single('receipt'), async (req, res, next) => {
         try {

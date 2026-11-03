@@ -95,12 +95,15 @@ const openPaymentModal = (person, month, payment = null) => {
 
         // Lógica de ações permitidas baseada na Role do usuário
         if (state.role === 'admin' || state.role === 'secretário') {
-            deleteBtn.style.display = 'block';
+            deleteBtn.style.display = state.role === 'admin' ? 'block' : 'none';
             deleteBtn.onclick = () => deletePayment(payment.id);
             // Se o pagamento está pendente, Admin vê botões de Aprovar/Recusar em vez de Salvar
             if (payment.status === 'pending') {
                 saveBtn.style.display = 'none';
                 adminActions.style.display = 'flex';
+                document.getElementById('approve-payment-btn').style.display = state.role === 'admin' ? '' : 'none';
+            } else if (payment.status === 'approved' && state.role !== 'admin') {
+                saveBtn.style.display = 'none';
             }
         } else {
             // Lógica para visualização do Membro Comum

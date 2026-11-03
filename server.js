@@ -951,7 +951,7 @@ app.get('/api/payments/detail/:id', authenticateToken, async (req, res) => {
 
 // Aprova um pagamento pendente (Admin)
 app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
-    if (!isStaff(req.user)) return res.sendStatus(403);
+    if (req.user.role !== 'admin') return res.sendStatus(403);
 
     try {
         const paymentResult = await db.query('SELECT p.person_id, p.month, pe.name as person_name FROM payments p JOIN people pe ON p.person_id = pe.id WHERE p.id = $1', [req.params.id]);
@@ -1025,7 +1025,7 @@ app.post('/api/payments/:id/reject', authenticateToken, async (req, res) => {
 
 // Exclui um registro de pagamento definitivamente (Admin)
 app.delete('/api/payments/:id', authenticateToken, async (req, res) => {
-    if (!isStaff(req.user)) return res.sendStatus(403);
+    if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
         await db.query('DELETE FROM payments WHERE id = $1', [req.params.id]);
         res.json({ success: true });
@@ -1483,7 +1483,7 @@ app.delete('/api/sales/:id', authenticateToken, async (req, res) => {
 
 // Aprova pagamento de evento (Admin)
 app.post('/api/event-payments/:id/approve', authenticateToken, async (req, res) => {
-    if (!isStaff(req.user)) return res.sendStatus(403);
+    if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
         // Busca dados do pagamento para notificação
         const paymentResult = await db.query('SELECT ep.*, e.name as event_name, pe.name as person_name FROM event_payments ep JOIN events e ON ep.event_id = e.id JOIN people pe ON ep.person_id = pe.id WHERE ep.id = $1', [req.params.id]);
@@ -1558,7 +1558,7 @@ app.post('/api/event-payments/:id/reject', authenticateToken, async (req, res) =
 
 // Exclui pagamento de evento (Admin)
 app.delete('/api/event-payments/:id', authenticateToken, async (req, res) => {
-    if (!isStaff(req.user)) return res.sendStatus(403);
+    if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
         await db.query('DELETE FROM event_payments WHERE id = $1', [req.params.id]);
         res.json({ success: true });
