@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestao-fin-v32-dashboard-labels';
+const CACHE_NAME = 'gestao-fin-v33-network-first';
 const STATIC_ASSETS = [
   "/",
   "/style.css",
@@ -69,8 +69,10 @@ self.addEventListener('fetch',event => {
         if(response.ok) { const cache=await caches.open(CACHE_NAME); await cache.put(cacheKey,response.clone()); }
         return response;
     });
-    event.waitUntil(refresh.catch(()=>{}));
-    event.respondWith(caches.match(cacheKey).then(cached=>cached||refresh).catch(()=>new Response('Página indisponível offline.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}})));
+    event.respondWith(refresh.catch(async()=>{
+        const cached=await caches.match(cacheKey);
+        return cached||new Response('Página indisponível offline.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});
+    }));
 });
 // --- Suporte a Notificações Push ---
 
