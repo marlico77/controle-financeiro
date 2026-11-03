@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gestao-fin-v31-financial-summary';
+const CACHE_NAME = 'gestao-fin-v32-dashboard-labels';
 const STATIC_ASSETS = [
   "/",
   "/style.css",

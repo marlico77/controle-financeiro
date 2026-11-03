@@ -105,14 +105,14 @@ const updateDashboardStats = () => {
 
         // Exibe os valores formatados nos respectivos cards
         if (direcaoStat) direcaoStat.textContent = `R$ ${direcaoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        if (direcaoStat?.previousElementSibling) direcaoStat.previousElementSibling.textContent = 'Direção recebida no ano';
+        if (direcaoStat?.previousElementSibling) direcaoStat.previousElementSibling.textContent = 'Direção (Anual)';
         if (desbravaStat) desbravaStat.textContent = `R$ ${desbravadoresTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        if (desbravaStat?.previousElementSibling) desbravaStat.previousElementSibling.textContent = 'Desbravadores recebidos no ano';
+        if (desbravaStat?.previousElementSibling) desbravaStat.previousElementSibling.textContent = 'Desbravadores (Anual)';
         if (eventosStat) eventosStat.textContent = `R$ ${eventosTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        if (eventosStat?.previousElementSibling) eventosStat.previousElementSibling.textContent = 'Eventos recebidos no ano';
+        if (eventosStat?.previousElementSibling) eventosStat.previousElementSibling.textContent = 'Eventos (Anual)';
 
         if (outflowsStat) outflowsStat.textContent = `R$ ${totalOutflows.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-        if (outflowsStat?.previousElementSibling) outflowsStat.previousElementSibling.textContent = 'Despesas do ano';
+        if (outflowsStat?.previousElementSibling) outflowsStat.previousElementSibling.textContent = 'Despesas (Anual)';
         if (outflowsCard) outflowsCard.style.display = 'block';
 
         // Preparação para gráficos: Categorização de fontes de renda
