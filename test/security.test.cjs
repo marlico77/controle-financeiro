@@ -264,6 +264,25 @@ test('secretary event payment stays pending; administrator payment is approved',
         assert.equal(result.error,undefined);assert.equal(result.res.body.status,expected);assert.equal(writes[0][1],expected);
     }
 });
+test('every event payment notifies administrators and attempts email independently',async()=>{
+    for (const [role,status] of [['secretário','pending'],['admin','approved']]) {
+        const {deps}=paymentDeps('pending');
+        const notices=[],emails=[];
+        deps.db.query=async sql=>sql.includes('SELECT e.* FROM events')
+            ? {rows:[{id:2,name:'Acampamento <2026>',payment_type:'unico'}]}
+            : {rows:[{id:7,email:'first@example.com'},{id:8,email:'second@example.com'}]};
+        deps.createNotification=async (...args)=>{notices.push(args);if(args[0]===7)throw new Error('notification unavailable');};
+        deps.sendResendEmail=async args=>{emails.push(args);return args.to==='first@example.com' ? {success:false,error:'provider rejected'} : {success:true,id:'test'};};
+        const {res,error}=await harness(require('../routes/securePayments'),deps)('post','/api/event-payments',{
+            body:{person_id:1,event_id:2,amount:'200.00'},user:{role,personId:1}
+        });
+        assert.equal(error,undefined);assert.equal(res.body.status,status);
+        assert.deepEqual(notices.map(n=>n[0]),[7,8]);
+        assert.ok(notices.every(n=>n[5]==='event'));
+        assert.deepEqual(emails.map(e=>e.to),['first@example.com','second@example.com']);
+        assert.ok(emails.every(e=>e.html.includes('Acampamento &lt;2026&gt;')));
+    }
+});
 test('batch failure rolls back and releases the reserved client',async()=>{
     const {deps,statements}=paymentDeps('pending',true);
     const run=harness(require('../routes/securePayments'),deps);

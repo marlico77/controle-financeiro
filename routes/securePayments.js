@@ -1,6 +1,7 @@
 const { HttpError, positiveId, paymentBatch, moneyCents, moneyString, monthNumber, yearNumber } = require('../lib/validation');
 const { canAccessPerson, isStaff } = require('../lib/security');
 const { storeReceipt } = require('../lib/receipts');
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 module.exports = function registerPayments(app, deps) {
     const { db, sharp, supabase, authenticateToken, blockSabbathUploads, upload, logAction, createNotification, sendResendEmail } = deps;
     async function persist(req, table, event, batch, receipt) {
@@ -37,15 +38,29 @@ module.exports = function registerPayments(app, deps) {
         finally { client.release(); }
         await logAction(req, 'SAVE_PAYMENT', { source: table, person_id: batch.personId, event_id: event?.id, months: batch.months, year: batch.year, amounts: batch.amounts, ids: results.map(r => r.id) });
         // Delivery is a secondary effect: a notification failure must not report a committed payment as failed.
-        if (req.user.role !== 'admin') {
+        if (event || req.user.role !== 'admin') {
             try {
                 const admins = await db.query("SELECT id, email FROM users WHERE role = 'admin'");
+                const pending = req.user.role !== 'admin';
+                const title = event ? 'Pagamento de Evento' : 'Novo Comprovante';
+                const message = event
+                    ? `Pagamento do evento ${event.name} ${pending ? 'aguardando aprovação' : 'registrado e aprovado'}.`
+                    : 'Há um pagamento aguardando conferência.';
+                const subject = event ? '[Tribo de Davi] Pagamento de evento registrado' : '[Tribo de Davi] Novo comprovante para conferência';
+                const loginUrl = new URL('/login.html', process.env.APP_URL || 'https://tribodedavi.net.br').href;
+                const html = event
+                    ? `<p>Um pagamento do evento <strong>${escapeHtml(event.name)}</strong> foi registrado e ${pending ? 'aguarda aprovação' : 'foi aprovado'}.</p><p><a href="${escapeHtml(loginUrl)}">Acessar o sistema</a></p>`
+                    : `<p>Há um novo comprovante aguardando conferência no painel financeiro.</p><p><a href="${escapeHtml(loginUrl)}">Acessar o sistema</a></p>`;
                 for (const admin of admins.rows) {
-                    await createNotification(admin.id, 'Novo Comprovante', 'Há um pagamento aguardando conferência.', 'info', results[0].id, event ? 'event' : 'monthly');
-                    if (admin.email && sendResendEmail) await sendResendEmail({
-                        to: admin.email, subject: '[Tribo de Davi] Novo comprovante para conferência',
-                        html: '<p>Há um novo comprovante aguardando conferência no painel financeiro.</p><p><a href="' + new URL('/login.html', process.env.APP_URL).href + '">Acessar o sistema</a></p>'
-                    });
+                    try {
+                        await createNotification(admin.id, title, message, 'info', results[0].id, event ? 'event' : 'monthly');
+                    } catch (err) { console.error(`[NOTIFICATION] Falha para o usuário ${admin.id}:`, err); }
+                    if (admin.email && sendResendEmail) {
+                        try {
+                            const delivery = await sendResendEmail({ to: admin.email, subject, html });
+                            if (!delivery?.success) console.error(`[EMAIL] Falha no aviso de pagamento para o usuário ${admin.id}:`, delivery?.error || 'Resposta sem confirmação de envio.');
+                        } catch (err) { console.error(`[EMAIL] Falha no aviso de pagamento para o usuário ${admin.id}:`, err); }
+                    }
                 }
             } catch (err) { console.error('[NOTIFICATION] Pagamento salvo; aviso pendente:', err.message); }
         }
