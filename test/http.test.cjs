@@ -69,6 +69,42 @@ test('secretary cannot approve or delete payments',async()=>{
         }
     } finally { await new Promise(resolve=>server.close(resolve));role='member'; }
 });
+test('approval and rejection email the account that submitted the receipt',async()=>{
+    role='admin';
+    const originalQuery=db.query, originalFetch=global.fetch;
+    const emails=[],recipients=[];
+    db.query=async(sql,params)=>{
+        if(sql.includes('FROM payments p JOIN people'))return {rows:[{person_id:33,submitted_by_user_id:42,month:10,person_name:'Julia'}],rowCount:1};
+        if(sql.includes('FROM event_payments ep JOIN events'))return {rows:[{id:113,person_id:33,submitted_by_user_id:42,event_name:'Acampamento',person_name:'Julia'}],rowCount:1};
+        if(sql.startsWith('UPDATE payments SET status') || sql.startsWith('UPDATE event_payments SET status'))return {rows:[{id:1}],rowCount:1};
+        if(sql==='SELECT id, email FROM users WHERE id = $1'){recipients.push(params[0]);return {rows:[{id:42,email:'uploader@example.com'}],rowCount:1};}
+        if(sql.startsWith('INSERT INTO notifications'))return {rows:[],rowCount:1};
+        return originalQuery(sql,params);
+    };
+    process.env.RESEND_API_KEY='test-key';
+    global.fetch=async(url,options)=>{
+        if(String(url)==='https://api.resend.com/emails'){
+            emails.push(JSON.parse(options.body));
+            return {ok:true,json:async()=>({id:'test-email'})};
+        }
+        return originalFetch(url,options);
+    };
+    const server=app.listen(0,'127.0.0.1');
+    await new Promise(resolve=>server.once('listening',resolve));
+    try {
+        const token=jwt.sign({id:1,sessionVersion:1},process.env.JWT_SECRET);
+        const base='http://127.0.0.1:'+server.address().port;
+        const approved=await fetch(base+'/api/payments/1/approve',{method:'POST',headers:{Authorization:'Bearer '+token}});
+        const rejected=await fetch(base+'/api/event-payments/113/reject',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({reason:'Inválido'})});
+        assert.equal(approved.status,200);assert.equal(rejected.status,200);
+        await new Promise(resolve=>setImmediate(resolve));
+        assert.deepEqual(recipients,[42,42]);
+        assert.deepEqual(emails.map(email=>email.to),[['uploader@example.com'],['uploader@example.com']]);
+    } finally {
+        await new Promise(resolve=>server.close(resolve));
+        db.query=originalQuery;global.fetch=originalFetch;role='member';delete process.env.RESEND_API_KEY;
+    }
+});
 test('HTTP event approval requires the payer to remain registered',async()=>{
     role='admin';
     const originalQuery=db.query;

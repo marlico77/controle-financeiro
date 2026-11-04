@@ -706,6 +706,23 @@ const createNotification = async (userId, title, message, type = 'info', related
     }
 };
 
+const paymentSubmitter = async (submittedByUserId, personId) => {
+    if (submittedByUserId) {
+        const submitted = await db.query('SELECT id, email FROM users WHERE id = $1', [submittedByUserId]);
+        if (submitted.rows[0]) return submitted.rows[0];
+    }
+    // Legacy payments did not record who uploaded the receipt.
+    const linked = await db.query("SELECT id, email FROM users WHERE person_id = $1 ORDER BY (NULLIF(TRIM(email), '') IS NOT NULL) DESC, id LIMIT 1", [personId]);
+    return linked.rows[0];
+};
+
+const sendPaymentDecisionEmail = async (to, subject, html) => {
+    try {
+        const result = await sendResendEmail({ to, subject, html });
+        if (!result?.success) console.error('[EMAIL] Aviso de decisão não enviado:', result?.error || 'Sem confirmação de envio.');
+    } catch (err) { console.error('[EMAIL] Erro ao enviar aviso de decisão:', err); }
+};
+
 const monthNames = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
@@ -954,7 +971,7 @@ app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403);
 
     try {
-        const paymentResult = await db.query('SELECT p.person_id, p.month, pe.name as person_name FROM payments p JOIN people pe ON p.person_id = pe.id WHERE p.id = $1', [req.params.id]);
+        const paymentResult = await db.query('SELECT p.person_id, p.submitted_by_user_id, p.month, pe.name as person_name FROM payments p JOIN people pe ON p.person_id = pe.id WHERE p.id = $1', [req.params.id]);
         const payment = paymentResult.rows[0];
         if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
 
@@ -962,20 +979,15 @@ app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
         if (!transition.rowCount) return res.status(409).json({ error: 'Pagamento já foi conferido. Atualize a tela.' });
 
         // Notifica o membro que seu pagamento foi aprovado
-        const userResult = await db.query('SELECT id, email FROM users WHERE person_id = $1', [payment.person_id]);
-        const userForMember = userResult.rows[0];
+        const userForMember = await paymentSubmitter(payment.submitted_by_user_id, payment.person_id).catch(err => { console.error('[NOTIFICATION] Falha ao localizar quem enviou o pagamento aprovado:', err); return null; });
         if (userForMember) {
-            await createNotification(userForMember.id, 'Pagamento Aprovado', `Seu pagamento do mês de ${monthNames[payment.month - 1]} foi aprovado com sucesso!`, 'success').catch(err => console.error("[NOTIFICATION] Pagamento conferido; aviso pendente:", err.message));
+            await createNotification(userForMember.id, 'Pagamento Aprovado', `O pagamento de ${payment.person_name} do mês de ${monthNames[payment.month - 1]} foi aprovado.`, 'success').catch(err => console.error("[NOTIFICATION] Pagamento conferido; aviso pendente:", err.message));
 
             if (userForMember.email) {
                 const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
                 const loginUrl = `${systemUrl}/login.html`;
                 const html = getPaymentApprovedEmailHtml(payment.person_name, 'Mensalidade', `Mês de ${monthNames[payment.month - 1]}`, loginUrl);
-                sendResendEmail({
-                    to: userForMember.email,
-                    subject: '[Tribo de Davi] Comprovante Aprovado',
-                    html: html
-                }).catch(e => console.error('[EMAIL] Erro ao enviar email de aprovação:', e));
+                await sendPaymentDecisionEmail(userForMember.email, '[Tribo de Davi] Comprovante Aprovado', html);
             }
         }
 
@@ -992,7 +1004,7 @@ app.post('/api/payments/:id/reject', authenticateToken, async (req, res) => {
     const { reason } = req.body || {};
 
     try {
-        const paymentResult = await db.query('SELECT p.person_id, p.month, pe.name as person_name FROM payments p JOIN people pe ON p.person_id = pe.id WHERE p.id = $1', [req.params.id]);
+        const paymentResult = await db.query('SELECT p.person_id, p.submitted_by_user_id, p.month, pe.name as person_name FROM payments p JOIN people pe ON p.person_id = pe.id WHERE p.id = $1', [req.params.id]);
         const payment = paymentResult.rows[0];
         if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
 
@@ -1000,20 +1012,15 @@ app.post('/api/payments/:id/reject', authenticateToken, async (req, res) => {
         if (!transition.rowCount) return res.status(409).json({ error: 'Pagamento já foi conferido. Atualize a tela.' });
 
         // Notifica o membro sobre a rejeição e o motivo
-        const userResult = await db.query('SELECT id, email FROM users WHERE person_id = $1', [payment.person_id]);
-        const userForMember = userResult.rows[0];
+        const userForMember = await paymentSubmitter(payment.submitted_by_user_id, payment.person_id).catch(err => { console.error('[NOTIFICATION] Falha ao localizar quem enviou o pagamento rejeitado:', err); return null; });
         if (userForMember) {
-            await createNotification(userForMember.id, 'Pagamento Rejeitado', `Seu pagamento do mês de ${monthNames[payment.month - 1]} foi rejeitado. Motivo: ${reason || 'Comprovante inválido'}. Por favor, corrija-o.`, 'error').catch(err => console.error("[NOTIFICATION] Pagamento conferido; aviso pendente:", err.message));
+            await createNotification(userForMember.id, 'Pagamento Rejeitado', `O pagamento de ${payment.person_name} do mês de ${monthNames[payment.month - 1]} foi rejeitado. Motivo: ${reason || 'Comprovante inválido'}.`, 'error').catch(err => console.error("[NOTIFICATION] Pagamento conferido; aviso pendente:", err.message));
 
             if (userForMember.email) {
                 const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
                 const loginUrl = `${systemUrl}/login.html`;
                 const html = getPaymentRejectedEmailHtml(payment.person_name, 'Mensalidade', `Mês de ${monthNames[payment.month - 1]}`, reason || 'Comprovante inválido', loginUrl);
-                sendResendEmail({
-                    to: userForMember.email,
-                    subject: '[Tribo de Davi] Comprovante Rejeitado',
-                    html: html
-                }).catch(e => console.error('[EMAIL] Erro ao enviar email de rejeição:', e));
+                await sendPaymentDecisionEmail(userForMember.email, '[Tribo de Davi] Comprovante Rejeitado', html);
             }
         }
 
@@ -1499,20 +1506,15 @@ app.post('/api/event-payments/:id/approve', authenticateToken, async (req, res) 
         if (!transition.rowCount) return res.status(409).json({ error: 'Pagamento já conferido ou membro não inscrito no evento. Atualize a tela.' });
 
         // Notifica o membro
-        const userResult = await db.query('SELECT id, email FROM users WHERE person_id = $1', [payment.person_id]);
-        const userForMember = userResult.rows[0];
+        const userForMember = await paymentSubmitter(payment.submitted_by_user_id, payment.person_id).catch(err => { console.error('[NOTIFICATION] Falha ao localizar quem enviou o pagamento de evento aprovado:', err); return null; });
         if (userForMember) {
-            await createNotification(userForMember.id, 'Pagamento de Evento Aprovado', `Seu pagamento para o evento ${payment.event_name} foi aprovado!`, 'success').catch(err => console.error("[NOTIFICATION] Pagamento conferido; aviso pendente:", err.message));
+            await createNotification(userForMember.id, 'Pagamento de Evento Aprovado', `O pagamento de ${payment.person_name} para o evento ${payment.event_name} foi aprovado.`, 'success').catch(err => console.error("[NOTIFICATION] Pagamento conferido; aviso pendente:", err.message));
 
             if (userForMember.email) {
                 const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
                 const loginUrl = `${systemUrl}/login.html`;
                 const html = getPaymentApprovedEmailHtml(payment.person_name, 'Evento', payment.event_name, loginUrl);
-                sendResendEmail({
-                    to: userForMember.email,
-                    subject: '[Tribo de Davi] Comprovante de Evento Aprovado',
-                    html: html
-                }).catch(e => console.error('[EMAIL] Erro ao enviar email de aprovação (evento):', e));
+                await sendPaymentDecisionEmail(userForMember.email, '[Tribo de Davi] Comprovante de Evento Aprovado', html);
             }
         }
         res.json({ success: true });
@@ -1534,20 +1536,15 @@ app.post('/api/event-payments/:id/reject', authenticateToken, async (req, res) =
         if (!transition.rowCount) return res.status(409).json({ error: 'Pagamento já foi conferido. Atualize a tela.' });
 
         // Notifica o membro sobre a rejeição
-        const userResult = await db.query('SELECT id, email FROM users WHERE person_id = $1', [payment.person_id]);
-        const userForMember = userResult.rows[0];
+        const userForMember = await paymentSubmitter(payment.submitted_by_user_id, payment.person_id).catch(err => { console.error('[NOTIFICATION] Falha ao localizar quem enviou o pagamento de evento rejeitado:', err); return null; });
         if (userForMember) {
-            await createNotification(userForMember.id, 'Pagamento de Evento Rejeitado', `Seu pagamento para o evento ${payment.event_name} foi rejeitado. Motivo: ${reason}`, 'error').catch(err => console.error("[NOTIFICATION] Pagamento conferido; aviso pendente:", err.message));
+            await createNotification(userForMember.id, 'Pagamento de Evento Rejeitado', `O pagamento de ${payment.person_name} para o evento ${payment.event_name} foi rejeitado. Motivo: ${reason || 'Inválido'}.`, 'error').catch(err => console.error("[NOTIFICATION] Pagamento conferido; aviso pendente:", err.message));
 
             if (userForMember.email) {
                 const systemUrl = process.env.APP_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
                 const loginUrl = `${systemUrl}/login.html`;
                 const html = getPaymentRejectedEmailHtml(payment.person_name, 'Evento', payment.event_name, reason || 'Inválido', loginUrl);
-                sendResendEmail({
-                    to: userForMember.email,
-                    subject: '[Tribo de Davi] Comprovante de Evento Rejeitado',
-                    html: html
-                }).catch(e => console.error('[EMAIL] Erro ao enviar email de rejeição (evento):', e));
+                await sendPaymentDecisionEmail(userForMember.email, '[Tribo de Davi] Comprovante de Evento Rejeitado', html);
             }
         }
         res.json({ success: true });

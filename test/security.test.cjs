@@ -231,8 +231,9 @@ function paymentDeps(status='pending',failSecond=false) {
     const statements=[],writes=[];let updated=0;
     const client={query:async(sql,args)=>{
         statements.push(sql.trim());
-        if(sql.includes('SELECT id, status FROM'))return {rows:[{id:1,status}]};
+        if(sql.includes('SELECT id, status FROM'))return {rows:status===null?[]:[{id:1,status}]};
         if(sql.startsWith('UPDATE payments') || sql.startsWith('UPDATE event_payments')){updated++;writes.push(args);if(failSecond&&updated===2)throw new Error('database unavailable');}
+        if(sql.startsWith('INSERT INTO payments') || sql.startsWith('INSERT INTO event_payments')){writes.push(args);return {rows:[{id:1}],rowCount:1};}
         return {rows:[],rowCount:1};
     },release(){statements.push('RELEASE');}};
     return {statements,writes,deps:{db:{pool:{connect:async()=>client},query:async()=>({rows:[]})},sharp,supabase:emptyStorage,upload:{single(){return ()=>{};}},logAction:async()=>{},createNotification:async()=>{}}};
@@ -258,33 +259,74 @@ test('secretary payment stays pending and cannot overwrite an approved payment',
 });
 test('secretary event payment stays pending; administrator payment is approved',async()=>{
     for(const [role,expected] of [['secretário','pending'],['admin','approved']]){
-        const {deps,writes}=paymentDeps('pending');
+        const {deps,writes}=paymentDeps(role==='admin'?null:'pending');
         deps.db.query=async()=>({rows:[{id:2,payment_type:'unico'}]});
         const result=await harness(require('../routes/securePayments'),deps)('post','/api/event-payments',{body:{person_id:1,event_id:2,amount:'200.00'},user:{role,personId:1}});
-        assert.equal(result.error,undefined);assert.equal(result.res.body.status,expected);assert.equal(writes[0][1],expected);
+        assert.equal(result.error,undefined);assert.equal(result.res.body.status,expected);assert.equal(writes[0][role==='admin'?5:1],expected);
     }
 });
-test('every event payment notifies administrators and attempts email independently',async()=>{
+test('non-admin event payment notifies administrators with payer, event and amount; admin payment is silent',async()=>{
     for (const [role,status] of [['secretário','pending'],['admin','approved']]) {
-        const {deps}=paymentDeps('pending');
+        const {deps}=paymentDeps(role==='admin'?null:'pending');
         const notices=[],emails=[];
         deps.db.query=async sql=>sql.includes('SELECT e.* FROM events')
             ? {rows:[{id:2,name:'Acampamento <2026>',payment_type:'unico'}]}
             : {rows:[{id:7,email:'first@example.com'},{id:8,email:'second@example.com'}]};
+        const originalConnect=deps.db.pool.connect;
+        deps.db.pool.connect=async()=>{
+            const client=await originalConnect(), originalQuery=client.query;
+            client.query=async(sql,args)=>sql.startsWith('SELECT name FROM people') ? {rows:[{name:'Julia Santos'}]} : originalQuery(sql,args);
+            return client;
+        };
         deps.createNotification=async (...args)=>{notices.push(args);if(args[0]===7)throw new Error('notification unavailable');};
         deps.sendResendEmail=async args=>{emails.push(args);return args.to==='first@example.com' ? {success:false,error:'provider rejected'} : {success:true,id:'test'};};
         const {res,error}=await harness(require('../routes/securePayments'),deps)('post','/api/event-payments',{
-            body:{person_id:1,event_id:2,amount:'200.00'},user:{role,personId:1}
+            body:{person_id:1,event_id:2,amount:'200.00'},user:{id:42,username:'julia.santos',role,personId:1}
         });
         assert.equal(error,undefined);assert.equal(res.body.status,status);
+        if(role==='admin') { assert.equal(notices.length,0);assert.equal(emails.length,0);continue; }
         assert.deepEqual(notices.map(n=>n[0]),[7,8]);
-        assert.ok(notices.every(n=>n[5]==='event'));
+        assert.ok(notices.every(n=>n[5]==='event' && n[2].includes('julia.santos') && n[2].includes('Julia Santos') && n[2].includes('R$ 200,00')));
         assert.deepEqual(emails.map(e=>e.to),['first@example.com','second@example.com']);
-        assert.ok(emails.every(e=>e.html.includes('Acampamento &lt;2026&gt;')));
+        assert.ok(emails.every(e=>e.html.includes('Acampamento &lt;2026&gt;') && e.html.includes('julia.santos') && e.html.includes('Julia Santos')));
     }
 });
+test('monthly receipt informs administrators with payer and amount; admin submission is silent',async()=>{
+    for (const role of ['member','admin']) {
+        const {deps,writes}=paymentDeps(role==='admin'?null:'pending');
+        const notices=[],emails=[];
+        const originalConnect=deps.db.pool.connect;
+        deps.db.pool.connect=async()=>{
+            const client=await originalConnect(), originalQuery=client.query;
+            client.query=async(sql,args)=>sql.startsWith('SELECT name FROM people') ? {rows:[{name:'Álvaro'}]} : originalQuery(sql,args);
+            return client;
+        };
+        deps.db.query=async()=>({rows:[{id:2,email:'admin@example.com'}]});
+        deps.createNotification=async(...args)=>notices.push(args);
+        deps.sendResendEmail=async args=>{emails.push(args);return {success:true};};
+        const result=await harness(require('../routes/securePayments'),deps)('post','/api/payments',{
+            body:{person_id:1,year:2026,month:10,amount:'20.00'},file:{buffer:Buffer.from('%PDF-1.7')},user:{id:42,username:'pagador',role,personId:1}
+        });
+        assert.equal(result.error,undefined);
+        assert.equal(role==='admin' ? writes[0].at(-1) : writes[0][5],42);
+        if (role==='admin') {assert.equal(result.res.body.status,'approved');assert.equal(notices.length,0);assert.equal(emails.length,0);}
+        else {
+            assert.equal(result.res.body.status,'pending');
+            assert.match(notices[0][2],/pagador.*mensalidade.*Álvaro.*20,00/);
+            assert.match(emails[0].html,/pagador.*mensalidade.*Álvaro.*20,00/);
+        }
+    }
+});
+test('administrator must use the decision route for an existing pending payment',async()=>{
+    const {deps,writes}=paymentDeps('pending');
+    const result=await harness(require('../routes/securePayments'),deps)('post','/api/payments',{
+        body:{person_id:1,year:2026,month:10,amount:'20.00'},user:{id:1,role:'admin',personId:1}
+    });
+    assert.equal(result.error.status,409);
+    assert.equal(writes.length,0);
+});
 test('batch failure rolls back and releases the reserved client',async()=>{
-    const {deps,statements}=paymentDeps('pending',true);
+    const {deps,statements}=paymentDeps('rejected',true);
     const run=harness(require('../routes/securePayments'),deps);
     const {error}=await run('post','/api/payments',{body:{person_id:1,year:2026,months:'[1,2]',amount:'40.00'},user:{role:'admin'}});
     assert.ok(error);assert.ok(statements.includes('BEGIN'));assert.ok(statements.includes('ROLLBACK'));assert.ok(!statements.includes('COMMIT'));assert.equal(statements.at(-1),'RELEASE');

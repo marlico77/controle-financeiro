@@ -255,9 +255,9 @@ function getPaymentApprovedEmailHtml(personName, paymentType, paymentDescription
                     </tr>
                     <tr>
                         <td style="padding: 30px 40px 40px 40px;">
-                            <h2 style="font-size: 16px; font-weight: bold; color: #111111; margin-top: 0; margin-bottom: 20px;">Olá, ${personName}</h2>
+                            <h2 style="font-size: 16px; font-weight: bold; color: #111111; margin-top: 0; margin-bottom: 20px;">Olá!</h2>
                             <p style="font-size: 14px; line-height: 1.6; color: #444444; margin-top: 0; margin-bottom: 20px;">
-                                Temos uma boa notícia! O seu comprovante de pagamento de <strong>${paymentType}</strong> (${paymentDescription}) foi avaliado e <strong style="color: #28a745;">aprovado</strong> pela tesouraria do clube.
+                                O comprovante de <strong>${paymentType}</strong> de <strong>${personName}</strong> (${paymentDescription}) foi avaliado e <strong style="color: #28a745;">aprovado</strong> pela tesouraria do clube.
                             </p>
                             <p style="font-size: 14px; line-height: 1.6; color: #444444; margin-top: 0; margin-bottom: 30px;">
                                 O pagamento já consta como baixado no sistema financeiro.
@@ -309,15 +309,15 @@ function getPaymentRejectedEmailHtml(personName, paymentType, paymentDescription
                     </tr>
                     <tr>
                         <td style="padding: 30px 40px 40px 40px;">
-                            <h2 style="font-size: 16px; font-weight: bold; color: #111111; margin-top: 0; margin-bottom: 20px;">Olá, ${personName}</h2>
+                            <h2 style="font-size: 16px; font-weight: bold; color: #111111; margin-top: 0; margin-bottom: 20px;">Olá!</h2>
                             <p style="font-size: 14px; line-height: 1.6; color: #444444; margin-top: 0; margin-bottom: 20px;">
-                                O seu comprovante de pagamento de <strong>${paymentType}</strong> (${paymentDescription}) foi avaliado e <strong style="color: #dc3545;">rejeitado</strong> pela secretaria.
+                                O comprovante de <strong>${paymentType}</strong> de <strong>${personName}</strong> (${paymentDescription}) foi avaliado e <strong style="color: #dc3545;">rejeitado</strong>.
                             </p>
                             <div style="background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
                                 <p style="font-size: 14px; color: #721c24; margin: 0;"><strong>Motivo da Rejeição:</strong><br>${rejectionReason}</p>
                             </div>
                             <p style="font-size: 14px; line-height: 1.6; color: #444444; margin-top: 0; margin-bottom: 30px;">
-                                O pagamento voltou ao status de "Pendente". Por favor, acesse o sistema para verificar o erro e enviar um novo comprovante corrigido.
+                                O pagamento está com status "Rejeitado". Acesse o sistema para verificar o motivo e enviar um novo comprovante.
                             </p>
                             <div style="text-align: center; margin-bottom: 30px;">
                                 <a href="${systemUrl}" style="background-color: #e50914; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: bold; display: inline-block;">Corrigir Pagamento</a>

@@ -7,16 +7,19 @@ module.exports = function registerPayments(app, deps) {
     async function persist(req, table, event, batch, receipt) {
         const client = await db.pool.connect();
         const results = [];
+        let personName;
         try {
             await client.query('BEGIN');
             // Serializes writes for this person's period, including the first insertion.
             await client.query('SELECT pg_advisory_xact_lock($1, $2)', [batch.personId, event?.id || 0]);
+            personName = (await client.query('SELECT name FROM people WHERE id = $1', [batch.personId])).rows[0]?.name || req.user.username;
             for (let i = 0; i < batch.months.length; i++) {
                 const month = batch.months[i];
                 const parameters = event ? [batch.personId, event.id, month, batch.year] : [batch.personId, month, batch.year];
                 const where = event ? 'person_id = $1 AND event_id = $2 AND month IS NOT DISTINCT FROM $3::integer AND year IS NOT DISTINCT FROM $4::integer' : 'person_id = $1 AND month = $2 AND year = $3';
                 const current = (await client.query(`SELECT id, status FROM ${table} WHERE ${where} FOR UPDATE`, parameters)).rows[0];
                 if (current?.status === 'approved' && req.user.role !== 'admin') throw new HttpError(409, 'Pagamento aprovado só pode ser ajustado pela administração.');
+                if (current?.status === 'pending' && req.user.role === 'admin') throw new HttpError(409, 'Use a aprovação do pagamento pendente para registrar a decisão.');
                 const status = req.user.role === 'admin' ? 'approved' : 'pending';
                 let id;
                 if (current) {
@@ -24,33 +27,34 @@ module.exports = function registerPayments(app, deps) {
                     // A new cloud receipt must clear any old database binary.
                     await client.query(`UPDATE ${table} SET amount = $1, status = $2,
                         receipt_path = COALESCE($3, receipt_path), receipt_content = CASE WHEN $3::text IS NULL THEN receipt_content ELSE $4 END,
-                        receipt_mime = COALESCE($5, receipt_mime), rejection_reason = NULL, updated_at = NOW() WHERE id = $6`,
-                    [batch.amounts[i], status, receipt.path, receipt.content, receipt.mime, id]);
+                        receipt_mime = COALESCE($5, receipt_mime), submitted_by_user_id = $6,
+                        rejection_reason = NULL, updated_at = NOW() WHERE id = $7`,
+                    [batch.amounts[i], status, receipt.path, receipt.content, receipt.mime, req.user.id, id]);
                 } else {
-                    const sql = event ? `INSERT INTO event_payments (person_id, event_id, month, year, amount, status, receipt_path, receipt_content, receipt_mime) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id` :
-                        `INSERT INTO payments (person_id, month, year, amount, status, receipt_path, receipt_content, receipt_mime) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`;
-                    id = (await client.query(sql, [...parameters, batch.amounts[i], status, receipt.path, receipt.content, receipt.mime])).rows[0].id;
+                    const sql = event ? `INSERT INTO event_payments (person_id, event_id, month, year, amount, status, receipt_path, receipt_content, receipt_mime, submitted_by_user_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id` :
+                        `INSERT INTO payments (person_id, month, year, amount, status, receipt_path, receipt_content, receipt_mime, submitted_by_user_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`;
+                    id = (await client.query(sql, [...parameters, batch.amounts[i], status, receipt.path, receipt.content, receipt.mime, req.user.id])).rows[0].id;
                 }
                 results.push({ id, updated: !!current });
             }
             await client.query('COMMIT');
         } catch (err) { await client.query('ROLLBACK'); throw err; }
         finally { client.release(); }
-        await logAction(req, 'SAVE_PAYMENT', { source: table, person_id: batch.personId, event_id: event?.id, months: batch.months, year: batch.year, amounts: batch.amounts, ids: results.map(r => r.id) });
+        try { await logAction(req, 'SAVE_PAYMENT', { source: table, person_id: batch.personId, event_id: event?.id, months: batch.months, year: batch.year, amounts: batch.amounts, ids: results.map(r => r.id) }); }
+        catch (err) { console.error('[AUDIT] Pagamento salvo; falha ao registrar auditoria:', err); }
         // Delivery is a secondary effect: a notification failure must not report a committed payment as failed.
-        if (event || req.user.role !== 'admin') {
+        if (req.user.role !== 'admin') {
             try {
                 const admins = await db.query("SELECT id, email FROM users WHERE role = 'admin'");
-                const pending = req.user.role !== 'admin';
-                const title = event ? 'Pagamento de Evento' : 'Novo Comprovante';
-                const message = event
-                    ? `Pagamento do evento ${event.name} ${pending ? 'aguardando aprovação' : 'registrado e aprovado'}.`
-                    : 'Há um pagamento aguardando conferência.';
-                const subject = event ? '[Tribo de Davi] Pagamento de evento registrado' : '[Tribo de Davi] Novo comprovante para conferência';
+                const title = event ? 'Comprovante de Evento Pendente' : 'Comprovante de Mensalidade Pendente';
+                const reference = event ? `evento ${event.name}` : `mensalidade de ${batch.months.join(', ')}/${batch.year}`;
+                const amount = batch.amounts.reduce((sum, value) => sum + moneyCents(value), 0);
+                const formattedAmount = (amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                const submitterName = req.user.username || personName;
+                const message = `${submitterName} anexou um comprovante de ${reference} para ${personName} no valor de ${formattedAmount}, aguardando aprovação.`;
+                const subject = event ? '[Tribo de Davi] Comprovante de evento para aprovação' : '[Tribo de Davi] Comprovante de mensalidade para aprovação';
                 const loginUrl = new URL('/login.html', process.env.APP_URL || 'https://tribodedavi.net.br').href;
-                const html = event
-                    ? `<p>Um pagamento do evento <strong>${escapeHtml(event.name)}</strong> foi registrado e ${pending ? 'aguarda aprovação' : 'foi aprovado'}.</p><p><a href="${escapeHtml(loginUrl)}">Acessar o sistema</a></p>`
-                    : `<p>Há um novo comprovante aguardando conferência no painel financeiro.</p><p><a href="${escapeHtml(loginUrl)}">Acessar o sistema</a></p>`;
+                const html = `<p><strong>${escapeHtml(submitterName)}</strong> anexou um comprovante de ${escapeHtml(reference)} para <strong>${escapeHtml(personName)}</strong> no valor de <strong>${escapeHtml(formattedAmount)}</strong>.</p><p>O pagamento aguarda sua aprovação.</p><p><a href="${escapeHtml(loginUrl)}">Acessar o sistema</a></p>`;
                 for (const admin of admins.rows) {
                     try {
                         await createNotification(admin.id, title, message, 'info', results[0].id, event ? 'event' : 'monthly');
