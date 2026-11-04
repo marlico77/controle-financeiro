@@ -76,11 +76,19 @@ test('unregistered specialty image is not public',async()=>{
     const {error}=await run('get','/api/public-images/:filename',{params:{filename:'especialidade-test.webp'}});
     assert.equal(error.status,404);
 });
-test('database fallback serves sales to staff with attachment and no-store',async()=>{
+test('database fallback opens a PDF receipt inline for staff with no-store',async()=>{
     const db={query:async()=>({rows:[{person_id:null,source:'sale',receipt_content:Buffer.from('%PDF-1.7'),receipt_mime:'application/pdf'}],rowCount:1})};
     const run=harness(registerReceiptRoutes,{db,supabase:emptyStorage});
     const {res,error}=await run('get','/api/files/receipt/:filename',{params:{filename:'sale.pdf'},user:{role:'secretário'}});
-    assert.equal(error,undefined);assert.equal(res.body.toString(),'%PDF-1.7');assert.match(res.headers['Content-Disposition'],/^attachment/);assert.equal(res.headers['Cache-Control'],'private, no-store');
+    assert.equal(error,undefined);assert.equal(res.body.toString(),'%PDF-1.7');assert.equal(res.headers['Content-Type'],'application/pdf');assert.match(res.headers['Content-Disposition'],/^inline/);assert.equal(res.headers['Cache-Control'],'private, no-store');
+});
+test('storage receipt images open inline for their owner',async()=>{
+    const image=Buffer.from('image bytes');
+    const db={query:async()=>({rows:[{person_id:7,receipt_content:null,receipt_mime:'image/webp'}],rowCount:1})};
+    const supabase={storage:{from(){return {download:async()=>({data:{arrayBuffer:async()=>image}})};}}};
+    const run=harness(registerReceiptRoutes,{db,supabase,authenticateToken(){}});
+    const {res,error}=await run('get','/api/files/receipt/:filename',{params:{filename:'payment.webp'},user:{role:'member',personId:7}});
+    assert.equal(error,undefined);assert.deepEqual(res.body,image);assert.equal(res.headers['Content-Type'],'image/webp');assert.match(res.headers['Content-Disposition'],/^inline/);
 });
 test('active HTML/SVG and invalid image content are rejected',async()=>{
     for(const data of ['<html><script>alert(1)</script></html>','<svg xmlns="http://www.w3.org/2000/svg"></svg>','invalid'])
