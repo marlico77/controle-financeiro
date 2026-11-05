@@ -557,7 +557,7 @@ async function checkAuth() {
             // Inicia o cronômetro de inatividade após confirmar a autenticação
             resetInactivityTimer();
             // Carrega os dados iniciais do banco
-            await loadInitialData();
+            await loadInitialData({ scope: state.activeTab });
             // Renderiza apenas a aba atual (em vez de switchTab que poderia bugar)
             switchTab(state.activeTab, true);
 
@@ -599,100 +599,82 @@ async function checkAuth() {
 }
 
 // --- Carregamento de Dados Iniciais ---
-async function loadInitialData() {
-    try {
-        // Carregamento em paralelo (Promise.all) para máxima performance na inicialização
-        const promises = [
-            apiFetch('/api/people'), // Lista de membros
-            apiFetch(`/api/payments?year=${state.currentYear}`), // Mensalidades do ano atual
-            apiFetch('/api/events') // Lista de eventos
-        ];
+async function loadInitialData({ scope = state.activeTab } = {}) {
+    const isStaff = ['admin', 'secret\u00e1rio'].includes(state.role);
+    const resources = {};
+    const add = (key, url) => { resources[key] = apiFetch(url); };
 
-        // Adiciona requisições extras apenas se for admin
-        if (['admin', 'secretário'].includes(state.role)) {
-            promises.push(apiFetch(`/api/event-payments?year=${state.currentYear}`)); // Pagamentos de eventos
-            promises.push(apiFetch(`/api/outflows?year=${state.currentYear}`)); // Saídas de caixa
-            promises.push(apiFetch(`/api/sales?year=${state.currentYear}`)); // Vendas (Cantina/Uniformes)
-            promises.push(apiFetch(`/api/financial-summary?year=${state.currentYear}`)); // Caixa por data de aprovação/lançamento
+    if (scope === 'dashboard') {
+        add('people', '/api/people');
+        add('payments', `/api/payments?year=${state.currentYear}`);
+        add('events', '/api/events');
+        add('eventPayments', `/api/event-payments?year=${state.currentYear}`);
+        if (isStaff) {
+            add('outflows', `/api/outflows?year=${state.currentYear}`);
+            add('sales', `/api/sales?year=${state.currentYear}`);
+            add('financialSummary', `/api/financial-summary?year=${state.currentYear}`);
+        }
+    } else if (scope === 'mensalidade') {
+        add('people', '/api/people');
+        add('payments', `/api/payments?year=${state.currentYear}`);
+    } else if (scope === 'events' || scope === 'people') {
+        add('people', '/api/people');
+    } else if (scope === 'reports') {
+        add('people', '/api/people');
+        add('payments', `/api/payments?year=${state.currentYear}`);
+        add('events', '/api/events');
+    } else if (scope === 'outflows') {
+        add('outflows', `/api/outflows?year=${state.currentYear}`);
+    }
+
+    const names = Object.keys(resources);
+    const results = await Promise.allSettled(Object.values(resources));
+    const errors = [];
+    state.dataLoadErrors = state.dataLoadErrors || {};
+    results.forEach((result, index) => {
+        const key = names[index];
+        if (result.status === 'fulfilled') {
+            state[key] = result.value;
+            delete state.dataLoadErrors[key];
         } else {
-            // Membro comum e secretário veem apenas seus próprios pagamentos de eventos
-            promises.push(apiFetch(`/api/event-payments?year=${state.currentYear}`));
+            state.dataLoadErrors[key] = true;
+            errors.push(key);
+            console.error(`[API ERROR] Failed to load ${key}:`, result.reason);
         }
+    });
 
-        // Aguarda todas as requisições terminarem. Se uma falhar, retorna lista vazia (catch interno)
-        const results = await Promise.all(promises.map(p => p.catch(err => {
-            console.error('[API ERROR] Falha ao carregar recurso:', err);
-            showStatus('Não foi possível atualizar os dados. Os totais não devem ser usados até recarregar.', 'error');
-            throw err;
-        })));
-
-        // Distribui os resultados nos estados globais
-        state.people = results[0];
-        if (typeof populateGuardianOptions === 'function') populateGuardianOptions();
-        state.payments = results[1];
-        state.events = results[2];
-        state.eventPayments = results[3] || [];
-
-        if (['admin', 'secretário'].includes(state.role)) {
-            state.outflows = results[4] || [];
-            state.sales = results[5] || [];
-            state.financialSummary = results[6];
-        } else {
-            state.outflows = [];
-            state.sales = [];
-            state.financialSummary = null;
+    if (names.includes('people') && !state.dataLoadErrors.people && typeof populateGuardianOptions === 'function') populateGuardianOptions();
+    if (names.includes('people') && !state.dataLoadErrors.people && state.role !== 'admin' && state.people.length > 0) {
+        const person = state.people.find(p => p.id == state.personId) || state.people[0];
+        if (person) {
+            const userNameDisplayUpdate = document.getElementById('user-name-display');
+            if (userNameDisplayUpdate) userNameDisplayUpdate.textContent = person.name;
         }
+    }
 
-        // Atualiza o nome exibido no topo para contas de membros comuns e secretários
-        if (state.role !== 'admin' && state.people.length > 0) {
-            const person = state.people.find(p => p.id == state.personId) || state.people[0];
-            if (person) {
-                const userNameDisplayUpdate = document.getElementById('user-name-display');
-                if (userNameDisplayUpdate) userNameDisplayUpdate.textContent = person.name;
-            }
-        }
-
-        // Renderiza os componentes visuais principais
+    if (scope === 'dashboard' && !errors.length) {
         renderEvents();
         renderDashboard();
-
         if (state.role === 'admin') {
             renderPeople();
-
-            // Alerta visual imediato para o Admin se houver pagamentos aguardando aprovação
             const pendingPayments = state.payments.filter(p => p.status === 'pending');
-            if (pendingPayments.length > 0) {
-                setTimeout(() => {
-                    if (state.role === 'admin') {
-                        const modal = document.getElementById('notification-modal');
-                        const msgEl = document.getElementById('notif-content');
-                        if (modal && msgEl) {
-                            msgEl.innerHTML = `Existem <strong>${pendingPayments.length}</strong> comprovante(s) aguardando sua aprovação no sistema.`;
-                            modal.style.display = 'flex';
-
-                            // Adiciona o comportamento de fechar para o botão Entendido neste contexto
-                            const closeBtn = document.getElementById('close-notif-btn');
-                            if (closeBtn) {
-                                closeBtn.onclick = () => {
-                                    modal.style.display = 'none';
-                                };
-                            }
-                        }
-                    }
-                }, 1500);
-            }
+            if (pendingPayments.length > 0) setTimeout(() => {
+                if (state.role !== 'admin') return;
+                const modal = document.getElementById('notification-modal');
+                const msgEl = document.getElementById('notif-content');
+                if (modal && msgEl) {
+                    msgEl.innerHTML = `Existem <strong>${pendingPayments.length}</strong> comprovante(s) aguardando sua aprova\u00e7\u00e3o no sistema.`;
+                    modal.style.display = 'flex';
+                    const closeBtn = document.getElementById('close-notif-btn');
+                    if (closeBtn) closeBtn.onclick = () => { modal.style.display = 'none'; };
+                }
+            }, 1500);
         }
-
-        // Atualiza os números (cards) do dashboard
         updateDashboardStats();
-
-        // Se estiver na aba de logs, carrega os logs do sistema
-        if (state.activeTab === 'logs') fetchLogs();
-    } catch (err) {
-        console.error('Error loading data:', err);
     }
+    if (errors.length) showStatus(`Dados indispon\u00edveis (${errors.join(', ')}). Tente atualizar a p\u00e1gina.`, 'error');
+    if (scope === 'logs') fetchLogs();
 }
-
 // --- Tratamento do Formulário de Login ---
 if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {

@@ -74,6 +74,22 @@ app.use(cors({
 // Media uses a scoped parser; ordinary API JSON stays limited to 100 KB.
 app.use('/api/whatsapp/send-media', express.json({ limit: '14mb' }));
 app.use(express.json({ limit: '100kb' }));
+app.use('/api', (req, res, next) => db.withRequestContext(`${req.method} ${req.path}`, () => {
+    const started = performance.now();
+    const originalEnd = res.end;
+    res.end = function (...args) {
+        const metrics = db.getRequestContext();
+        if (metrics && !res.headersSent) res.set('Server-Timing', `dbpool;dur=${metrics.poolWaitMs}, db;dur=${metrics.queryMs}`);
+        return originalEnd.apply(this, args);
+    };
+    res.once('finish', () => {
+        const elapsedMs = Math.round(performance.now() - started);
+        if (elapsedMs >= 1000 || res.statusCode >= 500) console.warn('[API] Slow or failed request', {
+            method: req.method, path: req.path, status: res.statusCode, elapsedMs
+        });
+    });
+    next();
+}));
 
 const planningsRouter = require('./routes/plannings');
 app.use('/api/plannings', authenticateToken, planningsRouter); // Habilita parsing de JSON no corpo das requisições
@@ -1493,7 +1509,7 @@ app.post('/api/event-payments/:id/approve', authenticateToken, async (req, res) 
     if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
         // Busca dados do pagamento para notificação
-        const paymentResult = await db.query('SELECT ep.*, e.name as event_name, pe.name as person_name FROM event_payments ep JOIN events e ON ep.event_id = e.id JOIN people pe ON ep.person_id = pe.id WHERE ep.id = $1', [req.params.id]);
+        const paymentResult = await db.query('SELECT ep.id, ep.event_id, ep.person_id, ep.submitted_by_user_id, ep.month, ep.year, ep.amount, ep.status, e.name as event_name, pe.name as person_name FROM event_payments ep JOIN events e ON ep.event_id = e.id JOIN people pe ON ep.person_id = pe.id WHERE ep.id = $1', [req.params.id]);
         const payment = paymentResult.rows[0];
         if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
 
@@ -1528,7 +1544,7 @@ app.post('/api/event-payments/:id/reject', authenticateToken, async (req, res) =
     if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
     const { reason } = req.body || {};
     try {
-        const paymentResult = await db.query('SELECT ep.*, e.name as event_name, pe.name as person_name FROM event_payments ep JOIN events e ON ep.event_id = e.id JOIN people pe ON ep.person_id = pe.id WHERE ep.id = $1', [req.params.id]);
+        const paymentResult = await db.query('SELECT ep.id, ep.event_id, ep.person_id, ep.submitted_by_user_id, ep.month, ep.year, ep.amount, ep.status, e.name as event_name, pe.name as person_name FROM event_payments ep JOIN events e ON ep.event_id = e.id JOIN people pe ON ep.person_id = pe.id WHERE ep.id = $1', [req.params.id]);
         const payment = paymentResult.rows[0];
         if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
 

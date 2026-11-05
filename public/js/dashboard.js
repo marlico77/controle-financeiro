@@ -501,6 +501,16 @@ async function fetchOutflows() {
 
 // Renderiza a grade de mensalidades (quem pagou o quê em cada mês)
 function renderDashboard() {
+    const dashboardSources = ['people', 'payments', 'events', 'eventPayments'];
+    if (['admin', 'secret\u00e1rio'].includes(state.role)) dashboardSources.push('outflows', 'sales', 'financialSummary');
+    const unavailable = dashboardSources.filter(key => state.dataLoadErrors?.[key]);
+    if (unavailable.length) {
+        ['stat-total-cash', 'stat-direcao', 'stat-desbravadores', 'stat-eventos', 'stat-total-outflows'].forEach(id => {
+            const value = document.getElementById(id);
+            if (value) value.textContent = '—';
+        });
+        return;
+    }
     if (paymentsBody) paymentsBody.innerHTML = '';
     const footer = document.getElementById('payments-footer');
     if (footer) footer.innerHTML = '';
