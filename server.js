@@ -74,22 +74,6 @@ app.use(cors({
 // Media uses a scoped parser; ordinary API JSON stays limited to 100 KB.
 app.use('/api/whatsapp/send-media', express.json({ limit: '14mb' }));
 app.use(express.json({ limit: '100kb' }));
-app.use('/api', (req, res, next) => db.withRequestContext(`${req.method} ${req.path}`, () => {
-    const started = performance.now();
-    const originalEnd = res.end;
-    res.end = function (...args) {
-        const metrics = db.getRequestContext();
-        if (metrics && !res.headersSent) res.set('Server-Timing', `dbpool;dur=${metrics.poolWaitMs}, db;dur=${metrics.queryMs}`);
-        return originalEnd.apply(this, args);
-    };
-    res.once('finish', () => {
-        const elapsedMs = Math.round(performance.now() - started);
-        if (elapsedMs >= 1000 || res.statusCode >= 500) console.warn('[API] Slow or failed request', {
-            method: req.method, path: req.path, status: res.statusCode, elapsedMs
-        });
-    });
-    next();
-}));
 
 const planningsRouter = require('./routes/plannings');
 app.use('/api/plannings', authenticateToken, planningsRouter); // Habilita parsing de JSON no corpo das requisições

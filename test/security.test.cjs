@@ -403,7 +403,6 @@ test('PostgreSQL URL sslmode cannot override configured certificate validation',
     const source=fs.readFileSync(path.join(root,'database.js'),'utf8');
     vm.runInNewContext(source,{URL,process:{env:{DATABASE_URL:'postgresql://test:test@remote.invalid/test?sslmode=require'}},console,module:{exports:{}},require(name){
         if(name==='dotenv')return {config(){}};
-        if(name==='node:async_hooks')return {AsyncLocalStorage:class{run(_store,callback){return callback();}getStore(){return undefined;}}};
         if(name==='pg')return {Pool:class{constructor(config){options=config;}},types:{setTypeParser(){}}};
         throw Error(name);
     }});
