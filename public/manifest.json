@@ -1,6 +1,7 @@
 {
-  "name": "Financeiro Tribo - Tribo de Davi",
-  "short_name": "Financeiro Tribo",
+  "id": "/?environment=mariadb-test",
+  "name": "Financeiro Tribo (Teste MariaDB)",
+  "short_name": "Tribo Teste",
   "description": "Sistema de controle financeiro e gestão de eventos",
   "start_url": "/",
   "display": "standalone",

@@ -1,4 +1,5 @@
-const CACHE_NAME = 'gestao-fin-v33-network-first';
+// Cache and registration are scoped by browser origin; this ID also marks the test deployment.
+const CACHE_NAME = 'gestao-fin-mariadb-test-v1';
 const STATIC_ASSETS = [
   "/",
   "/style.css",
@@ -21,6 +22,7 @@ const STATIC_ASSETS = [
   "/js/reports.js",
   "/js/sales.js",
   "/js/state.js",
+  "/js/test-environment.js",
   "/js/ui.js",
   "/js/uniformes.js",
   "/js/utils.js",

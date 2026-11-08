@@ -28,4 +28,4 @@ See [QUERY-MAPPING.md](QUERY-MAPPING.md). It records PostgreSQL-specific syntax 
 - `check-snapshot-integrity.js` checks the export manifest counts, all foreign-key orphans, check-constraint violations, bytea hashes/sizes, indexed text widths, and observed numeric precision without printing row contents.
 - `CLONE-VALIDATION.md` records the imported test snapshot, parity checks and known conversion limits. Generated SQL and snapshot files are intentionally ignored by Git.
 
-The schema/data import has completed in the isolated database and matched all table counts, financial aggregates and receipt-byte hashes. It is a data/schema clone only; no MariaDB application adapter, endpoint parity test or production cutover is included.
+The schema/data import has completed in the isolated database and matched all table counts, financial aggregates and receipt-byte hashes. This branch now also contains an opt-in MariaDB runtime adapter and the separate `server-test.js` entry point. The adapter remains experimental until hosted endpoint smoke tests pass; see [RUNTIME-TEST.md](RUNTIME-TEST.md). It must never be enabled for production data.

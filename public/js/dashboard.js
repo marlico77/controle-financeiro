@@ -17,7 +17,7 @@ const updateDashboardStats = () => {
         monthlyData[p.month - 1] += amount;
 
         // Atribui o valor à unidade correta do membro
-        const person = state.people.find(pers => pers.id === p.person_id);
+        const person = state.people.find(pers => sameDatabaseId(pers.id, p.person_id));
         const unit = (person?.unit || '').toUpperCase();
 
         if (unit.includes('DIREÇÃO') || unit.includes('DIRECAO')) {
@@ -61,7 +61,7 @@ const updateDashboardStats = () => {
             totalCash += amount; // Soma ao saldo geral
 
             // Filtra e soma ao gráfico se a venda for do ano atual
-            const saleDate = new Date(s.date + 'T12:00:00');
+            const saleDate = parseDatabaseDate(s.date);
             if (saleDate.getFullYear() === parseInt(state.currentYear)) {
                 monthlyData[saleDate.getMonth()] += amount;
             }

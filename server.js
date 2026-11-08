@@ -10,13 +10,18 @@ const xlsx = require('xlsx'); // Biblioteca para leitura e escrita de arquivos E
 const sharp = require('sharp'); // Biblioteca de alto desempenho para processamento de imagens
 const db = require('./database'); // Importa a configuração do banco de dados (Pool do Postgres)
 const UAParser = require('ua-parser-js'); // Analisador de User-Agent (detecta navegador/dispositivo)
-const webPush = require('web-push'); // Biblioteca para envio de notificações push
+const webPush = process.env.APP_ENV === 'test'
+    ? { setVapidDetails() {}, sendNotification: async () => { throw new Error('Push externo desabilitado em teste.'); } }
+    : require('web-push'); // Biblioteca para envio de notificações push
 const cron = require('node-cron'); // Agendador de tarefas (não usado explicitamente mas carregado)
 const { createClient } = require('@supabase/supabase-js'); // Cliente para integração com Supabase Storage
+const { testStorage } = require('./lib/testStorage');
 const { getMonthlyReceiptEmailHtml, getEventReceiptEmailHtml, getPaymentApprovedEmailHtml, getPaymentRejectedEmailHtml } = require('./utils/emailTemplates');
 
 // Inicializa o cliente do Supabase para armazenamento de arquivos em nuvem
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = process.env.APP_ENV === 'test'
+    ? testStorage(process.env.LOCAL_RECEIPTS_DIR)
+    : createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 const { HttpError, moneyCents, moneyString, dateOnly, yearNumber, monthNumber, positiveId } = require('./lib/validation');
 const { authenticate, rateLimit, canAccessPerson, canAccessFinancialPerson, isStaff, newAccountHash } = require('./lib/security');
@@ -24,7 +29,7 @@ const { findAvailableUsername } = require('./lib/usernames');
 const { prepareReceipt, registerReceiptRoutes } = require('./lib/receipts');
 const { migrate } = require('./lib/migrations');
 const { civilParts, scheduledInstant } = require('./lib/time');
-const { ledgerQuery, summarizeLedgerRows } = require('./lib/financialSummary');
+const { ledgerQuery, mariaLedgerQuery, normalizeMariaLedgerRows, summarizeLedgerRows } = require('./lib/financialSummary');
 const app = express(); // Instancia a aplicação Express
 const scheduledTasks = [];
 const schedule = (...args) => scheduledTasks.push(cron.createTask(...args));
@@ -74,6 +79,7 @@ app.use(cors({
 // Media uses a scoped parser; ordinary API JSON stays limited to 100 KB.
 app.use('/api/whatsapp/send-media', express.json({ limit: '14mb' }));
 app.use(express.json({ limit: '100kb' }));
+if (process.env.APP_ENV === 'test') app.use('/api/whatsapp', (req, res) => res.status(503).json({ error: 'Integração WhatsApp desabilitada no ambiente de teste.' }));
 
 const planningsRouter = require('./routes/plannings');
 app.use('/api/plannings', authenticateToken, planningsRouter); // Habilita parsing de JSON no corpo das requisições
@@ -92,6 +98,10 @@ app.get('/', (req, res) => {
 
 // --- Configuração de E-mail (Resend) ---
 const sendResendEmail = async ({ to, subject, html, attachments }) => {
+    if (process.env.APP_ENV === 'test') {
+        console.info('[TEST-MODE] E-mail externo suprimido.');
+        return { success: false, suppressed: true, error: 'E-mail suprimido no ambiente de teste.' };
+    }
     const apiKey = process.env.RESEND_API_KEY;
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'contato@tribodedavi.net.br';
     const fromName = process.env.RESEND_FROM_NAME || 'Tribo de Davi';
@@ -1462,9 +1472,9 @@ app.get('/api/financial-summary', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
         const year = req.query.year ? yearNumber(req.query.year) : new Date().getFullYear();
-        const result = await db.query(ledgerQuery);
+        const result = await db.query(db.isMariaDB ? mariaLedgerQuery : ledgerQuery);
         res.set('Cache-Control', 'no-store');
-        res.json(summarizeLedgerRows(result.rows, year));
+        res.json(summarizeLedgerRows(db.isMariaDB ? normalizeMariaLedgerRows(result.rows) : result.rows, year));
     } catch (err) {
         const status = err instanceof HttpError ? err.status : 500;
         res.status(status).json({ error: status === 500 ? 'Erro ao calcular o caixa.' : err.message });
@@ -1668,6 +1678,7 @@ let isProcessingWhatsAppQueue = false;
 let successCounter = 0;
 
 async function processWhatsAppQueue() {
+    if (process.env.APP_ENV === 'test') return;
     if (process.env.WHATSAPP_WORKER_ENABLED !== 'true') return;
     if (isProcessingWhatsAppQueue) return;
     isProcessingWhatsAppQueue = true;
@@ -2726,6 +2737,11 @@ app.use((err, req, res, next) => {
     res.status(status).json({ error: status===500 ? 'Erro interno. Tente novamente mais tarde.' : status===409 ? 'Registro duplicado ou conflito de atualização.' : err.message });
 });
 async function start() {
+    if (process.env.APP_ENV === 'test') {
+        if (!db.isMariaDB || !db.isTestMode || typeof db.assertTestDatabase !== 'function') throw new Error('APP_ENV=test exige adaptador MariaDB estritamente isolado.');
+        await db.assertTestDatabase();
+        return app.listen(PORT, () => console.log('Servidor MariaDB de teste pronto na porta ' + PORT));
+    }
     await migrate(db);
     await initDB();
     await syncMemberUsers();
@@ -2740,5 +2756,5 @@ async function start() {
 }
 // LiteSpeed's lsnode may load the startup file as a module rather than the main script.
 // In production it must still start the HTTP listener. Imports in non-production stay inert.
-if (require.main === module || process.env.NODE_ENV === 'production') start().catch(err => { console.error('[STARTUP]',err.message); process.exitCode=1; db.pool.end(); });
+if (require.main === module || process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'test') start().catch(err => { console.error('[STARTUP]',err.message); process.exitCode=1; db.pool.end(); });
 module.exports = { app, start };

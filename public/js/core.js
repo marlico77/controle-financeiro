@@ -645,7 +645,7 @@ async function loadInitialData({ scope = state.activeTab } = {}) {
             if (state.role !== 'admin' && Array.isArray(value)) {
                 if (key === 'people') value = value.filter(person => Number(person.id) === Number(state.personId));
                 if (key === 'payments' || key === 'eventPayments') value = value.filter(payment => Number(payment.person_id) === Number(state.personId));
-                if (key === 'events') value = value.filter(event => event.is_participant === true);
+                if (key === 'events') value = value.filter(event => databaseBoolean(event.is_participant));
             }
             state[key] = value;
             delete state.dataLoadErrors[key];

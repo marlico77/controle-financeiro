@@ -13,7 +13,7 @@ async function generateGeneralReport() {
         const people = state.people || []; // Lista de pessoas
 
         // Filtra apenas pagamentos aprovados do ano selecionado
-        const approvedPayments = payments.filter(p => p.status === 'approved' && p.year === currentYear);
+        const approvedPayments = payments.filter(p => p.status === 'approved' && Number(p.year) === currentYear);
         // Soma o total arrecadado
         const totalCash = approvedPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
 
@@ -23,7 +23,7 @@ async function generateGeneralReport() {
             const unit = p.unit || 'Sem Unidade';
             if (!byUnit[unit]) byUnit[unit] = 0;
             const paid = approvedPayments
-                .filter(pay => pay.person_id === p.id)
+                .filter(pay => sameDatabaseId(pay.person_id, p.id))
                 .reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
             byUnit[unit] += paid;
         });
@@ -95,7 +95,7 @@ async function generateMemberReport() {
 
         const currentYear = parseInt(state.currentYear || new Date().getFullYear()); // Ano atual de referência
         // Filtra os pagamentos do estado global pertencentes a este membro e a este ano
-        const payments = (state.payments || []).filter(p => p.person_id == memberId && p.year === currentYear);
+        const payments = (state.payments || []).filter(p => sameDatabaseId(p.person_id, memberId) && Number(p.year) === currentYear);
         // Calcula o total pago somando apenas os registros com status 'approved'
         const totalPaid = payments.filter(p => p.status === 'approved').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
 
@@ -127,7 +127,7 @@ async function generateMemberReport() {
                     <tbody>
                         ${months.map((m, idx) => {
             // Para cada mês, verifica se existe um registro de pagamento
-            const pay = payments.find(p => p.month === idx + 1);
+            const pay = payments.find(p => Number(p.month) === idx + 1);
             return `
                                 <tr>
                                     <td>${m}</td>
@@ -184,7 +184,7 @@ async function generateEventReport() {
             const totalPaid = personPayments.filter(p => p.status === 'approved').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
             
             let contentHtml = '';
-            if (event.payment_type === 'unico') {
+            if (normalizedPaymentType(event.payment_type) === 'unico') {
                 const displayPayment = personPayments[personPayments.length - 1];
                 const statusLabel = displayPayment ? (displayPayment.status === 'approved' ? 'PAGO' : (displayPayment.status === 'rejected' ? 'RECUSADO' : 'PENDENTE')) : 'PENDENTE';
                 const paymentDate = displayPayment && displayPayment.updated_at ? new Date(displayPayment.updated_at).toLocaleDateString('pt-BR') : '-';
@@ -249,7 +249,7 @@ async function generateEventReport() {
                 </div>
                 <div class="report-summary-box">
                     <div><span class="label">Total Pago no Evento</span><span class="value">R$ ${totalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
-                    <div><span class="label">Tipo de Pagamento</span><span class="value">${event.payment_type === 'unico' ? 'Pagamento Único' : 'Parcelamento Mensal'}</span></div>
+                    <div><span class="label">Tipo de Pagamento</span><span class="value">${normalizedPaymentType(event.payment_type) === 'unico' ? 'Pagamento Único' : 'Parcelamento Mensal'}</span></div>
                 </div>
                 ${contentHtml}
             `;
@@ -276,7 +276,7 @@ async function generateEventReport() {
                 if (!byUnit[unit]) byUnit[unit] = { count: 0, paid: 0 };
                 byUnit[unit].count++; // Conta participantes por unidade
                 // Soma o que cada participante da unidade já pagou
-                const amount = (payments || []).filter(pay => pay.person_id === p.id && pay.status === 'approved').reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
+                const amount = (payments || []).filter(pay => sameDatabaseId(pay.person_id, p.id) && pay.status === 'approved').reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
                 byUnit[unit].paid += amount;
             });
             // Gera tabela de resumo por unidade
@@ -307,7 +307,7 @@ async function generateEventReport() {
                         <tbody>
                             ${(participants || []).map(p => {
                 // Calcula quanto este membro específico já pagou para o evento
-                const amount = (payments || []).filter(pay => pay.person_id === p.id && pay.status === 'approved').reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
+                const amount = (payments || []).filter(pay => sameDatabaseId(pay.person_id, p.id) && pay.status === 'approved').reduce((sum, pay) => sum + parseFloat(pay.amount || 0), 0);
                 return `<tr><td>${escapeHTML(p.name)}</td><td>${escapeHTML(p.unit || '-')}</td><td>${amount > 0 ? 'PARTICIPANDO' : 'PENDENTE'}</td><td>R$ ${amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td></tr>`;
             }).join('')}
                         </tbody>

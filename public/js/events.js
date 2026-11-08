@@ -3,7 +3,7 @@
 async function fetchEventsData() {
     try {
         const events = await apiFetch('/api/events');
-        state.events = state.role === 'admin' ? events : events.filter(event => event.is_participant === true);
+        state.events = state.role === 'admin' ? events : events.filter(event => databaseBoolean(event.is_participant));
         renderEvents(); // Atualiza a visualização em cards
     } catch (err) {
         console.error('Error fetching events:', err);
@@ -17,7 +17,7 @@ const renderEvents = () => {
     if (!list) return;
 
     // Administração vê todos; membros veem seus eventos.
-    const eventsToRender = state.role === 'admin' ? state.events : state.events.filter(e => e.is_participant);
+    const eventsToRender = state.role === 'admin' ? state.events : state.events.filter(e => databaseBoolean(e.is_participant));
 
     // Gera o HTML para cada cartão de evento
     // Gera o HTML para cada cartão de evento
@@ -80,7 +80,7 @@ const openEventDetail = async (eventId, preserveUI = false) => {
 
         // Sincroniza o ano de exibição com o ano da data do evento
         if (data.event.date) {
-            state.eventDetailYear = new Date(data.event.date).getFullYear();
+            state.eventDetailYear = parseDatabaseDate(data.event.date).getFullYear();
         }
 
         // Se preserveUI for false, faz a transição de telas no Dashboard
@@ -114,7 +114,7 @@ const openEventDetail = async (eventId, preserveUI = false) => {
 
         // Ajusta os cabeçalhos da tabela conforme o tipo de pagamento (único ou parcelado/por meses)
         const tableHead = document.querySelector('#event-detail-table thead');
-        if (data.event.payment_type === 'unico') {
+        if (normalizedPaymentType(data.event.payment_type) === 'unico') {
             tableHead.innerHTML = `
                 <tr>
                     <th>Membro</th>
@@ -152,7 +152,7 @@ let renderEventDetailGrid = (participants, payments) => {
     const event = state.currentEvent;
     if (!event) return;
 
-    const isUnico = event.payment_type === 'unico';
+    const isUnico = normalizedPaymentType(event.payment_type) === 'unico';
 
     // Agrupa os pagamentos por ID de pessoa para facilitar a renderização por linha
     const paymentsByPerson = {};
@@ -416,7 +416,7 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
 
     // Ajusta visibilidade da seleção de data baseado no tipo do evento (Único ou Parcelado)
     const dateSelection = document.getElementById('ep-date-selection');
-    if (state.currentEvent && state.currentEvent.payment_type === 'unico') {
+    if (state.currentEvent && normalizedPaymentType(state.currentEvent.payment_type) === 'unico') {
         dateSelection.style.display = 'none';
     } else {
         dateSelection.style.display = 'flex';

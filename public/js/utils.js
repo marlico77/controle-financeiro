@@ -48,6 +48,18 @@ const monthsShort = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Se
 
 // --- Utilitários de Formatação ---
 // Aplica máscara de CPF (000.000.000-00) enquanto o usuário digita
+// Normalize MariaDB/MySQL TINYINT(1)/BOOLEAN values and numeric IDs returned as strings.
+const databaseBoolean = value => value === true || value === 1 || value === '1' || value === 'true';
+const sameDatabaseId = (left, right) => left != null && right != null && String(left) === String(right);
+const normalizedPaymentType = value => String(value ?? '').trim().toLowerCase();
+const parseDatabaseDate = value => {
+    if (value instanceof Date) return new Date(value.getTime());
+    const text = String(value ?? '');
+    const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+    if (dateOnlyMatch) return new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]), 12);
+    return new Date(text);
+};
+
 const formatCPF = (v) => {
     v = v.replace(/\D/g, ""); // Remove tudo o que não é dígito numérico
     if (v.length > 11) v = v.substring(0, 11); // Limita a 11 caracteres
