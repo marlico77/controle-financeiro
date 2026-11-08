@@ -685,6 +685,7 @@ async function loadInitialData({ scope = state.activeTab } = {}) {
         }
         updateDashboardStats();
     }
+    if (scope === 'mensalidade' && !errors.length) renderDashboard();
     if (errors.length) showStatus(`Dados indispon\u00edveis (${errors.join(', ')}). Tente atualizar a p\u00e1gina.`, 'error');
     if (scope === 'logs') fetchLogs();
 }

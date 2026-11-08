@@ -493,8 +493,10 @@ async function fetchOutflows() {
 
 // Renderiza a grade de mensalidades (quem pagou o quê em cada mês)
 function renderDashboard() {
-    const dashboardSources = ['people', 'payments', 'events', 'eventPayments'];
-    if (state.role === 'admin') dashboardSources.push('outflows', 'sales', 'financialSummary');
+    const dashboardSources = state.activeTab === 'mensalidade'
+        ? ['people', 'payments']
+        : ['people', 'payments', 'events', 'eventPayments'];
+    if (state.role === 'admin' && state.activeTab !== 'mensalidade') dashboardSources.push('outflows', 'sales', 'financialSummary');
     const unavailable = dashboardSources.filter(key => state.dataLoadErrors?.[key]);
     if (unavailable.length) {
         ['stat-total-cash', 'stat-direcao', 'stat-desbravadores', 'stat-eventos', 'stat-total-outflows'].forEach(id => {
