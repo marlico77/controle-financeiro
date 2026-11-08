@@ -471,7 +471,7 @@ async function checkAuth() {
             };
 
             // Restrição de Abas e Ajustes Visuais por Perfil
-            if (!isAdmin && !isSecretary) {
+            if (!isAdmin) {
                 // Usuários Comuns e Secretários não veem abas de gestão administrativa geral
                 if (navItems.people) navItems.people.style.display = 'none';
                 if (navItems.outflows) navItems.outflows.style.display = 'none';
@@ -480,7 +480,7 @@ async function checkAuth() {
                 if (navItems.logs) navItems.logs.style.display = 'none';
 
                 // Secretário tem acesso aos relatórios e autorizações; membro comum e social media não
-                if (navItems.reports) navItems.reports.style.display = isSecretary ? 'flex' : 'none';
+                if (navItems.reports) navItems.reports.style.display = 'none';
                 if (navItems.authorizations) navItems.authorizations.style.display = isSecretary ? 'flex' : 'none';
                 
                 // Secretário e Social Media têm acesso à Galeria; membro comum não
@@ -488,6 +488,13 @@ async function checkAuth() {
 
                 // Ajusta os cartões de estatísticas no Dashboard para refletir o painel pessoal (membro/secretário)
                 const cards = document.querySelectorAll('.stat-card');
+                ['stat-direcao', 'stat-desbravadores', 'stat-total-outflows'].forEach(id => {
+                    const card = document.getElementById(id)?.closest('.stat-card');
+                    if (card) card.style.display = 'none';
+                });
+                document.querySelectorAll('.charts-grid .chart-container').forEach(chart => {
+                    if (chart.querySelector('#pieChart')) chart.style.display = 'none';
+                });
                 if (cards[1]) cards[1].style.display = 'none'; // Esconde caixa atual
                 if (cards[2]) cards[2].style.display = 'none'; // Esconde inadimplência
 
@@ -540,12 +547,12 @@ async function checkAuth() {
             }
 
             // Bloqueia abas administrativas gerais para não-admins
-            if (!isAdmin && !isSecretary && (state.activeTab === 'people' || state.activeTab === 'outflows' || state.activeTab === 'sales' || (state.activeTab === 'messages' && !isSecretary))) {
+            if (!isAdmin && (state.activeTab === 'people' || state.activeTab === 'outflows' || state.activeTab === 'sales' || state.activeTab === 'reports' || (state.activeTab === 'messages' && !isSecretary))) {
                 window.location.href = '/dashboard.html';
             }
 
             // Bloqueia relatórios e autorizações para quem não é admin nem secretário (ou seja, membro comum e social_midia)
-            if (state.role !== 'admin' && state.role !== 'secretário' && (state.activeTab === 'reports' || state.activeTab === 'authorizations')) {
+            if (state.role !== 'admin' && state.activeTab === 'authorizations') {
                 window.location.href = '/dashboard.html';
             }
 
@@ -600,7 +607,7 @@ async function checkAuth() {
 
 // --- Carregamento de Dados Iniciais ---
 async function loadInitialData({ scope = state.activeTab } = {}) {
-    const isStaff = ['admin', 'secret\u00e1rio'].includes(state.role);
+    const isAdmin = state.role === 'admin';
     const resources = {};
     const add = (key, url) => { resources[key] = apiFetch(url); };
 
@@ -609,7 +616,7 @@ async function loadInitialData({ scope = state.activeTab } = {}) {
         add('payments', `/api/payments?year=${state.currentYear}`);
         add('events', '/api/events');
         add('eventPayments', `/api/event-payments?year=${state.currentYear}`);
-        if (isStaff) {
+        if (isAdmin) {
             add('outflows', `/api/outflows?year=${state.currentYear}`);
             add('sales', `/api/sales?year=${state.currentYear}`);
             add('financialSummary', `/api/financial-summary?year=${state.currentYear}`);
@@ -634,7 +641,13 @@ async function loadInitialData({ scope = state.activeTab } = {}) {
     results.forEach((result, index) => {
         const key = names[index];
         if (result.status === 'fulfilled') {
-            state[key] = result.value;
+            let value = result.value;
+            if (state.role !== 'admin' && Array.isArray(value)) {
+                if (key === 'people') value = value.filter(person => Number(person.id) === Number(state.personId));
+                if (key === 'payments' || key === 'eventPayments') value = value.filter(payment => Number(payment.person_id) === Number(state.personId));
+                if (key === 'events') value = value.filter(event => event.is_participant === true);
+            }
+            state[key] = value;
             delete state.dataLoadErrors[key];
         } else {
             state.dataLoadErrors[key] = true;
@@ -891,7 +904,7 @@ function switchTab(tabName, force = false) {
     // Atualiza o título dinâmico da página no topo
     const title = document.getElementById('page-title');
     if (title) {
-        if (tabName === 'dashboard') title.textContent = ['admin', 'secretário'].includes(state.role) ? 'Dashboard de Mensalidades' : 'Meu Status de Mensalidade';
+        if (tabName === 'dashboard') title.textContent = state.role === 'admin' ? 'Dashboard de Mensalidades' : 'Meu Status de Mensalidade';
         else if (tabName === 'people') title.textContent = 'Gerenciamento de Membros';
         else if (tabName === 'events') title.textContent = 'Gestão de Eventos';
         else if (tabName === 'reports') title.textContent = 'Relatórios do Sistema';
@@ -959,8 +972,11 @@ function populateReportSelects() {
 
     // Preenche lista de membros (filtrando responsáveis)
     if (memberSelect) {
+        const selectablePeople = state.role === 'admin'
+            ? state.people.filter(p => p.unit !== 'Responsável')
+            : state.people.filter(p => Number(p.id) === Number(state.personId));
         memberSelect.innerHTML = '<option value="">Selecione um Membro</option>' +
-            state.people.filter(p => p.unit !== 'Responsável').map(p => `<option value="${p.id}">${escapeHTML(p.name)}</option>`).join('');
+            selectablePeople.map(p => `<option value="${p.id}">${escapeHTML(p.name)}</option>`).join('');
     }
 
     // Preenche lista de eventos
@@ -980,7 +996,7 @@ if (backToEventsBtn) {
     if (detailView) detailView.style.display = 'none';
 
     // Ajusta visibilidade de botões administrativos
-    const isAdmin = ['admin', 'secretário'].includes(state.role);
+    const isAdmin = state.role === 'admin';
     if (isAdmin) {
         const addEventBtn = document.getElementById('add-event-btn');
         const addPartBtn = document.getElementById('add-participants-btn');

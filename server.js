@@ -19,7 +19,7 @@ const { getMonthlyReceiptEmailHtml, getEventReceiptEmailHtml, getPaymentApproved
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 const { HttpError, moneyCents, moneyString, dateOnly, yearNumber, monthNumber, positiveId } = require('./lib/validation');
-const { authenticate, rateLimit, canAccessPerson, isStaff, newAccountHash } = require('./lib/security');
+const { authenticate, rateLimit, canAccessPerson, canAccessFinancialPerson, isStaff, newAccountHash } = require('./lib/security');
 const { findAvailableUsername } = require('./lib/usernames');
 const { prepareReceipt, registerReceiptRoutes } = require('./lib/receipts');
 const { migrate } = require('./lib/migrations');
@@ -889,7 +889,7 @@ app.post('/api/people/import', authenticateToken, upload.single('file'), async (
 
 // Busca lista de membros inadimplentes de mensalidade por mês e ano
 app.get('/api/payments/unpaid', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    if (req.user.role !== 'admin') return res.sendStatus(403);
 
     const month = parseInt(req.query.month) || (new Date().getMonth() + 1);
     const year = parseInt(req.query.year) || new Date().getFullYear();
@@ -919,30 +919,13 @@ app.get('/api/payments', authenticateToken, async (req, res) => {
     const targetYear = parseInt(year) || new Date().getFullYear();
 
     try {
-        // Admin e Secretário veem todos os pagamentos do ano selecionado
-        if (req.user.role === 'admin' || req.user.role === 'secretário') {
+        // Apenas administradores podem consultar pagamentos de todo o clube.
+        if (req.user.role === 'admin') {
             const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, updated_at, rejection_reason FROM payments WHERE year = $1', [targetYear]);
             return res.json(result.rows);
         }
 
-        // Responsável vê seus próprios pagamentos e os de seus filhos
-        if (req.user.role === 'responsible') {
-            if (!req.user.personId) return res.json([]);
-            const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
-            if (parentResult.rows.length === 0) return res.json([]);
-            const parentName = req.user.personId;
-
-            const result = await db.query(`
-        SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, updated_at, rejection_reason
-        FROM payments
-        WHERE (person_id = $1 OR person_id IN (
-            SELECT child_person_id FROM person_guardians WHERE guardian_person_id = $2
-        )) AND year = $3
-      `, [req.user.personId, parentName, targetYear]);
-            return res.json(result.rows);
-        }
-
-        // Membro vê apenas os seus próprios pagamentos
+        // Qualquer outro papel, inclusive secretário e responsável, vê somente o próprio registro.
         if (!req.user.personId) return res.json([]);
         const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, updated_at, rejection_reason FROM payments WHERE person_id = $1 AND year = $2', [req.user.personId, targetYear]);
         res.json(result.rows);
@@ -954,9 +937,8 @@ app.get('/api/payments', authenticateToken, async (req, res) => {
 
 // Busca detalhes de um pagamento específico
 app.get('/api/payments/detail/:id', authenticateToken, async (req, res) => {
-    if (!isStaff(req.user)) return res.sendStatus(403);
     try {
-        const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, updated_at, rejection_reason FROM payments WHERE id = $1', [req.params.id]);
+        const result = await db.query('SELECT id, person_id, month, year, amount, status, receipt_path, receipt_mime, created_at, updated_at, rejection_reason FROM payments WHERE id = $1 AND ($2::boolean OR person_id = $3)', [req.params.id, req.user.role === 'admin', req.user.personId || 0]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Pagamento não encontrado' });
         res.json(result.rows[0]);
     } catch {
@@ -1000,7 +982,7 @@ app.post('/api/payments/:id/approve', authenticateToken, async (req, res) => {
 
 // Rejeita um pagamento pendente com motivo (Admin/Secretário)
 app.post('/api/payments/:id/reject', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    if (req.user.role !== 'admin') return res.sendStatus(403);
     const { reason } = req.body || {};
 
     try {
@@ -1122,8 +1104,8 @@ app.get('/api/events', authenticateToken, async (req, res) => {
         let queryText = '';
         let params = [];
 
-        // Admin e Secretário veem estatísticas detalhadas por unidade
-        if (req.user.role === 'admin' || req.user.role === 'secretário') {
+        // Administrators can see club-wide events and participation statistics.
+        if (req.user.role === 'admin') {
             queryText = `
                 WITH participant_counts AS (
                     SELECT event_id, COUNT(*) as count
@@ -1150,63 +1132,12 @@ app.get('/api/events', authenticateToken, async (req, res) => {
                 ORDER BY e.date ASC
             `;
             params = [req.user.personId || 0];
-        } else if (req.user.role === 'responsible') {
-            // Responsável vê eventos em que ele ou seus filhos participam
-            queryText = `
-                WITH participant_counts AS (
-                    SELECT event_id, COUNT(*) as count
-                    FROM event_participants
-                    GROUP BY event_id
-                ),
-                unit_stats AS (
-                    SELECT uc.event_id, jsonb_object_agg(COALESCE(uc.unit, 'S/U'), uc.count) as unit_counts
-                    FROM (
-                        SELECT ep.event_id, p.unit, COUNT(*) as count
-                        FROM event_participants ep
-                        JOIN people p ON ep.person_id = p.id
-                        GROUP BY ep.event_id, p.unit
-                    ) uc
-                    GROUP BY uc.event_id
-                )
-                SELECT DISTINCT e.*,
-                       COALESCE(pc.count, 0) as total_participants,
-                       COALESCE(us.unit_counts, '{}'::jsonb) as unit_counts,
-                       TRUE as is_participant
-                FROM events e
-                LEFT JOIN participant_counts pc ON e.id = pc.event_id
-                LEFT JOIN unit_stats us ON e.id = us.event_id
-                JOIN event_participants ep ON e.id = ep.event_id
-                WHERE ep.person_id = $1 OR ep.person_id IN (
-                    SELECT child_person_id FROM person_guardians WHERE guardian_person_id = $1
-                )
-                ORDER BY e.date ASC
-            `;
-            params = [req.user.personId];
         } else {
-            // Membro vê apenas se está inscrito ou não no evento
+            // Non-admins only see events for their own person record, without club-wide participant statistics.
+            if (!req.user.personId) return res.json([]);
             queryText = `
-                WITH participant_counts AS (
-                    SELECT event_id, COUNT(*) as count
-                    FROM event_participants
-                    GROUP BY event_id
-                ),
-                unit_stats AS (
-                    SELECT uc.event_id, jsonb_object_agg(COALESCE(uc.unit, 'S/U'), uc.count) as unit_counts
-                    FROM (
-                        SELECT ep.event_id, p.unit, COUNT(*) as count
-                        FROM event_participants ep
-                        JOIN people p ON ep.person_id = p.id
-                        GROUP BY ep.event_id, p.unit
-                    ) uc
-                    GROUP BY uc.event_id
-                )
-                SELECT e.*,
-                       COALESCE(pc.count, 0) as total_participants,
-                       COALESCE(us.unit_counts, '{}'::jsonb) as unit_counts,
-                       TRUE as is_participant
+                SELECT e.*, TRUE as is_participant, 0 as total_participants, '{}'::jsonb as unit_counts
                 FROM events e
-                LEFT JOIN participant_counts pc ON e.id = pc.event_id
-                LEFT JOIN unit_stats us ON e.id = us.event_id
                 JOIN event_participants ep ON e.id = ep.event_id AND ep.person_id = $1
                 ORDER BY e.date ASC
             `;
@@ -1285,31 +1216,16 @@ app.get('/api/events/:id/details', authenticateToken, async (req, res) => {
         const event = eventResult.rows[0];
         if (!event) return res.status(404).json({ error: 'Evento não encontrado' });
 
-        // Membros e responsáveis só podem ver detalhes de eventos em que eles ou seus filhos estão inscritos
-        if (req.user.role !== 'admin' && req.user.role !== 'secretário') {
-            let isAllowed = false;
-            if (req.user.role === 'responsible') {
-                const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
-                if (parentResult.rows.length > 0) {
-                    const parentName = req.user.personId;
-                    const checkResult = await db.query(`
-                        SELECT 1 FROM event_participants ep
-                        WHERE ep.event_id = $1 AND (ep.person_id = $2 OR ep.person_id IN (
-                            SELECT child_person_id FROM person_guardians WHERE guardian_person_id = $3
-                        ))
-                    `, [id, req.user.personId, parentName]);
-                    if (checkResult.rows.length > 0) isAllowed = true;
-                }
-            } else {
-                const participantResult = await db.query('SELECT 1 FROM event_participants WHERE event_id = $1 AND person_id = $2', [id, req.user.personId]);
-                if (participantResult.rows.length > 0) isAllowed = true;
-            }
-            if (!isAllowed) return res.sendStatus(403);
+        const isAdmin = req.user.role === 'admin';
+        if (!isAdmin) {
+            if (!req.user.personId) return res.sendStatus(403);
+            const participantResult = await db.query('SELECT 1 FROM event_participants WHERE event_id = $1 AND person_id = $2', [id, req.user.personId]);
+            if (!participantResult.rowCount) return res.sendStatus(403);
         }
 
         let participants, payments;
-        if (req.user.role === 'admin' || req.user.role === 'secretário') {
-            // Admin vê todos os inscritos e todos os pagamentos realizados para este evento
+        if (isAdmin) {
+            // Admin sees all participants and event payments.
             const pResult = await db.query(`
                 SELECT p.id, p.name, p.unit
                 FROM people p
@@ -1320,30 +1236,8 @@ app.get('/api/events/:id/details', authenticateToken, async (req, res) => {
             participants = pResult.rows;
             const payResult = await db.query('SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, updated_at, rejection_reason FROM event_payments WHERE event_id = $1', [id]);
             payments = payResult.rows;
-        } else if (req.user.role === 'responsible') {
-            // Responsável vê a si e a seus filhos inscritos, com seus respectivos pagamentos
-            const parentResult = await db.query('SELECT name FROM people WHERE id = $1', [req.user.personId]);
-            const parentName = req.user.personId;
-
-            const pResult = await db.query(`
-                SELECT p.id, p.name, p.unit
-                FROM people p
-                JOIN event_participants ep ON p.id = ep.person_id
-                WHERE ep.event_id = $1 AND (p.id = $2 OR p.id IN (SELECT child_person_id FROM person_guardians WHERE guardian_person_id = $3))
-                ORDER BY p.name ASC
-            `, [id, req.user.personId, parentName]);
-            participants = pResult.rows;
-
-            const payResult = await db.query(`
-                SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, updated_at, rejection_reason
-                FROM event_payments
-                WHERE event_id = $1 AND (person_id = $2 OR person_id IN (
-                    SELECT child_person_id FROM person_guardians WHERE guardian_person_id = $3
-                ))
-            `, [id, req.user.personId, parentName]);
-            payments = payResult.rows;
         } else {
-            // Membro vê apenas seus próprios dados e pagamentos vinculados ao evento
+            // Every non-admin sees only their own registration and payment.
             const pResult = await db.query(`
                 SELECT p.id, p.name, p.unit
                 FROM people p
@@ -1380,12 +1274,10 @@ app.get('/api/event-payments', authenticateToken, async (req, res, next) => {
     try {
         const params = [], conditions = [];
         const filter = (sql, value) => { params.push(value); conditions.push(sql + '$' + params.length); };
-        if (!isStaff(req.user)) {
+        if (req.user.role !== 'admin') {
             if (!req.user.personId) return res.json([]);
             params.push(req.user.personId);
-            conditions.push(req.user.role === 'responsible'
-                ? '(ep.person_id = $1 OR ep.person_id IN (SELECT child_person_id FROM person_guardians WHERE guardian_person_id = $1))'
-                : 'ep.person_id = $1');
+            conditions.push('ep.person_id = $1');
         }
         if (req.query.event_id) filter('ep.event_id = ', positiveId(req.query.event_id));
         if (req.query.month) filter('ep.month = ', monthNumber(req.query.month));
@@ -1398,9 +1290,8 @@ app.get('/api/event-payments', authenticateToken, async (req, res, next) => {
 
 // Busca detalhes de um pagamento de evento específico
 app.get('/api/event-payments/detail/:id', authenticateToken, async (req, res) => {
-    if (!isStaff(req.user)) return res.sendStatus(403);
     try {
-        const result = await db.query('SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, updated_at, rejection_reason FROM event_payments WHERE id = $1', [req.params.id]);
+        const result = await db.query('SELECT id, event_id, person_id, amount, month, year, status, receipt_path, receipt_mime, updated_at, rejection_reason FROM event_payments WHERE id = $1 AND ($2::boolean OR person_id = $3)', [req.params.id, req.user.role === 'admin', req.user.personId || 0]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Pagamento de evento não encontrado' });
         res.json(result.rows[0]);
     } catch {
@@ -1414,7 +1305,7 @@ app.get('/api/event-payments/detail/:id', authenticateToken, async (req, res) =>
 
 // Busca histórico de vendas
 app.get('/api/sales', authenticateToken, async (req, res) => {
-    if (!isStaff(req.user)) return res.sendStatus(403);
+    if (req.user.role !== 'admin') return res.sendStatus(403);
     const { year } = req.query;
     try {
         let sql = 'SELECT id, event_name, amount, date, description, receipt_path, receipt_mime, created_at FROM sales';
@@ -1433,7 +1324,7 @@ app.get('/api/sales', authenticateToken, async (req, res) => {
 
 // Registra nova venda
 app.post('/api/sales', authenticateToken, blockSabbathUploads, upload.single('receipt'), async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    if (req.user.role !== 'admin') return res.sendStatus(403);
     const { event_name, amount, date, description } = req.body || {};
 
     if (!event_name || !amount || !date) {
@@ -1476,7 +1367,7 @@ app.post('/api/sales', authenticateToken, blockSabbathUploads, upload.single('re
 
 // Exclui uma venda (Admin)
 app.delete('/api/sales/:id', authenticateToken, async (req, res) => {
-    if (!isStaff(req.user)) return res.sendStatus(403);
+    if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
         await db.query('DELETE FROM sales WHERE id = $1', [req.params.id]);
         res.json({ success: true });
@@ -1525,7 +1416,7 @@ app.post('/api/event-payments/:id/approve', authenticateToken, async (req, res) 
 
 // Rejeita pagamento de evento (Admin/Secretário)
 app.post('/api/event-payments/:id/reject', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    if (req.user.role !== 'admin') return res.sendStatus(403);
     const { reason } = req.body || {};
     try {
         const paymentResult = await db.query('SELECT ep.id, ep.event_id, ep.person_id, ep.submitted_by_user_id, ep.month, ep.year, ep.amount, ep.status, e.name as event_name, pe.name as person_name FROM event_payments ep JOIN events e ON ep.event_id = e.id JOIN people pe ON ep.person_id = pe.id WHERE ep.id = $1', [req.params.id]);
@@ -1568,7 +1459,7 @@ app.delete('/api/event-payments/:id', authenticateToken, async (req, res) => {
 
 // Lista todas as despesas (Apenas Admin/Secretário)
 app.get('/api/financial-summary', authenticateToken, async (req, res) => {
-    if (!isStaff(req.user)) return res.sendStatus(403);
+    if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
         const year = req.query.year ? yearNumber(req.query.year) : new Date().getFullYear();
         const result = await db.query(ledgerQuery);
@@ -1581,7 +1472,7 @@ app.get('/api/financial-summary', authenticateToken, async (req, res) => {
 });
 
 app.get('/api/outflows', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
         const year = req.query.year ? yearNumber(req.query.year) : null;
         const result = await db.query('SELECT id, amount, category, date, description, receipt_path, receipt_mime, created_at FROM outflows WHERE ($1::integer IS NULL OR EXTRACT(YEAR FROM date) = $1) ORDER BY date DESC', [year]);
@@ -1594,7 +1485,7 @@ app.get('/api/outflows', authenticateToken, async (req, res) => {
 // Registra nova despesa
 app.post('/api/outflows', authenticateToken, blockSabbathUploads, upload.single('receipt'), async (req, res) => {
     try {
-        if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+        if (req.user.role !== 'admin') return res.sendStatus(403);
         const { amount, category, date, description } = req.body;
 
         if (!amount || !category || !date) {
@@ -1637,7 +1528,7 @@ app.post('/api/outflows', authenticateToken, blockSabbathUploads, upload.single(
 
 // Exclui uma despesa (Admin/Secretário)
 app.delete('/api/outflows/:id', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'secretário') return res.sendStatus(403);
+    if (req.user.role !== 'admin') return res.sendStatus(403);
     try {
         await db.query('DELETE FROM outflows WHERE id = $1', [req.params.id]);
         logAction(req, 'DELETE_OUTFLOW', { id: req.params.id });

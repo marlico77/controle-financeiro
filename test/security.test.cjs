@@ -6,7 +6,7 @@ const vm = require('node:vm');
 const jwt = require('jsonwebtoken');
 const sharp = require('sharp');
 const { paymentBatch, moneyCents, dateOnly } = require('../lib/validation');
-const { authenticate, canAccessPerson, rateLimit } = require('../lib/security');
+const { authenticate, canAccessPerson, canAccessFinancialPerson, rateLimit } = require('../lib/security');
 const { prepareReceipt, registerReceiptRoutes } = require('../lib/receipts');
 const root = path.join(__dirname, '..');
 function response() {
@@ -59,6 +59,14 @@ test('guardian access requires a persisted ID link, never a matching name',async
     assert.deepEqual(args,[10,8]);
     assert.equal(await canAccessPerson({query:async()=>({rowCount:1})},{role:'responsible',personId:8},10),true);
 });
+test('financial person access is admin-wide and every non-admin is limited to self',()=>{
+    for (const role of ['member','secretário','responsible','social_midia']) {
+        assert.equal(canAccessFinancialPerson({role,personId:7},7),true,role+' can read own finance');
+        assert.equal(canAccessFinancialPerson({role,personId:7},8),false,role+' cannot read another person');
+        assert.equal(canAccessFinancialPerson({role,personId:null},7),false,role+' without person link is denied');
+    }
+    assert.equal(canAccessFinancialPerson({role:'admin'},7),true);
+});
 test('receipt ownership is checked before storage; third party is refused',async()=>{
     let downloaded=false;
     const db={query:async()=>({rows:[{person_id:2,receipt_mime:'application/pdf'}],rowCount:1})};
@@ -76,11 +84,17 @@ test('unregistered specialty image is not public',async()=>{
     const {error}=await run('get','/api/public-images/:filename',{params:{filename:'especialidade-test.webp'}});
     assert.equal(error.status,404);
 });
-test('database fallback opens a PDF receipt inline for staff with no-store',async()=>{
+test('database fallback opens a PDF receipt inline for admins with no-store',async()=>{
     const db={query:async()=>({rows:[{person_id:null,source:'sale',receipt_content:Buffer.from('%PDF-1.7'),receipt_mime:'application/pdf'}],rowCount:1})};
     const run=harness(registerReceiptRoutes,{db,supabase:emptyStorage});
-    const {res,error}=await run('get','/api/files/receipt/:filename',{params:{filename:'sale.pdf'},user:{role:'secretário'}});
+    const {res,error}=await run('get','/api/files/receipt/:filename',{params:{filename:'sale.pdf'},user:{role:'admin'}});
     assert.equal(error,undefined);assert.equal(res.body.toString(),'%PDF-1.7');assert.equal(res.headers['Content-Type'],'application/pdf');assert.match(res.headers['Content-Disposition'],/^inline/);assert.equal(res.headers['Cache-Control'],'private, no-store');
+});
+test('secretary cannot read a club-wide receipt',async()=>{
+    const db={query:async()=>({rows:[{person_id:null,source:'sale',receipt_content:Buffer.from('%PDF-1.7'),receipt_mime:'application/pdf'}],rowCount:1})};
+    const run=harness(registerReceiptRoutes,{db,supabase:emptyStorage});
+    const {error}=await run('get','/api/files/receipt/:filename',{params:{filename:'sale.pdf'},user:{role:'secretário',personId:7}});
+    assert.equal(error.status,403);
 });
 test('storage receipt images open inline for their owner',async()=>{
     const image=Buffer.from('image bytes');
@@ -265,6 +279,12 @@ test('secretary payment stays pending and cannot overwrite an approved payment',
     const blocked=await harness(require('../routes/securePayments'),approved.deps)('post','/api/payments',{body:{person_id:1,year:2026,month:1,amount:'20.00'},user});
     assert.equal(blocked.error.status,409);assert.equal(approved.writes.length,0);
 });
+test('secretary cannot submit a payment for another member',async()=>{
+    const {deps,writes}=paymentDeps();
+    const run=harness(require('../routes/securePayments'),deps);
+    const {error}=await run('post','/api/payments',{body:{person_id:2,year:2026,month:1,amount:'20.00'},file:{buffer:Buffer.from('%PDF-1.7')},user:{role:'secretário',personId:1}});
+    assert.equal(error.status,403);assert.equal(writes.length,0);
+});
 test('secretary event payment stays pending; administrator payment is approved',async()=>{
     for(const [role,expected] of [['secretário','pending'],['admin','approved']]){
         const {deps,writes}=paymentDeps(role==='admin'?null:'pending');
@@ -371,7 +391,7 @@ test('event payment reports a concurrent loss of registration as a conflict',asy
 });
 test('report renders malicious member names as text',async()=>{
     const elements=new Map();const document={getElementById(id){if(!elements.has(id))elements.set(id,{value:'1',style:{},remove(){}});return elements.get(id);}};
-    const context={document,state:{currentYear:2026,people:[{id:1,name:'<img src=x onerror="alert(1)">',unit:'<b>Injected</b>'}],payments:[]},console,showStatus(){},window:{location:{origin:'http://localhost'}},localStorage:{getItem(){}},sessionStorage:{getItem(){}}};
+    const context={document,state:{role:'admin',currentYear:2026,people:[{id:1,name:'<img src=x onerror="alert(1)">',unit:'<b>Injected</b>'}],payments:[]},console,showStatus(){},window:{location:{origin:'http://localhost'}},localStorage:{getItem(){}},sessionStorage:{getItem(){}}};
     vm.runInNewContext(fs.readFileSync(path.join(root,'public/js/state.js'),'utf8').split('// Gerenciamento de Estado Global')[0],context);
     const reports=fs.readFileSync(path.join(root,'public/js/reports.js'),'utf8');
     vm.runInNewContext(reports.slice(reports.indexOf('async function generateMemberReport()'),reports.indexOf('window.generateMemberReport')),context);

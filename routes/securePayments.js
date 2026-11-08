@@ -1,5 +1,5 @@
 const { HttpError, positiveId, paymentBatch, moneyCents, moneyString, monthNumber, yearNumber } = require('../lib/validation');
-const { canAccessPerson, isStaff } = require('../lib/security');
+const { canAccessFinancialPerson, isStaff } = require('../lib/security');
 const { storeReceipt } = require('../lib/receipts');
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 module.exports = function registerPayments(app, deps) {
@@ -73,7 +73,7 @@ module.exports = function registerPayments(app, deps) {
     app.post('/api/payments', authenticateToken, blockSabbathUploads, upload.single('receipt'), async (req, res, next) => {
         try {
             const batch = paymentBatch(req.body || {});
-            if (!await canAccessPerson(db, req.user, batch.personId)) throw new HttpError(403, 'Pagamento não autorizado para este membro.');
+            if (!canAccessFinancialPerson(req.user, batch.personId)) throw new HttpError(403, 'Pagamento não autorizado para este membro.');
             if (!isStaff(req.user) && !req.file) throw new HttpError(400, 'Envie um comprovante para conferência.');
             const receipt = await storeReceipt(req.file, sharp, supabase);
             res.json(await persist(req, 'payments', null, batch, receipt));
@@ -84,7 +84,7 @@ module.exports = function registerPayments(app, deps) {
             const body = req.body || {};
             const personId = positiveId(body.person_id || req.user.personId);
             const eventId = positiveId(body.event_id);
-            if (!await canAccessPerson(db, req.user, personId)) throw new HttpError(403, 'Pagamento não autorizado para este membro.');
+            if (!canAccessFinancialPerson(req.user, personId)) throw new HttpError(403, 'Pagamento não autorizado para este membro.');
             const result = await db.query('SELECT e.* FROM events e JOIN event_participants ep ON ep.event_id = e.id WHERE e.id = $1 AND ep.person_id = $2', [eventId, personId]);
             const event = result.rows[0];
             if (!event) throw new HttpError(400, 'Membro não inscrito neste evento.');

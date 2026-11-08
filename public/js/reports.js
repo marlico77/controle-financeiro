@@ -2,6 +2,7 @@
 // Gera o relatório geral de arrecadação do ano
 async function generateGeneralReport() {
     try {
+        if (state.role !== 'admin') return showStatus('Apenas administradores podem gerar o relatório geral.', 'error');
         const calFilters = document.getElementById('calendar-export-filters');
         if (calFilters) calFilters.style.display = 'none';
         const styleEl = document.getElementById('print-orientation-style');
@@ -88,6 +89,7 @@ async function generateMemberReport() {
         if (!memberId) return showStatus('Selecione um membro primeiro.', 'info'); // Verifica se um membro foi escolhido
 
         const people = state.people || []; // Lista de pessoas no estado global
+        if (state.role !== 'admin' && Number(memberId) !== Number(state.personId)) return showStatus('Você só pode consultar seus próprios pagamentos.', 'error');
         const member = people.find(p => p.id == memberId); // Procura o objeto do membro pelo ID
         if (!member) return showStatus('Membro não encontrado.', 'error'); // Caso não encontre, exibe erro
 
@@ -166,7 +168,9 @@ async function generateEventReport() {
 
     try {
         const data = await apiFetch(`/api/events/${eventId}/details`);
-        const { event, participants, payments } = data; // Desestrutura a resposta
+        const { event } = data;
+        const participants = state.role === 'admin' ? (data.participants || []) : (data.participants || []).filter(person => Number(person.id) === Number(state.personId));
+        const payments = state.role === 'admin' ? (data.payments || []) : (data.payments || []).filter(payment => Number(payment.person_id) === Number(state.personId));
 
         if (filterType === 'individual') {
             const participantId = document.getElementById('report-event-member-select').value;
@@ -175,7 +179,8 @@ async function generateEventReport() {
             const participant = participants.find(p => p.id == participantId);
             if (!participant) return showStatus('Participante não encontrado no evento.', 'error');
 
-            const personPayments = (payments || []).filter(pay => pay.person_id == participantId);
+            if (state.role !== 'admin' && Number(participantId) !== Number(state.personId)) return showStatus('Você só pode consultar seus próprios pagamentos.', 'error');
+            const personPayments = payments.filter(pay => pay.person_id == participantId);
             const totalPaid = personPayments.filter(p => p.status === 'approved').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
             
             let contentHtml = '';
@@ -494,7 +499,9 @@ async function updateEventMembersSelect() {
     
     try {
         const data = await apiFetch(`/api/events/${eventId}/details`);
-        const { participants } = data;
+        const participants = state.role === 'admin'
+            ? (data.participants || [])
+            : (data.participants || []).filter(person => Number(person.id) === Number(state.personId));
         
         eventMemberSelect.innerHTML = '<option value="">Selecione um Participante</option>' +
             (participants || []).map(p => `<option value="${p.id}">${escapeHTML(p.name)}</option>`).join('');

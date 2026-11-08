@@ -2,7 +2,8 @@
 // Busca a lista de eventos cadastrados no sistema
 async function fetchEventsData() {
     try {
-        state.events = await apiFetch('/api/events');
+        const events = await apiFetch('/api/events');
+        state.events = state.role === 'admin' ? events : events.filter(event => event.is_participant === true);
         renderEvents(); // Atualiza a visualização em cards
     } catch (err) {
         console.error('Error fetching events:', err);
@@ -16,17 +17,17 @@ const renderEvents = () => {
     if (!list) return;
 
     // Administração vê todos; membros veem seus eventos.
-    const eventsToRender = ['admin', 'secretário'].includes(state.role) ? state.events : state.events.filter(e => e.is_participant);
+    const eventsToRender = state.role === 'admin' ? state.events : state.events.filter(e => e.is_participant);
 
     // Gera o HTML para cada cartão de evento
     // Gera o HTML para cada cartão de evento
     list.innerHTML = eventsToRender.map(event => {
-        const canViewDetails = ['admin', 'secretário'].includes(state.role);
+        const canViewDetails = state.role === 'admin';
         return `
             <div class="glass-card event-card animate-fade-in" style="padding: 1.5rem; margin-bottom: 1rem; cursor: pointer;" onclick="openEventDetail(${event.id})">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <h4 style="margin: 0; color: var(--accent-color);">${escapeHTML(event.name)}</h4>
-                    ${['admin', 'secretário'].includes(state.role) ? `<button class="btn-text" onclick="event.stopPropagation(); deleteEvent(${event.id})" style="padding: 0; min-height: auto; display: flex; align-items: center; justify-content: center; color: var(--text-dim); transition: color 0.2s;">
+                    ${state.role === 'admin' ? `<button class="btn-text" onclick="event.stopPropagation(); deleteEvent(${event.id})" style="padding: 0; min-height: auto; display: flex; align-items: center; justify-content: center; color: var(--text-dim); transition: color 0.2s;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="18" height="18" fill="currentColor">
                             <path d="M262.2 48C248.9 48 236.9 56.3 232.2 68.8L216 112L120 112C106.7 112 96 122.7 96 136C96 149.3 106.7 160 120 160L520 160C533.3 160 544 149.3 544 136C544 122.7 533.3 112 520 112L424 112L407.8 68.8C403.1 56.3 391.2 48 377.8 48L262.2 48zM128 208L128 512C128 547.3 156.7 576 192 576L448 576C483.3 576 512 547.3 512 512L512 208L464 208L464 512C464 520.8 456.8 528 448 528L192 528C183.2 528 176 520.8 176 512L176 208L128 208zM288 280C288 266.7 277.3 256 264 256C250.7 256 240 266.7 280L240 456C240 469.3 250.7 480 264 480C277.3 480 288 469.3 288 456L280zM400 280C400 266.7 389.3 256 376 256C362.7 256 352 266.7 352 280L352 456C352 469.3 362.7 480 376 480C389.3 480 400 469.3 400 456L400 280z"/>
                         </svg>
@@ -66,6 +67,10 @@ const openEventDetail = async (eventId, preserveUI = false) => {
     try {
         // Busca os detalhes via API
         const data = await apiFetch(`/api/events/${eventId}/details`);
+        if (state.role !== 'admin') {
+            data.participants = (data.participants || []).filter(person => Number(person.id) === Number(state.personId));
+            data.payments = (data.payments || []).filter(payment => Number(payment.person_id) === Number(state.personId));
+        }
         if (!data.event) throw new Error('Evento não encontrado.');
 
         // Salva os dados no estado global para acesso por outras funções
@@ -89,7 +94,7 @@ const openEventDetail = async (eventId, preserveUI = false) => {
             const addEventBtn = document.getElementById('add-event-btn');
             const addPartBtn = document.getElementById('add-participants-btn');
             if (addEventBtn) addEventBtn.style.display = 'none';
-            if (addPartBtn) addPartBtn.style.display = ['admin', 'secretário'].includes(state.role) ? 'block' : 'none';
+            if (addPartBtn) addPartBtn.style.display = state.role === 'admin' ? 'block' : 'none';
 
             // Garante que a tabela detalhada membro a membro comece escondida
             const detailContainer = document.getElementById('event-details-table-container');
@@ -158,11 +163,9 @@ let renderEventDetailGrid = (participants, payments) => {
     });
 
     // Define quais participantes renderizar: Admin vê todos, responsável vê apenas os filhos, membro/secretário vê apenas a si mesmo
-    const participantsToRender = ['admin', 'secretário'].includes(state.role)
+    const participantsToRender = state.role === 'admin'
         ? participants
-        : (state.role === 'responsible'
-            ? participants.filter(p => p.id != state.personId)
-            : participants.filter(p => p.id == state.personId));
+        : participants.filter(p => Number(p.id) === Number(state.personId));
 
     const rows = [];
     participantsToRender.forEach(p => {
@@ -240,7 +243,7 @@ let renderEventDetailGrid = (participants, payments) => {
 // Abre o modal de pagamento de evento a partir da grade detalhada
 window.openEventPaymentModalFromGridIndex = (personId, month, paymentIndex = -1) => {
     // Segurança: Somente o próprio membro, responsável ou Admins/Secretários podem registrar pagamentos
-    if (state.role !== 'admin' && state.role !== 'secretário' && state.role !== 'responsible' && parseInt(personId) !== parseInt(state.personId)) return;
+    if (state.role !== 'admin' && parseInt(personId) !== parseInt(state.personId)) return;
 
     // Recupera o pagamento do cache pelo index se ele existir
     const payment = paymentIndex >= 0 ? window._tempEventPayments[paymentIndex] : null;
@@ -459,7 +462,7 @@ const openEventPaymentModal = (eventId, eventName, payment = null) => {
             saveBtn.textContent = 'Atualizar Comprovante';
 
             // Ações extras exclusivas para Administrador em pagamentos pendentes
-            if (['admin', 'secretário'].includes(state.role)) {
+            if (state.role === 'admin') {
                 saveBtn.style.display = 'none'; // Esconde botão padrão de salvar do usuário
                 adminActions.style.display = 'flex'; // Mostra Aprovar/Reprovar
                 document.getElementById('ep-approve-btn').style.display = state.role === 'admin' ? '' : 'none';

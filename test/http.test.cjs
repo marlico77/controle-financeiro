@@ -124,7 +124,7 @@ test('HTTP event approval requires the payer to remain registered',async()=>{
         assert.match(approvalSql,/EXISTS \(SELECT 1 FROM event_participants/);
     } finally { await new Promise(resolve=>server.close(resolve));db.query=originalQuery;role='member'; }
 });
-test('HTTP family payment query uses immutable guardian IDs and includes single events in annual filter',async()=>{
+test('HTTP responsible event payments are restricted to own person ID and annual filter',async()=>{
     role='responsible';
     const server=app.listen(0,'127.0.0.1');
     await new Promise(resolve=>server.once('listening',resolve));
@@ -133,7 +133,27 @@ test('HTTP family payment query uses immutable guardian IDs and includes single 
         const res=await fetch('http://127.0.0.1:'+server.address().port+'/api/event-payments?year=2026',{headers:{Authorization:'Bearer '+token}});
         assert.equal(res.status,200);
         const q=queries.find(q=>q.sql.startsWith('SELECT ep.id')&&q.sql.includes('COALESCE(ep.year'));
-        assert.ok(q.sql.includes('person_guardians'));assert.deepEqual(q.params,[1,2026]);
+        assert.doesNotMatch(q.sql,/person_guardians/);assert.match(q.sql,/ep\.person_id = \$1/);assert.deepEqual(q.params,[1,2026]);
+    } finally { await new Promise(resolve=>server.close(resolve));role='member'; }
+});
+test('HTTP secretary sees only own financial records and cannot read the general summary',async()=>{
+    role='secretário';
+    const server=app.listen(0,'127.0.0.1');
+    await new Promise(resolve=>server.once('listening',resolve));
+    try {
+        const token=jwt.sign({id:1,sessionVersion:1},process.env.JWT_SECRET);
+        const base='http://127.0.0.1:'+server.address().port;
+        const headers={Authorization:'Bearer '+token};
+        const summary=await fetch(base+'/api/financial-summary?year=2026',{headers});
+        assert.equal(summary.status,403);
+        const monthly=await fetch(base+'/api/payments?year=2026',{headers});
+        assert.equal(monthly.status,200);
+        const monthlyQuery=queries.findLast(q=>q.sql.includes('FROM payments WHERE person_id = $1 AND year = $2'));
+        assert.deepEqual(monthlyQuery.params,[1,2026]);
+        const events=await fetch(base+'/api/event-payments?year=2026',{headers});
+        assert.equal(events.status,200);
+        const eventQuery=queries.findLast(q=>q.sql.startsWith('SELECT ep.id')&&q.sql.includes('COALESCE(ep.year'));
+        assert.doesNotMatch(eventQuery.sql,/person_guardians/);assert.match(eventQuery.sql,/ep\.person_id = \$1/);assert.deepEqual(eventQuery.params,[1,2026]);
     } finally { await new Promise(resolve=>server.close(resolve));role='member'; }
 });
 test('staff financial summary includes approved receipts regardless of reference year',async()=>{

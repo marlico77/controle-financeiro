@@ -80,7 +80,7 @@ const updateDashboardStats = () => {
 
     // Os demais painéis usam o ano de referência. O resumo financeiro usa a data
     // em que o pagamento foi aprovado, inclusive para eventos de anos futuros.
-    if (['admin', 'secretário'].includes(state.role) && state.financialSummary) {
+    if (state.role === 'admin' && state.financialSummary) {
         const cash = state.financialSummary;
         totalCash = cash.balanceCents / 100;
         direcaoTotal = cash.directionCents / 100;
@@ -92,7 +92,7 @@ const updateDashboardStats = () => {
     }
 
     // Atualiza os elementos visuais do Dashboard (se for Admin)
-    if (['admin', 'secretário'].includes(state.role)) {
+    if (state.role === 'admin') {
         const totalCashElem = document.getElementById('stat-total-cash');
         if (totalCashElem) totalCashElem.textContent = `R$ ${totalCash.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
         if (totalCashElem?.previousElementSibling) totalCashElem.previousElementSibling.textContent = 'Saldo em Caixa (geral)';
@@ -130,11 +130,9 @@ const updateDashboardStats = () => {
         );
     } else {
         // Estatísticas simplificadas para membros comuns, secretários e responsáveis (painel pessoal/familiar)
-        const myPayments = (state.role === 'responsible')
-            ? state.payments.filter(p => p.person_id != state.personId && p.status === 'approved')
-            : state.payments.filter(p => p.person_id == state.personId && p.status === 'approved');
+        const myPayments = state.payments.filter(p => Number(p.person_id) === Number(state.personId) && p.status === 'approved');
             
-        const familyPeopleCount = (state.role === 'responsible') ? state.people.filter(p => p.id != state.personId).length : 1;
+        const familyPeopleCount = 1;
         const paidMonths = myPayments.length;
         const pendingMonths = (familyPeopleCount * 12) - paidMonths;
         const myTotalCash = myPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
@@ -144,9 +142,7 @@ const updateDashboardStats = () => {
         // Processa pagamentos de eventos do membro/família para exibir no card correspondente
         let myEventsTotal = 0;
         if (state.eventPayments) {
-            const myEventPayments = (state.role === 'responsible')
-                ? state.eventPayments.filter(p => p.person_id != state.personId && p.status === 'approved')
-                : state.eventPayments.filter(p => p.person_id == state.personId && p.status === 'approved');
+            const myEventPayments = state.eventPayments.filter(p => Number(p.person_id) === Number(state.personId) && p.status === 'approved');
             myEventsTotal = myEventPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
         }
         const eventosStat = document.getElementById('stat-eventos');
@@ -173,11 +169,9 @@ const renderEventDashboard = (participants, payments) => {
     participants.forEach(p => participantsMap.set(p.id, p));
 
     // Processa pagamentos apenas deste evento e para o usuário logado/família se não for Admin
-    const paymentsToProcess = ['admin', 'secretário'].includes(state.role)
+    const paymentsToProcess = state.role === 'admin'
         ? payments
-        : (state.role === 'responsible'
-            ? payments.filter(p => p.person_id != state.personId)
-            : payments.filter(p => p.person_id == state.personId));
+        : (payments.filter(p => Number(p.person_id) === Number(state.personId)));
     paymentsToProcess.forEach(p => {
         if (p.status !== 'approved') return;
         const amount = parseFloat(p.amount);
@@ -212,7 +206,7 @@ const renderEventDashboard = (participants, payments) => {
         const totalLabel = totalStat.previousElementSibling;
         const pieChartContainer = document.getElementById('evPieChart')?.closest('.chart-container');
         
-        if (['admin', 'secretário'].includes(state.role)) {
+        if (state.role === 'admin') {
             if (direcaoCard) direcaoCard.style.display = 'block';
             if (desbravaCard) desbravaCard.style.display = 'block';
             if (totalLabel) totalLabel.textContent = 'Arrecadação do Evento';
@@ -250,11 +244,9 @@ const renderMensalidadeDashboard = () => {
     const peopleMap = new Map();
     state.people.forEach(p => peopleMap.set(p.id, p));
 
-    const paymentsToProcess = ['admin', 'secretário'].includes(state.role)
+    const paymentsToProcess = state.role === 'admin'
         ? state.payments
-        : (state.role === 'responsible'
-            ? state.payments.filter(p => p.person_id != state.personId)
-            : state.payments.filter(p => p.person_id == state.personId));
+        : state.payments.filter(p => Number(p.person_id) === Number(state.personId));
     paymentsToProcess.forEach(p => {
         if (p.status !== 'approved') return;
         const amount = parseFloat(p.amount);
@@ -502,7 +494,7 @@ async function fetchOutflows() {
 // Renderiza a grade de mensalidades (quem pagou o quê em cada mês)
 function renderDashboard() {
     const dashboardSources = ['people', 'payments', 'events', 'eventPayments'];
-    if (['admin', 'secret\u00e1rio'].includes(state.role)) dashboardSources.push('outflows', 'sales', 'financialSummary');
+    if (state.role === 'admin') dashboardSources.push('outflows', 'sales', 'financialSummary');
     const unavailable = dashboardSources.filter(key => state.dataLoadErrors?.[key]);
     if (unavailable.length) {
         ['stat-total-cash', 'stat-direcao', 'stat-desbravadores', 'stat-eventos', 'stat-total-outflows'].forEach(id => {
@@ -530,11 +522,9 @@ function renderDashboard() {
     });
 
     // Define quais pessoas renderizar: Admin vê todos (exceto responsáveis), responsável vê apenas os filhos, membro/secretário vê apenas a si mesmo
-    const peopleToRender = ['admin', 'secretário'].includes(state.role)
+    const peopleToRender = state.role === 'admin'
         ? state.people.filter(p => p.unit !== 'Responsável')
-        : (state.role === 'responsible'
-            ? state.people.filter(p => p.id != state.personId)
-            : state.people.filter(p => p.id == state.personId));
+        : state.people.filter(p => Number(p.id) === Number(state.personId));
 
     // Pré-processa os dados dos membros com status de pagamento e totais
     const processedPeople = peopleToRender.map(person => {
@@ -609,7 +599,7 @@ function renderDashboard() {
 
             // Ao clicar na célula, abre o modal de pagamento se tiver permissão
             td.onclick = () => {
-                const canEdit = ['admin', 'secretário'].includes(state.role) || state.role === 'responsible' || (state.personId && person.id == state.personId);
+                const canEdit = state.role === 'admin' || state.role === 'responsible' || (state.personId && person.id == state.personId);
                 if (canEdit) {
                     openPaymentModal(person, m, payment);
                 }
@@ -783,7 +773,7 @@ fetch('/api/time')
     .catch(err => console.error('Erro ao sincronizar horário:', err));
 
 const isSabbathBlocked = () => {
-    if (['admin', 'secretário'].includes(state.role)) return false;
+    if (['admin', 'secret\u00e1rio'].includes(state.role)) return false;
     const now = new Date(Date.now() + serverTimeOffset);
     const formatter = new Intl.DateTimeFormat('en-US', {
         timeZone: officialTimezone,
