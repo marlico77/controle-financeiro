@@ -8,7 +8,7 @@ The read-only PostgreSQL snapshot contained 27 public tables, 234 columns, 55 co
 
 ## Verified results
 
-- All 27 tables and 1,597 rows were imported. An aggregate query reported 27 tables and 1,597 total rows. Each of the 25 per-table counts visible in phpMyAdmin matched the snapshot manifest; the compact summary covered all 27.
+- The initial import had 27 tables and 1,597 rows. A refreshed read-only snapshot corrected timestamp-without-timezone serialization and was reimported; an aggregate MariaDB query reported 1,595 rows across the same 27 tables. The source changed between snapshots while production remained active.
 - All seven populated financial groups matched PostgreSQL and the JSONL snapshot by row count and integer cents: payments for 2026 (approved and pending), event payments for NULL/2026/2027 (approved) and 2027 (pending), and 2026 outflows. Sales was empty in both databases.
 - Receipt blobs matched byte count and SHA-256 multiset: `payments` 28 receipts / 2,165,283 bytes; `event_payments` 27 / 1,633,925 bytes; `outflows` and `sales` had none. The clone multiset hashes matched the source snapshot for all four tables.
 - All 19 foreign-key relationships had zero orphan rows in the source snapshot. Data was replayed in parent-before-child order.
@@ -26,9 +26,9 @@ The PostgreSQL `event_payments_positive` constraint is marked `NOT VALID`, and t
 - PostgreSQL `JSONB` maps to MariaDB `JSON` (validated text storage). Object representation, comparison and indexing do not have PostgreSQL JSONB semantics. The unique subscription key uses a generated SHA-256 column to avoid indexing a JSON document directly.
 - Partial/expression indexes were represented with generated columns or MariaDB nullable unique-key semantics. The username/email normalization expressions must still be tested for Unicode and collation parity.
 - PostgreSQL UUID defaults (`gen_random_uuid()`) were not translated into MariaDB defaults. The future adapter must generate UUIDs in application code or define and test a MariaDB-specific default.
-- `BYTEA` values are `LONGBLOB` and their inline content was verified. Separately exported file-storage objects (172 files, 6,420,093 bytes) have not been copied to the ValueHost test filesystem.
+- `BYTEA` values are `LONGBLOB` and their inline content was verified. Separately exported file-storage objects (172 files, 6,420,093 bytes) were copied to the private ValueHost test filesystem; two hosted receipt downloads returned HTTP 200.
 - PostgreSQL RLS has 48 policies on 27 tables. MariaDB has no equivalent RLS in this migration. These policies must be replaced with tested application authorization before a MariaDB runtime cutover.
-- No backend adapter or query rewrite is included. Placeholder conversion, locking/idempotency, JSON aggregation, date/time behavior, UUID creation, and access-control parity remain future work.
+- The test branch includes a guarded MariaDB adapter and a separate test entry point. See [RUNTIME-TEST.md](RUNTIME-TEST.md) for hosted read and authorization checks and work remaining before production cutover.
 
 ## Reproduction artifacts
 
