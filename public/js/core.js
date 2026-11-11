@@ -551,8 +551,8 @@ async function checkAuth() {
                 window.location.href = '/dashboard.html';
             }
 
-            // Bloqueia relatórios e autorizações para quem não é admin nem secretário (ou seja, membro comum e social_midia)
-            if (state.role !== 'admin' && state.activeTab === 'authorizations') {
+            // A página de autorizações é permitida para administradores e secretários.
+            if (!isAdmin && !isSecretary && state.activeTab === 'authorizations') {
                 window.location.href = '/dashboard.html';
             }
 
