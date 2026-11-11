@@ -455,6 +455,7 @@ async function checkAuth() {
             const isSecretary = state.role === 'secretário';
             const isSocialMedia = state.role === 'social_midia';
             const isMaster = isAdmin && state.isMaster;
+            const canAccessAuthorizations = isAdmin || isSecretary;
 
             // Mapeamento dos elementos de navegação
             const navItems = {
@@ -481,7 +482,6 @@ async function checkAuth() {
 
                 // Secretário tem acesso aos relatórios e autorizações; membro comum e social media não
                 if (navItems.reports) navItems.reports.style.display = 'none';
-                if (navItems.authorizations) navItems.authorizations.style.display = isSecretary ? 'flex' : 'none';
                 
                 // Secretário e Social Media têm acesso à Galeria; membro comum não
                 if (navItems.gallery) navItems.gallery.style.display = (isSecretary || isSocialMedia) ? 'flex' : 'none';
@@ -506,7 +506,6 @@ async function checkAuth() {
                 // Acesso total para Administradores
                 if (navItems.people) navItems.people.style.display = 'flex';
                 if (navItems.reports) navItems.reports.style.display = 'flex';
-                if (navItems.authorizations) navItems.authorizations.style.display = 'flex';
                 if (navItems.outflows) navItems.outflows.style.display = 'flex';
                 if (navItems.sales) navItems.sales.style.display = 'flex';
                 if (navItems.messages) navItems.messages.style.display = 'flex';
@@ -517,6 +516,7 @@ async function checkAuth() {
 
                 document.getElementById('page-title').textContent = 'Dashboard de Mensalidades';
             }
+            if (navItems.authorizations) navItems.authorizations.style.display = canAccessAuthorizations ? 'flex' : 'none';
 
             // Oculta aba Calendário dentro de Eventos para usuários comuns e social media
             const tabSite = document.getElementById('tab-site-calendar');
@@ -552,7 +552,7 @@ async function checkAuth() {
             }
 
             // A página de autorizações é permitida para administradores e secretários.
-            if (!isAdmin && !isSecretary && state.activeTab === 'authorizations') {
+            if (!canAccessAuthorizations && state.activeTab === 'authorizations') {
                 window.location.href = '/dashboard.html';
             }
 
